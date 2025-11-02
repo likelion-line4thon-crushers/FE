@@ -28,8 +28,8 @@ const Logo = styled.div`
     height: 2.2vh; /* 24px -> 2.2vh */
   }
 
-  ${({ isMain }) =>
-    isMain
+  ${({ $isMain }) =>
+    $isMain
       ? css`
           /* ✅ 메인 페이지 중앙 정렬 */
           position: absolute;
@@ -83,11 +83,10 @@ function HeaderBar({ children }) {
 
   return (
     <HeaderWrapper>
-      <Logo isMain={isMain}>
+      <Logo $isMain={isMain}>
         <img src={BoiniLogo} alt="Boini logo" />
       </Logo>
 
-      {/* ✅ 메인페이지에는 children 없음, 그 외 페이지는 자유롭게 콘텐츠 배치 */}
       {!isMain && (
         <Body>
           {isAudienceView && (
