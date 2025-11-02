@@ -1,38 +1,86 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   HeaderContainer,
   IconButton,
   IconContainer,
 } from "./SideHeader.styles";
 import TotalReactionIcon from "../../../assets/images/AI/TotalReaction.png";
+import TotalReactionSelectedIcon from "../../../assets/images/AI/TotalReaction_selected.png";
 import Top3Icon from "../../../assets/images/AI/Top3.png";
+import Top3SelectedIcon from "../../../assets/images/AI/Top3_selected.png";
 import PopularSlideIcon from "../../../assets/images/AI/PopularSlide.png";
+import PopularSlideSelectedIcon from "../../../assets/images/AI/PopularSlide_selected.png";
 import QuestionSlideIcon from "../../../assets/images/AI/QuestionSlide.png";
+import QuestionSlideSelectedIcon from "../../../assets/images/AI/QuestionSlide_selected.png";
 import ReplaySlideIcon from "../../../assets/images/AI/ReplaySlide.png";
+import ReplaySlideSelectedIcon from "../../../assets/images/AI/ReplaySlide_selected.png";
 import ReviewIcon from "../../../assets/images/AI/Review.png";
+import ReviewSelectedIcon from "../../../assets/images/AI/Review_selected.png";
 
-const SideHeader = () => {
+const SideHeader = ({ onIconClick }) => {
+  const [selectedIcon, setSelectedIcon] = useState("totalReaction");
+
+  const handleIconClick = (iconName) => {
+    setSelectedIcon(iconName);
+    if (onIconClick) {
+      onIconClick(iconName);
+    }
+  };
+
+  const icons = [
+    {
+      name: "totalReaction",
+      normal: TotalReactionIcon,
+      selected: TotalReactionSelectedIcon,
+      alt: "Total Reaction",
+    },
+    {
+      name: "top3",
+      normal: Top3Icon,
+      selected: Top3SelectedIcon,
+      alt: "Top 3",
+    },
+    {
+      name: "popularSlide",
+      normal: PopularSlideIcon,
+      selected: PopularSlideSelectedIcon,
+      alt: "Popular Slide",
+    },
+    {
+      name: "questionSlide",
+      normal: QuestionSlideIcon,
+      selected: QuestionSlideSelectedIcon,
+      alt: "Question Slide",
+    },
+    {
+      name: "replaySlide",
+      normal: ReplaySlideIcon,
+      selected: ReplaySlideSelectedIcon,
+      alt: "Replay Slide",
+    },
+    {
+      name: "review",
+      normal: ReviewIcon,
+      selected: ReviewSelectedIcon,
+      alt: "Review",
+    },
+  ];
+
   return (
     <HeaderContainer>
       <IconContainer>
-        <IconButton>
-          <img src={TotalReactionIcon} alt="Total Reaction" />
-        </IconButton>
-        <IconButton>
-          <img src={Top3Icon} alt="Top 3" />
-        </IconButton>
-        <IconButton>
-          <img src={PopularSlideIcon} alt="Popular Slide" />
-        </IconButton>
-        <IconButton>
-          <img src={QuestionSlideIcon} alt="Question Slide" />
-        </IconButton>
-        <IconButton>
-          <img src={ReplaySlideIcon} alt="Replay Slide" />
-        </IconButton>
-        <IconButton>
-          <img src={ReviewIcon} alt="Review" />
-        </IconButton>
+        {icons.map((icon) => (
+          <IconButton
+            key={icon.name}
+            onClick={() => handleIconClick(icon.name)}
+            $isSelected={selectedIcon === icon.name}
+          >
+            <img
+              src={selectedIcon === icon.name ? icon.selected : icon.normal}
+              alt={icon.alt}
+            />
+          </IconButton>
+        ))}
       </IconContainer>
     </HeaderContainer>
   );
