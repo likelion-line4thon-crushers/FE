@@ -7,12 +7,17 @@ import {
   TitleText,
   NumberDisplay,
   UnitText,
+  SlideImage,
+  SlideNumber,
+  ImageContainer,
 } from "./ContentBox.styles";
 
 const ContentBox = ({
   title = "총 이모지 반응",
   value = "00",
   unit = "개",
+  slideImage,
+  slideNumber,
 }) => {
   return (
     <ContentBoxContainer>
@@ -20,10 +25,21 @@ const ContentBox = ({
         <OrangeLine />
         <TitleText>{title}</TitleText>
       </TopSection>
-      <BottomSection>
-        <NumberDisplay>{value}</NumberDisplay>
-        <UnitText>{unit}</UnitText>
-      </BottomSection>
+      {slideImage ? (
+        <>
+          <ImageContainer>
+            <SlideImage src={slideImage} alt="슬라이드" />
+          </ImageContainer>
+          {slideNumber !== undefined && (
+            <SlideNumber>슬라이드 {slideNumber}</SlideNumber>
+          )}
+        </>
+      ) : (
+        <BottomSection>
+          <NumberDisplay>{value}</NumberDisplay>
+          <UnitText>{unit}</UnitText>
+        </BottomSection>
+      )}
     </ContentBoxContainer>
   );
 };
