@@ -1,15 +1,18 @@
 import styled from "styled-components";
 
 export const ContentBoxContainer = styled.div`
-  width: 390px;
-  height: 390px;
+  width: ${(props) =>
+    props.$width === "auto" ? "auto" : props.$width || "390px"};
+  height: ${(props) =>
+    props.$height === "auto" ? "auto" : props.$height || "390px"};
   border-radius: 12px;
   border: 1px solid #eaeaea;
-  background: #fafafa;
+  background: ${(props) => props.$backgroundColor || "#fafafa"};
   padding: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: ${(props) =>
+    props.$height && props.$height !== "auto" ? "space-between" : "flex-start"};
   position: relative;
 `;
 
@@ -80,4 +83,14 @@ export const SlideNumber = styled.div`
   font-size: 14px;
   font-weight: 400;
   color: #333;
+`;
+
+export const ContentText = styled.p`
+  font-family: Pretendard;
+  font-size: 14px;
+  font-weight: 400;
+  color: #333;
+  margin: 0;
+  line-height: 1.5;
+  margin-top: 12px;
 `;

@@ -10,6 +10,7 @@ import {
   SlideImage,
   SlideNumber,
   ImageContainer,
+  ContentText,
 } from "./ContentBox.styles";
 
 const ContentBox = ({
@@ -18,14 +19,34 @@ const ContentBox = ({
   unit = "개",
   slideImage,
   slideNumber,
+  content,
+  variant,
+  width,
+  height,
+  backgroundColor,
 }) => {
+  let determinedVariant = variant;
+  if (!determinedVariant) {
+    if (slideImage) {
+      determinedVariant = "image";
+    } else if (content) {
+      determinedVariant = "text";
+    } else {
+      determinedVariant = "number";
+    }
+  }
+
   return (
-    <ContentBoxContainer>
+    <ContentBoxContainer
+      $width={width}
+      $height={height}
+      $backgroundColor={backgroundColor}
+    >
       <TopSection>
         <OrangeLine />
         <TitleText>{title}</TitleText>
       </TopSection>
-      {slideImage ? (
+      {determinedVariant === "image" && slideImage ? (
         <>
           <ImageContainer>
             <SlideImage src={slideImage} alt="슬라이드" />
@@ -34,6 +55,8 @@ const ContentBox = ({
             <SlideNumber>슬라이드 {slideNumber}</SlideNumber>
           )}
         </>
+      ) : determinedVariant === "text" && content ? (
+        <ContentText>{content}</ContentText>
       ) : (
         <BottomSection>
           <NumberDisplay>{value}</NumberDisplay>

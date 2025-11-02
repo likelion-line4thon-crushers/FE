@@ -1,8 +1,17 @@
 import styled from "styled-components";
+
 export const Top3Container = styled.div`
   display: flex;
   flex-direction: column;
-  width: 100px;
-  height: 100px;
-  background-color: #f0f0f0;
+  gap: 20px;
+  padding-right: 2.8vw;
+
+  h1 {
+    color: #000;
+    font-family: Pretendard;
+    font-size: 32px;
+    font-style: normal;
+    font-weight: 600;
+    margin: 0;
+  }
 `;

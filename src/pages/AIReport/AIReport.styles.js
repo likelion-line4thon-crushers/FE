@@ -14,6 +14,7 @@ export const ContentContainer = styled.div`
   height: 100%;
   padding-left: 2.8vw;
   padding-bottom: 100px;
+  padding-top: 20px;
   overflow-y: auto;
   overflow-x: hidden;
   gap: 20px;
