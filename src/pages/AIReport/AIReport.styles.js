@@ -5,7 +5,6 @@ export const PageContainer = styled.div`
   flex-direction: row;
   width: 100%;
   height: 100%;
-  padding: 3.7vh 0.8vw;
 `;
 
 export const ContentContainer = styled.div`
