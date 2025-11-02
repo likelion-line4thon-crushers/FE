@@ -24,10 +24,13 @@ const ContentBox = ({
   width,
   height,
   backgroundColor,
+  children,
 }) => {
   let determinedVariant = variant;
   if (!determinedVariant) {
-    if (slideImage) {
+    if (children) {
+      determinedVariant = "custom";
+    } else if (slideImage) {
       determinedVariant = "image";
     } else if (content) {
       determinedVariant = "text";
@@ -46,7 +49,9 @@ const ContentBox = ({
         <OrangeLine />
         <TitleText>{title}</TitleText>
       </TopSection>
-      {determinedVariant === "image" && slideImage ? (
+      {determinedVariant === "custom" && children ? (
+        children
+      ) : determinedVariant === "image" && slideImage ? (
         <>
           <ImageContainer>
             <SlideImage src={slideImage} alt="슬라이드" />

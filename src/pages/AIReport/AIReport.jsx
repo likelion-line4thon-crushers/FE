@@ -37,12 +37,11 @@ const AiReportPage = () => {
       const targetHeight = targetElement.offsetHeight;
       const maxScroll = container.scrollHeight - containerHeight;
 
-      let scrollPosition = targetTop;
+      const offset = 40;
+      let scrollPosition = Math.max(0, targetTop - offset);
 
       if (targetTop + targetHeight > container.scrollHeight - 50) {
         scrollPosition = Math.max(0, maxScroll);
-      } else {
-        scrollPosition = targetTop;
       }
 
       container.scrollTo({

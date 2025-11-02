@@ -39,3 +39,81 @@ export const EmojiPanelWrapper = styled.div`
     height: 60px !important;
   }
 `;
+
+export const SectionContainer = styled.div`
+  padding-right: 2.8vw;
+`;
+export const SlideContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  width: 100%;
+  align-items: flex-start;
+  margin-top: 20px;
+`;
+
+export const LargeSlide = styled.div`
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  aspect-ratio: 16 / 9;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+`;
+
+export const SmallSlide = styled.div`
+  width: 400px;
+  background: #ffffff;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  aspect-ratio: 16 / 9;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+`;
+
+export const NoSlideMessage = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: #fafafa;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  min-height: 400px;
+
+  img {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    margin-bottom: 20px;
+  }
+
+  p {
+    font-family: Pretendard;
+    font-size: 18px;
+    font-weight: 400;
+    color: #666;
+    margin: 0;
+  }
+`;
