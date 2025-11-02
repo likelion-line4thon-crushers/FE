@@ -4,6 +4,7 @@ import MainPage from "./pages/MainPage";
 import CreateSessionPage from "./pages/CreateSession/CreateSessionPage";
 import PresenterViewPage from "./pages/PresenterView/PresenterViewPage";
 import AudienceViewPage from "./pages/AudienceView/AudienceViewPage";
+import AiReportPage from "./pages/AIReport/AIReport";
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
       {
         path: "audience",
         element: <AudienceViewPage />,
+      },
+      {
+        path: "ai-report",
+        element: <AiReportPage />,
       },
     ],
   },
