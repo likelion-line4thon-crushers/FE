@@ -24,7 +24,6 @@ export const OrangeLine = styled.div`
   width: 24px;
   height: 4px;
   background: #e74d07;
-  border-radius: 2px;
 `;
 
 export const TitleText = styled.h2`
@@ -71,7 +70,6 @@ export const SlideImage = styled.img`
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  opacity: 0.3;
 `;
 
 export const SlideNumber = styled.div`
