@@ -15,6 +15,7 @@ const AiReportPage = () => {
   const questionSlideRef = useRef(null);
   const replaySlideRef = useRef(null);
   const reviewRef = useRef(null);
+  const contentContainerRef = useRef(null);
 
   const scrollToSection = (sectionName) => {
     const refs = {
@@ -27,15 +28,34 @@ const AiReportPage = () => {
     };
 
     const targetRef = refs[sectionName];
-    if (targetRef?.current) {
-      targetRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    const container = contentContainerRef.current;
+
+    if (targetRef?.current && container) {
+      const targetElement = targetRef.current;
+      const containerHeight = container.clientHeight;
+      const targetTop = targetElement.offsetTop;
+      const targetHeight = targetElement.offsetHeight;
+      const maxScroll = container.scrollHeight - containerHeight;
+
+      let scrollPosition = targetTop;
+
+      if (targetTop + targetHeight > container.scrollHeight - 50) {
+        scrollPosition = Math.max(0, maxScroll);
+      } else {
+        scrollPosition = targetTop;
+      }
+
+      container.scrollTo({
+        top: scrollPosition,
+        behavior: "smooth",
+      });
     }
   };
 
   return (
     <PageContainer>
       <SideHeader onIconClick={scrollToSection} />
-      <ContentContainer>
+      <ContentContainer ref={contentContainerRef}>
         <div ref={totalReactionRef}>
           <TotalReaction />
         </div>
