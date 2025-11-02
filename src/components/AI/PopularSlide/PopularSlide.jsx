@@ -1,10 +1,17 @@
 import React from "react";
-import { PopularSlideContainer } from "./PopularSlide.styles";
+import {
+  PopularSlideContainer,
+  EmojiPanelWrapper,
+} from "./PopularSlide.styles";
+import EmojiPanel from "../../Audience/EmojiPanel";
 
 const PopularSlide = () => {
   return (
     <PopularSlideContainer>
-      <h1>Popular Slide</h1>
+      <h1>이모지별 인기 슬라이드</h1>
+      <EmojiPanelWrapper>
+        <EmojiPanel />
+      </EmojiPanelWrapper>
     </PopularSlideContainer>
   );
 };
