@@ -39,19 +39,18 @@ export const ContentContainer = styled.div`
   align-items: center;
   justify-content: flex-start;
   gap: 20px;
-  padding: 20px;
 `;
 export const EmojiSummaryContainer = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-  gap: 20px;
+
   border-radius: 12px;
   border: 1px solid #eaeaea;
 
   background: #fafafa;
-  padding: 20px;
+
   .div {
     justify-content: flex-start;
   }
@@ -66,7 +65,6 @@ export const QuestionSummaryContainer = styled.div`
   border: 1px solid #eaeaea;
 
   background: #fafafa;
-  padding: 20px;
 `;
 export const FocusSummaryContainer = styled.div`
   display: flex;
@@ -78,5 +76,4 @@ export const FocusSummaryContainer = styled.div`
   border: 1px solid #eaeaea;
 
   background: #fafafa;
-  padding: 20px;
 `;
