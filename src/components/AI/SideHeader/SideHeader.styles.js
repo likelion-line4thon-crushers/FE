@@ -10,6 +10,10 @@ export const HeaderContainer = styled.div`
   flex-shrink: 0;
   border: 1px solid #eaeaea;
   background: #f5f5f5;
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 999;
 `;
 
 export const IconButton = styled.button`
