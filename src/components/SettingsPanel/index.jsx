@@ -34,7 +34,7 @@ const QuickSettingsSection = () => (
             />
             <QuickSettingToggle
                 label="실시간 질문"
-                description="청중의 실시간 질문 기능을 켜거나 끌 수 있습니다."
+                description="청중이 실시간으로 질문을 남길 수 있습니다."
             />
             <QuickSettingToggle
                 label="실시간 피드백"
