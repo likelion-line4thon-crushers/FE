@@ -26,6 +26,7 @@ export const RightBoxContainer = styled.div`
   flex-direction: column;
   gap: 10px;
   flex: 1;
+  padding-right: 20px;
 
   & > div {
     width: 100% !important;

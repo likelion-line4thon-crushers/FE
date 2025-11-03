@@ -12,7 +12,6 @@ export const EmojiPanelWrapper = styled.div`
   position: relative;
   width: 100%;
 
-  /* EmojiPanel의 absolute 위치를 relative로 오버라이드 */
   > div {
     position: relative !important;
     top: auto !important;

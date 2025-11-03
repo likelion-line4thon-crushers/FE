@@ -4,6 +4,7 @@ export const QuestionSlideContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding-right: 2.8vw;
 `;
 export const TotalContainer = styled.div`
   display: flex;
@@ -58,9 +59,10 @@ export const RightBoxContainer = styled.div`
   flex-direction: column;
   gap: 10px;
   flex: 1;
+  padding-right: 20px;
 
   & > div {
-    width: 100% !important;
+    width: 100%;
     height: 835px;
     display: flex;
     flex-direction: column;
