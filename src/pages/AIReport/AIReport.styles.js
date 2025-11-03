@@ -17,5 +17,19 @@ export const ContentContainer = styled.div`
   padding-top: 20px;
   overflow-y: auto;
   overflow-x: hidden;
-  gap: 20px;
+  gap: 35px;
+`;
+
+export const FooterContainer = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px 40px;
+  margin-bottom: 50px;
+
+  img {
+    height: 24px;
+    width: auto;
+  }
 `;

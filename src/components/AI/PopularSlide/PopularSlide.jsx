@@ -12,6 +12,7 @@ import EmojiPanel from "../../Audience/EmojiPanel";
 import ContentBox from "../ContentBox/ContentBox";
 import RabbitImage from "../../../assets/images/rabbit.jpg";
 import NoSlideImage from "../../../assets/images/AI/NoSlide.png";
+import AITitle from "../AITitle/AITitle";
 
 const PopularSlide = () => {
   // 임시 데이터 - 나중에 실제 데이터로 교체
@@ -25,7 +26,10 @@ const PopularSlide = () => {
 
   return (
     <PopularSlideContainer>
-      <h1>이모지별 인기 슬라이드</h1>
+      <AITitle
+        title="이모지별 인기슬라이드 "
+        description="이모지별 반응 상위 슬라이드를 정리해드립니다."
+      />
       <EmojiPanelWrapper>
         <EmojiPanel />
       </EmojiPanelWrapper>

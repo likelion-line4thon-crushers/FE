@@ -1,12 +1,17 @@
 import React, { useRef } from "react";
 import SideHeader from "../../components/AI/SideHeader/SideHeader";
-import { PageContainer, ContentContainer } from "./AIReport.styles";
+import {
+  PageContainer,
+  ContentContainer,
+  FooterContainer,
+} from "./AIReport.styles";
 import TotalReaction from "../../components/AI/TotalReaction/TotalReaction";
 import Top3 from "../../components/AI/Top3/Top3";
 import PopularSlide from "../../components/AI/PopularSlide/PopularSlide";
 import QuestionSlide from "../../components/AI/QuestionSlide/QuestionSlide";
 import ReplaySlide from "../../components/AI/ReplaySlide/ReplaySlide";
 import Review from "../../components/AI/ReviewSlide/ReviewSlide";
+import FooterImage from "../../assets/images/AI/AIFooter.png";
 
 const AiReportPage = () => {
   const totalReactionRef = useRef(null);
@@ -73,6 +78,9 @@ const AiReportPage = () => {
         <div ref={reviewRef}>
           <Review />
         </div>
+        <FooterContainer>
+          <img src={FooterImage} alt="footer" />
+        </FooterContainer>
       </ContentContainer>
     </PageContainer>
   );
