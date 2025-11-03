@@ -2,15 +2,15 @@ import styled from "styled-components";
 export const ReviewSlideContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-right: 2.8vw;
+  gap: 15px;
+  padding-right: 0.4vw;
 `;
 
 export const TotalContainer = styled.div`
   display: flex;
   flex-direction: row;
-  gap: 20px;
-  padding: 10px;
+  gap: 5px;
+  padding: 0;
   align-items: stretch;
 `;
 
@@ -19,22 +19,16 @@ export const LeftBoxContainer = styled.div`
   flex-direction: column;
   gap: 10px;
   width: 48%;
+  margin-right: 20px;
 `;
 
 export const RightBoxContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  flex: 1;
 
-  & > div {
-    width: 100% !important;
-    min-height: 530px;
-    height: auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
+  flex: 1;
+  align-items: stretch;
+  padding-right: 70px;
 `;
 
 export const RatingWrapper = styled.div`
@@ -70,12 +64,12 @@ export const SmallDivider = styled.div`
   height: 4px;
   background: #d9d9d9;
   border-radius: 2px;
+  margin-top: 2px;
 `;
 
 export const RatingRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
 `;
 
 export const RatingScore = styled.div`
@@ -100,7 +94,7 @@ export const SummaryBoxContainer = styled.div`
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  gap: 10px;
+  gap: 5px;
 
   padding-right: 2.8vw;
 
@@ -127,5 +121,6 @@ export const SummaryBoxContainer = styled.div`
     box-sizing: border-box;
     word-break: break-word;
     overflow-wrap: anywhere;
+    margin-top: 15px;
   }
 `;

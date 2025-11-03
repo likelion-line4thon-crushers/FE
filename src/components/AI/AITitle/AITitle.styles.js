@@ -25,7 +25,8 @@ export const DescriptionBox = styled.div`
   background: #fff;
   display: flex;
   align-items: center;
-  padding: 8px 14px;
+  padding: 8px 28px 8px 28px;
+
   box-sizing: border-box;
 `;
 

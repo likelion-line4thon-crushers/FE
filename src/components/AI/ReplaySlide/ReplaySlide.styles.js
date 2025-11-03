@@ -4,7 +4,7 @@ export const ReplaySlideContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding-right: 2.8vw;
+  padding-right: 0.8vw;
 `;
 export const TotalContainer = styled.div`
   display: flex;
@@ -26,7 +26,7 @@ export const RightBoxContainer = styled.div`
   flex-direction: column;
   gap: 10px;
   flex: 1;
-  padding-right: 20px;
+  padding-right: 70px;
 
   & > div {
     width: 100% !important;

@@ -3,15 +3,12 @@ import styled from "styled-components";
 export const QuestionSlideContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-right: 2.8vw;
+  gap: 15px;
+  padding-right: 0.4vw;
 `;
 export const TotalContainer = styled.div`
   display: flex;
   flex-direction: row;
-  gap: 20px;
-  padding: 10px;
-  align-items: stretch;
 `;
 export const SummaryBoxContainer = styled.div`
   display: flex;
@@ -22,7 +19,6 @@ export const SummaryBoxContainer = styled.div`
   max-width: 100%;
   box-sizing: border-box;
   gap: 10px;
-  padding: 20px;
 
   .face-image {
     width: 185px;
@@ -51,21 +47,14 @@ export const SummaryBoxContainer = styled.div`
 export const LeftBoxContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
   width: 48%;
 `;
 export const RightBoxContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  flex: 1;
-  padding-right: 20px;
 
-  & > div {
-    width: 100%;
-    height: 835px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start !important;
-  }
+  flex: 1;
+  align-items: stretch;
+  padding-right: 50px;
 `;

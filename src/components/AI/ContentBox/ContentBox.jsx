@@ -43,11 +43,17 @@ const ContentBox = ({
     }
   }
 
+  const justifyForVariant =
+    determinedVariant === "number" && height && height !== "auto"
+      ? "space-between"
+      : "flex-start";
+
   return (
     <ContentBoxContainer
       $width={width}
       $height={height}
       $backgroundColor={backgroundColor}
+      $justify={justifyForVariant}
     >
       <TopSection>
         <OrangeLine />

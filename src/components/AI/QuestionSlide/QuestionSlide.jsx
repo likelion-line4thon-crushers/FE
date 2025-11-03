@@ -23,18 +23,20 @@ const QuestionSlide = () => {
       <TotalContainer>
         <LeftBoxContainer>
           <ContentBox
-            title="질문이 가장 많았던 슬라이드"
-            variant="image"
+            title="질문이 가장 많았던 슬라이드드"
             slideImage={rabbitImage}
-            slideNumberComponent={<SlideNumber slideNumber={0} />}
-            width="auto"
-            height="auto"
+            slideNumber={0}
+            height="350px"
+            width="680px"
+            slideImageWidth="80%"
+            slideImageHeight="80%"
+            slideNumberComponent={<SlideNumber slideNumber={1} />}
           />
           <ContentBox
             title="실시간 질문 요약"
             variant="custom"
-            width="auto"
-            height="auto"
+            height="350px"
+            width="680px"
           >
             <SummaryBoxContainer>
               <img className="face-image" src={faceImage} alt="face" />
@@ -44,10 +46,7 @@ const QuestionSlide = () => {
                 src={rectangleImage}
                 alt="rectangle"
               />
-              <h3>
-                Boini 질문 요약
-                내용내용내용내용내용이다~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-              </h3>
+              <h3>Boini 질문 요약 내용내용내용내용내용이다</h3>
             </SummaryBoxContainer>
           </ContentBox>
         </LeftBoxContainer>
@@ -59,7 +58,7 @@ const QuestionSlide = () => {
             }
             variant="text"
             width="auto"
-            height="700px"
+            height="760px"
           />
         </RightBoxContainer>
       </TotalContainer>

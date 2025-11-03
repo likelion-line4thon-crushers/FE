@@ -12,7 +12,10 @@ export const ContentBoxContainer = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: ${(props) =>
-    props.$height && props.$height !== "auto" ? "space-between" : "flex-start"};
+    props.$justify ||
+    (props.$height && props.$height !== "auto"
+      ? "space-between"
+      : "flex-start")};
   position: relative;
 `;
 

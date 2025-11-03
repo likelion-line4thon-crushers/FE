@@ -26,7 +26,7 @@ const ReviewSlide = () => {
       />
       <TotalContainer>
         <LeftBoxContainer>
-          <ContentBox title="" variant="custom" width="auto" height="300px">
+          <ContentBox title="" variant="custom" width="640px" height="300px">
             <CenterHeader>
               <img src={SatisfyImage} alt="satisfy" width={48} height={48} />
               <h2>세션 만족도</h2>
@@ -45,8 +45,8 @@ const ReviewSlide = () => {
           <ContentBox
             title="청중 후기 요약"
             variant="custom"
-            width="auto"
-            height="auto"
+            height="300px"
+            width="640px"
           >
             <SummaryBoxContainer>
               <img className="icon-image" src={faceImage} alt="face" />
@@ -60,8 +60,8 @@ const ReviewSlide = () => {
           <ContentBox
             title="청중 후기 및 의견 모음"
             variant="text"
-            width="auto"
-            height="auto"
+            width="765px"
+            height="650px"
             content={
               "• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)"
             }
