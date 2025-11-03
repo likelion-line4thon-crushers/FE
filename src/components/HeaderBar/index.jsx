@@ -97,9 +97,10 @@ const RightActions = styled.div`
 function HeaderBar() {
   const location = useLocation();
   const isMain = location.pathname === "/";
+  const isRating = location.pathname === "/rating";
+  const isAiReport = location.pathname === "/ai-report";
   const isAudienceView = location.pathname === "/audience";
   const isPrep = location.pathname === "/create-presentation";
-  const isAiReport = location.pathname === "/ai-report";
   const fileName = location.state?.fileName;
   const navigate = useNavigate();
   const { slides, sessionId, features, maxParticipants } = location.state || {};
@@ -112,7 +113,7 @@ function HeaderBar() {
   return (
     <HeaderWrapper>
       {/* ===== 로고 ===== */}
-      <Logo $isMain={isMain} $isAiReport={isAiReport}>
+      <Logo $isMain={isMain || isRating || isAiReport}>
         <img src={BoiniLogo} alt="Boini logo" />
       </Logo>
 
