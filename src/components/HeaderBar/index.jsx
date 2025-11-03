@@ -97,6 +97,7 @@ const RightActions = styled.div`
 function HeaderBar() {
   const location = useLocation();
   const isMain = location.pathname === "/";
+  const isRating = location.pathname === "/rating";
   const isAudienceView = location.pathname === "/audience";
   const isPrep = location.pathname === "/create-presentation";
   const fileName = location.state?.fileName;
@@ -111,7 +112,7 @@ function HeaderBar() {
   return (
     <HeaderWrapper>
       {/* ===== 로고 ===== */}
-      <Logo $isMain={isMain}>
+      <Logo $isMain={isMain || isRating}>
         <img src={BoiniLogo} alt="Boini logo" />
       </Logo>
 
