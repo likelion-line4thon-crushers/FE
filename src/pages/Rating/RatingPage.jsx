@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import Emoji3 from "../../assets/images/emoji3.svg";
+import StarIcon from "../../assets/images/star.svg";
+import StarCheckedIcon from "../../assets/images/star_checked.svg";
+
 
 const RatingPage = () => {
     const [rating, setRating] = useState(0);
@@ -37,16 +40,15 @@ const RatingPage = () => {
                 {/* 왼쪽 하단 - 별점 */}
                 <Box>
                     <RatingBox>
-                        <RatingTitle>오늘의 세션, 잘 보셨나요?</RatingTitle>
+                        <RatingTitle>오늘의 세션, 잘 보였나요?</RatingTitle>
                         <Stars>
                             {[1, 2, 3, 4, 5].map((star) => (
-                                <Star
+                                <StarImg
                                     key={star}
-                                    selected={rating >= star}
+                                    src={rating >= star ? StarCheckedIcon : StarIcon}
+                                    alt={`${star} star`}
                                     onClick={() => setRating(star)}
-                                >
-                                    ★
-                                </Star>
+                                />
                             ))}
                         </Stars>
                     </RatingBox>
@@ -186,21 +188,22 @@ const RatingTitle = styled.h3`
   color: #5C5C5C;
 `;
 
+const StarImg = styled.img`
+  width: 2vw !important;
+  height: auto;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+
+  &:hover {
+    transform: scale(1.1);
+    filter: brightness(1.1);
+  }
+`;
+
 const Stars = styled.div`
   display: flex;
   justify-content: center;
-  gap: 1vw;
-`;
-
-const Star = styled.span`
-  font-size: clamp(28px, 2vw, 50px);
-  color: ${(props) => (props.selected ? "#FFD700" : "#ddd")};
-  cursor: pointer;
-  transition: color 0.2s ease;
-
-  &:hover {
-    color: #ffc107;
-  }
+  gap: 0vw;
 `;
 
 /* 후기 입력 */
