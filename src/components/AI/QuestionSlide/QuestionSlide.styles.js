@@ -10,6 +10,7 @@ export const TotalContainer = styled.div`
   flex-direction: row;
   gap: 20px;
   padding: 10px;
+  align-items: stretch;
 `;
 export const SummaryBoxContainer = styled.div`
   display: flex;
@@ -50,9 +51,19 @@ export const LeftBoxContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 48%;
 `;
 export const RightBoxContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;
+
+  & > div {
+    width: 100% !important;
+    height: 835px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start !important;
+  }
 `;

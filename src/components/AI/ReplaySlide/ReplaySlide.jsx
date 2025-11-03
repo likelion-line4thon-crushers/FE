@@ -3,11 +3,15 @@ import { ReplaySlideContainer, TotalContainer } from "./ReplaySlide.styles";
 import { ContentBoxContainer } from "../ContentBox/ContentBox.styles";
 import rabbitImage from "../../../assets/images/rabbit.jpg";
 import ContentBox from "../ContentBox/ContentBox";
+import AITitle from "../AITitle/AITitle";
 
 const ReplaySlide = () => {
   return (
     <ReplaySlideContainer>
-      <h1>재방문수가 가장 많은 슬라이드</h1>
+      <AITitle
+        title="재방문수가 가장 많은 슬라이드"
+        description="재방문한 청중의 수가 가장 많은 슬라이드입니다."
+      />
       <TotalContainer>
         <ContentBoxContainer>
           <img src={rabbitImage} alt="rabbit" />

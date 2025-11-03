@@ -93,4 +93,5 @@ export const ContentText = styled.p`
   margin: 0;
   line-height: 1.5;
   margin-top: 12px;
+  white-space: pre-line;
 `;
