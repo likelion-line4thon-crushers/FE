@@ -6,6 +6,7 @@ import Layout from "../../components/Layout/LayoutContainer";
 import SidebarSlides from "../../components/SidebarSlides";
 import SlideViewer from "../../components/SlideViewer";
 import SettingsPanel from "../../components/SettingsPanel";
+import LandingPage from "../../components/LandingPage";
 
 const PresentationPrepPage = () => {
   const location = useLocation();
@@ -31,7 +32,7 @@ const PresentationPrepPage = () => {
   const handleStart = () =>
     navigate("/presentation", { state: { slides, sessionId, features, maxParticipants } });
 
-  if (!slides.length) return <div style={{ marginTop: "120px", textAlign: "center" }}>발표 준비 중...</div>;
+  if (!slides.length) return <LandingPage message="세션 자료 정리 중..." />;
 
   return (
     <Layout>
