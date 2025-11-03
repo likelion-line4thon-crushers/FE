@@ -28,7 +28,9 @@ const ReplaySlide = () => {
             slideImage={rabbitImage}
             slideNumberComponent={<SlideNumber slideNumber={0} />}
             width="auto"
-            height="auto"
+            height="405px"
+            slideImageWidth="80%"
+            slideImageHeight="80%"
           />
         </LeftBoxContainer>
         <RightBoxContainer>

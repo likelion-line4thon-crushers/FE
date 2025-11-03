@@ -70,8 +70,8 @@ export const ImageContainer = styled.div`
 `;
 
 export const SlideImage = styled.img`
-  max-width: 100%;
-  max-height: 100%;
+  max-width: ${(props) => props.$imgWidth || "100%"};
+  max-height: ${(props) => props.$imgHeight || "100%"};
   object-fit: contain;
 `;
 
@@ -88,7 +88,12 @@ export const SlideNumber = styled.div`
 export const SlideNumberSlot = styled.div`
   position: absolute;
   bottom: 5px;
-  left: 320px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
 `;
 
 export const ContentText = styled.p`

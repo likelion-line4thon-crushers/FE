@@ -26,6 +26,8 @@ const ContentBox = ({
   width,
   height,
   backgroundColor,
+  slideImageWidth,
+  slideImageHeight,
   children,
 }) => {
   let determinedVariant = variant;
@@ -56,7 +58,12 @@ const ContentBox = ({
       ) : determinedVariant === "image" && slideImage ? (
         <>
           <ImageContainer>
-            <SlideImage src={slideImage} alt="슬라이드" />
+            <SlideImage
+              src={slideImage}
+              alt="슬라이드"
+              $imgWidth={slideImageWidth}
+              $imgHeight={slideImageHeight}
+            />
           </ImageContainer>
           {slideNumberComponent ? (
             <SlideNumberSlot>{slideNumberComponent}</SlideNumberSlot>

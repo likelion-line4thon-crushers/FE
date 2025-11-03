@@ -19,13 +19,13 @@ export const TitleText = styled.h1`
 
 export const DescriptionBox = styled.div`
   flex: 1;
-  min-height: 28px;
+  min-height: 22px;
 
   border: 2px dashed #eaeaea;
   background: #fff;
   display: flex;
   align-items: center;
-  padding: 12px 18px;
+  padding: 8px 14px;
   box-sizing: border-box;
 `;
 
