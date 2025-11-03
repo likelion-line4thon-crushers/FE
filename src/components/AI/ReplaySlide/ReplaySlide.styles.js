@@ -15,3 +15,9 @@ export const ReplaySlideContainer = styled.div`
     margin: 0;
   }
 `;
+export const TotalContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  padding: 10px;
+`;
