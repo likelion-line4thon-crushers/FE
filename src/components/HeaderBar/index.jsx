@@ -130,9 +130,9 @@ function HeaderBar() {
       )}
 
       {/* ===== 우측 버튼 ===== */}
-      {(isAudienceView || isPrep) && (
+      {(isAudienceView || isPrep || isAiReport) && (
         <RightActions>
-          <ShareButton />
+          {(isAudienceView || isPrep) && <ShareButton />}
           {isPrep ? (
             <StartSessionButton onClick={handleStartSession} />
           ) : (
