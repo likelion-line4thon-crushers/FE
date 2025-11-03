@@ -21,9 +21,9 @@ export const Section = styled.section`
 
 /* 상단 제목바 */
 export const Title = styled.h2`
-  height: 3.5vh;
+  height: 3vh;
   margin: 0;
-  padding: 0.75vh 0.6vw;
+  padding: 0.7vh 0.55vw;
   font-family: Pretendard;
   font-size: clamp(12px, 0.8vw, 15px);
   font-weight: 600;
@@ -38,7 +38,7 @@ export const Title = styled.h2`
 export const AudienceCountWrapper = styled.div`
   display: flex;
   align-items: center;
-  padding: 1.5vh 0.8vw;
+  padding: 1.2vh 0.8vw;
   gap: 0.4vw;
   color: #5c5c5c;
   font-family: Pretendard;
@@ -66,20 +66,20 @@ export const AudienceNum = styled.span`
 export const QuickTogglesGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.6vw;
+  gap: 0.4vw;
   padding: 0 0.6vw 1vh;
 `;
 
 export const ToggleLabel = styled.div`
   color: #5c5c5c;
-  font-size: clamp(13px, 0.9vw, 16px);
+  font-size: clamp(11px, 0.75vw, 14px);
   font-weight: 600;
 `;
 
 export const ToggleDescription = styled.p`
   margin: 0;
   color: #838383;
-  font-size: clamp(10px, 0.7vw, 12px);
+  font-size: clamp(9px, 0.6vw, 11px);
   font-weight: 400;
 `;
 
@@ -92,7 +92,7 @@ export const ToggleBox = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 0.3vh;
+  gap: 0.1vh;
   transition: all 0.2s ease;
 
   &:hover {
