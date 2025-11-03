@@ -101,7 +101,6 @@ function HeaderBar() {
   const isAiReport = location.pathname === "/ai-report";
   const isAudienceView = location.pathname === "/audience";
   const isPrep = location.pathname === "/create-presentation";
-  const isAiReport = location.pathname === "/ai-report";
   const fileName = location.state?.fileName;
   const navigate = useNavigate();
   const { slides, sessionId, features, maxParticipants } = location.state || {};
