@@ -6,22 +6,12 @@ export const PopularSlideContainer = styled.div`
   width: 100%;
   height: 100%;
   gap: 20px;
-
-  h1 {
-    color: #000;
-    font-family: Pretendard;
-    font-size: 32px;
-    font-style: normal;
-    font-weight: 600;
-    margin: 0;
-  }
 `;
 
 export const EmojiPanelWrapper = styled.div`
   position: relative;
   width: 100%;
 
-  /* EmojiPanel의 absolute 위치를 relative로 오버라이드 */
   > div {
     position: relative !important;
     top: auto !important;

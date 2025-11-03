@@ -12,7 +12,10 @@ export const ContentBoxContainer = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: ${(props) =>
-    props.$height && props.$height !== "auto" ? "space-between" : "flex-start"};
+    props.$justify ||
+    (props.$height && props.$height !== "auto"
+      ? "space-between"
+      : "flex-start")};
   position: relative;
 `;
 
@@ -70,8 +73,8 @@ export const ImageContainer = styled.div`
 `;
 
 export const SlideImage = styled.img`
-  max-width: 100%;
-  max-height: 100%;
+  max-width: ${(props) => props.$imgWidth || "100%"};
+  max-height: ${(props) => props.$imgHeight || "100%"};
   object-fit: contain;
 `;
 
@@ -85,6 +88,17 @@ export const SlideNumber = styled.div`
   color: #333;
 `;
 
+export const SlideNumberSlot = styled.div`
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+`;
+
 export const ContentText = styled.p`
   font-family: Pretendard;
   font-size: 14px;
@@ -93,4 +107,5 @@ export const ContentText = styled.p`
   margin: 0;
   line-height: 1.5;
   margin-top: 12px;
+  white-space: pre-line;
 `;

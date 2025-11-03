@@ -9,6 +9,7 @@ import {
   UnitText,
   SlideImage,
   SlideNumber,
+  SlideNumberSlot,
   ImageContainer,
   ContentText,
 } from "./ContentBox.styles";
@@ -19,11 +20,14 @@ const ContentBox = ({
   unit = "개",
   slideImage,
   slideNumber,
+  slideNumberComponent,
   content,
   variant,
   width,
   height,
   backgroundColor,
+  slideImageWidth,
+  slideImageHeight,
   children,
 }) => {
   let determinedVariant = variant;
@@ -39,11 +43,17 @@ const ContentBox = ({
     }
   }
 
+  const justifyForVariant =
+    determinedVariant === "number" && height && height !== "auto"
+      ? "space-between"
+      : "flex-start";
+
   return (
     <ContentBoxContainer
       $width={width}
       $height={height}
       $backgroundColor={backgroundColor}
+      $justify={justifyForVariant}
     >
       <TopSection>
         <OrangeLine />
@@ -54,10 +64,19 @@ const ContentBox = ({
       ) : determinedVariant === "image" && slideImage ? (
         <>
           <ImageContainer>
-            <SlideImage src={slideImage} alt="슬라이드" />
+            <SlideImage
+              src={slideImage}
+              alt="슬라이드"
+              $imgWidth={slideImageWidth}
+              $imgHeight={slideImageHeight}
+            />
           </ImageContainer>
-          {slideNumber !== undefined && (
-            <SlideNumber>슬라이드 {slideNumber}</SlideNumber>
+          {slideNumberComponent ? (
+            <SlideNumberSlot>{slideNumberComponent}</SlideNumberSlot>
+          ) : (
+            slideNumber !== undefined && (
+              <SlideNumber>슬라이드 {slideNumber}</SlideNumber>
+            )
           )}
         </>
       ) : determinedVariant === "text" && content ? (

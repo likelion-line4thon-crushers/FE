@@ -1,6 +1,6 @@
 import React from "react";
 import styled, { css } from "styled-components";
-import { useLocation,useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import BoiniLogo from "../../assets/images/Boini_logo.svg";
 import LiveIcon from "../../assets/images/live.png";
 import {
@@ -35,8 +35,8 @@ const Logo = styled.div`
     width: auto;
   }
 
-  ${({ $isMain }) =>
-    $isMain
+  ${({ $isMain, $isAiReport }) =>
+    $isMain || $isAiReport
       ? css`
           position: absolute;
           left: 50%;
@@ -100,6 +100,7 @@ function HeaderBar() {
   const isRating = location.pathname === "/rating";
   const isAudienceView = location.pathname === "/audience";
   const isPrep = location.pathname === "/create-presentation";
+  const isAiReport = location.pathname === "/ai-report";
   const fileName = location.state?.fileName;
   const navigate = useNavigate();
   const { slides, sessionId, features, maxParticipants } = location.state || {};
@@ -130,13 +131,11 @@ function HeaderBar() {
       )}
 
       {/* ===== 우측 버튼 ===== */}
-      {(isAudienceView || isPrep) && (
+      {(isAudienceView || isPrep || isAiReport) && (
         <RightActions>
-          <ShareButton />
+          {(isAudienceView || isPrep) && <ShareButton />}
           {isPrep ? (
-            <StartSessionButton
-              onClick={handleStartSession}
-            />
+            <StartSessionButton onClick={handleStartSession} />
           ) : (
             <ExitButton />
           )}
