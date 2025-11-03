@@ -11,10 +11,14 @@ import rabbitImage from "../../../assets/images/rabbit.jpg";
 import faceImage from "../../../assets/images/emoji1_black.svg";
 import rectangleImage from "../../../assets/images/AI/Rectangle.png";
 import ContentBox from "../ContentBox/ContentBox";
+import AITitle from "../AITitle/AITitle";
 const QuestionSlide = () => {
   return (
     <QuestionSlideContainer>
-      <h1>질문이 가장 많았던 슬라이드 </h1>
+      <AITitle
+        title="질문이 가장 많았던 슬라이드"
+        description="청중이 가장 활발하게 질문을 남긴 구간입니다."
+      />
       <TotalContainer>
         <LeftBoxContainer>
           <ContentBoxContainer>
