@@ -1,13 +1,18 @@
 import React from "react";
 import styled, { css } from "styled-components";
-import { useLocation } from "react-router-dom";
+import { useLocation,useNavigate } from "react-router-dom";
 import BoiniLogo from "../../assets/images/Boini_logo.svg";
 import LiveIcon from "../../assets/images/live.png";
-import { ShareButton, ExitButton } from "../common/HeaderButtons";
+import {
+  ShareButton,
+  ExitButton,
+  StartSessionButton,
+} from "../common/HeaderButtons";
 
+/* ===== 헤더 전체 래퍼 ===== */
 const HeaderWrapper = styled.header`
   width: 100vw;
-  height: 3.7vh; /* 40px -> 3.7vh */
+  height: 5.2vh;
   display: flex;
   align-items: center;
   background: #fff;
@@ -16,40 +21,52 @@ const HeaderWrapper = styled.header`
   top: 0;
   left: 0;
   z-index: 1000;
-  padding: 0 0.8vw;
+  padding: 0 1vw;
+  box-sizing: border-box;
 `;
 
+/* ===== 로고 ===== */
 const Logo = styled.div`
   display: flex;
   align-items: center;
 
   img {
+    height: 3vh;
     width: auto;
-    height: 2.2vh; /* 24px -> 2.2vh */
   }
 
   ${({ $isMain }) =>
     $isMain
       ? css`
-          /* ✅ 메인 페이지 중앙 정렬 */
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          margin: 0;
         `
       : css`
-          margin: 0 0.83vw 0 0.63vw; /* (16px,12px) -> vw 단위 */
+          margin-right: 1vw;
         `}
 `;
 
+/* ===== 중앙 영역 ===== */
 const Body = styled.div`
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6vw;
 `;
 
+/* ===== 파일명 표시 ===== */
+const FileName = styled.div`
+  font-size: clamp(12px, 0.95vw, 18px);
+  color: #5c5c5c;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50vw;
+`;
+
+/* ===== 라이브 뱃지 ===== */
 const LiveBadge = styled.div`
   display: inline-flex;
   align-items: center;
@@ -69,24 +86,36 @@ const LiveBadge = styled.div`
   }
 `;
 
+/* ===== 우측 버튼 영역 ===== */
 const RightActions = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 0.63vw;
-  margin-right: 20px;
+  margin-right: 1vw;
 `;
 
-function HeaderBar({ children }) {
+function HeaderBar() {
   const location = useLocation();
-  const isMain = location.pathname === "/"; // ✅ 메인페이지 감지
+  const isMain = location.pathname === "/";
   const isAudienceView = location.pathname === "/audience";
+  const isPrep = location.pathname === "/create-presentation";
+  const fileName = location.state?.fileName;
+  const navigate = useNavigate();
+  const { slides, sessionId, features, maxParticipants } = location.state || {};
+  const handleStartSession = () => {
+    navigate("/presentation", {
+      state: { slides, sessionId, features, maxParticipants },
+    });
+  };
 
   return (
     <HeaderWrapper>
+      {/* ===== 로고 ===== */}
       <Logo $isMain={isMain}>
         <img src={BoiniLogo} alt="Boini logo" />
       </Logo>
 
+      {/* ===== 중앙 내용 ===== */}
       {!isMain && (
         <Body>
           {isAudienceView && (
@@ -95,13 +124,21 @@ function HeaderBar({ children }) {
               라이브 진행 중
             </LiveBadge>
           )}
+          {isPrep && <FileName>{fileName || "파일명 없음"}</FileName>}
         </Body>
       )}
 
-      {isAudienceView && (
+      {/* ===== 우측 버튼 ===== */}
+      {(isAudienceView || isPrep) && (
         <RightActions>
           <ShareButton />
-          <ExitButton />
+          {isPrep ? (
+            <StartSessionButton
+              onClick={handleStartSession}
+            />
+          ) : (
+            <ExitButton />
+          )}
         </RightActions>
       )}
     </HeaderWrapper>
