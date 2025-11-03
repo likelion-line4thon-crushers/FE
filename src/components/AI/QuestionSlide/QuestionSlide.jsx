@@ -12,6 +12,7 @@ import faceImage from "../../../assets/images/emoji1_black.svg";
 import rectangleImage from "../../../assets/images/AI/Rectangle.png";
 import ContentBox from "../ContentBox/ContentBox";
 import AITitle from "../AITitle/AITitle";
+import SlideNumber from "../SlideNumber/SlideNumber";
 const QuestionSlide = () => {
   return (
     <QuestionSlideContainer>
@@ -25,7 +26,7 @@ const QuestionSlide = () => {
             title="질문이 가장 많았던 슬라이드"
             variant="image"
             slideImage={rabbitImage}
-            slideNumber={0}
+            slideNumberComponent={<SlideNumber slideNumber={0} />}
             width="auto"
             height="auto"
           />

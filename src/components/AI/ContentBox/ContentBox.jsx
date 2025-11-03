@@ -9,6 +9,7 @@ import {
   UnitText,
   SlideImage,
   SlideNumber,
+  SlideNumberSlot,
   ImageContainer,
   ContentText,
 } from "./ContentBox.styles";
@@ -19,6 +20,7 @@ const ContentBox = ({
   unit = "개",
   slideImage,
   slideNumber,
+  slideNumberComponent,
   content,
   variant,
   width,
@@ -56,8 +58,12 @@ const ContentBox = ({
           <ImageContainer>
             <SlideImage src={slideImage} alt="슬라이드" />
           </ImageContainer>
-          {slideNumber !== undefined && (
-            <SlideNumber>슬라이드 {slideNumber}</SlideNumber>
+          {slideNumberComponent ? (
+            <SlideNumberSlot>{slideNumberComponent}</SlideNumberSlot>
+          ) : (
+            slideNumber !== undefined && (
+              <SlideNumber>슬라이드 {slideNumber}</SlideNumber>
+            )
           )}
         </>
       ) : determinedVariant === "text" && content ? (

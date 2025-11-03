@@ -85,6 +85,12 @@ export const SlideNumber = styled.div`
   color: #333;
 `;
 
+export const SlideNumberSlot = styled.div`
+  position: absolute;
+  bottom: 5px;
+  left: 320px;
+`;
+
 export const ContentText = styled.p`
   font-family: Pretendard;
   font-size: 14px;
