@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import styled, { css } from "styled-components";
 import { useLocation, useNavigate } from "react-router-dom";
 import BoiniLogo from "../../assets/images/Boini_logo.svg";
 import LiveIcon from "../../assets/images/live.png";
+import ShareModal from "../modal/ShareModal";
+import useRoom from "../../hooks/useRoom";
 import {
   ShareButton,
   ExitButton,
@@ -96,52 +98,78 @@ const RightActions = styled.div`
 
 function HeaderBar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isMain = location.pathname === "/";
   const isRating = location.pathname === "/rating";
   const isAiReport = location.pathname === "/ai-report";
   const isAudienceView = location.pathname === "/audience";
   const isPrep = location.pathname === "/create-presentation";
+
   const fileName = location.state?.fileName;
-  const navigate = useNavigate();
   const { slides, sessionId, features, maxParticipants } = location.state || {};
+
+  const [showShareModal, setShowShareModal] = useState(false);
+  const { roomData, loading, initRoom } = useRoom();
+
   const handleStartSession = () => {
     navigate("/presentation", {
       state: { slides, sessionId, features, maxParticipants },
     });
   };
 
+  // === 공유하기 버튼 클릭 시 ===
+  const handleShareClick = async () => {
+    if (!roomData) {
+      await initRoom(slides?.length || 10); // PDF 페이지 수 넘겨줌
+    }
+    setShowShareModal(true);
+  };
+
   return (
-    <HeaderWrapper>
-      {/* ===== 로고 ===== */}
-      <Logo $isMain={isMain || isRating || isAiReport}>
-        <img src={BoiniLogo} alt="Boini logo" />
-      </Logo>
+    <>
+      <HeaderWrapper>
+        {/* ===== 로고 ===== */}
+        <Logo $isMain={isMain || isRating || isAiReport}>
+          <img src={BoiniLogo} alt="Boini logo" />
+        </Logo>
 
-      {/* ===== 중앙 내용 ===== */}
-      {!isMain && (
-        <Body>
-          {isAudienceView && (
-            <LiveBadge>
-              <img src={LiveIcon} alt="live" />
-              라이브 진행 중
-            </LiveBadge>
-          )}
-          {isPrep && <FileName>{fileName || "파일명 없음"}</FileName>}
-        </Body>
-      )}
+        {/* ===== 중앙 내용 ===== */}
+        {!isMain && (
+          <Body>
+            {isAudienceView && (
+              <LiveBadge>
+                <img src={LiveIcon} alt="live" />
+                라이브 진행 중
+              </LiveBadge>
+            )}
+            {isPrep && <FileName>{fileName || "파일명 없음"}</FileName>}
+          </Body>
+        )}
 
-      {/* ===== 우측 버튼 ===== */}
-      {(isAudienceView || isPrep || isAiReport) && (
-        <RightActions>
-          {(isAudienceView || isPrep) && <ShareButton />}
-          {isPrep ? (
-            <StartSessionButton onClick={handleStartSession} />
-          ) : (
-            <ExitButton />
-          )}
-        </RightActions>
+        {/* ===== 우측 버튼 ===== */}
+        {(isAudienceView || isPrep || isAiReport) && (
+          <RightActions>
+            {(isAudienceView || isPrep) && (
+              <ShareButton onClick={handleShareClick} disabled={loading} />
+            )}
+            {isPrep ? (
+              <StartSessionButton onClick={handleStartSession} />
+            ) : (
+              <ExitButton />
+            )}
+          </RightActions>
+        )}
+      </HeaderWrapper>
+
+      {/* ===== 공유 모달 ===== */}
+      {showShareModal && roomData && (
+        <ShareModal
+          sessionLink={roomData.joinUrl}
+          qrBase64={roomData.qrPngBase64}
+          onClose={() => setShowShareModal(false)}
+        />
       )}
-    </HeaderWrapper>
+    </>
   );
 }
 

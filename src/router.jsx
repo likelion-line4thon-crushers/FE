@@ -40,7 +40,7 @@ const router = createBrowserRouter([
   },
 
   {
-    path: "/j/:code",
+    path: "/:code",
     element: <AudienceViewPage />,
   },
 ]);
