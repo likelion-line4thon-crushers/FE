@@ -38,6 +38,11 @@ const router = createBrowserRouter([
       },
     ],
   },
+
+  {
+    path: "/j/:code",
+    element: <AudienceViewPage />,
+  },
 ]);
 
 export default router;

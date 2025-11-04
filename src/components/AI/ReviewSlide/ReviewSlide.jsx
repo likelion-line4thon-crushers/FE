@@ -65,6 +65,18 @@ const ReviewSlide = () => {
             content={
               "• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)"
             }
+            titleStyle={{
+              color: "#434343",
+              fontSize: "20px",
+              fontWeight: "600",
+              fontStyle: "normal",
+            }}
+            contentStyle={{
+              color: "#5C5C5C",
+              fontSize: "24px",
+              fontWeight: "400",
+              fontStyle: "normal",
+            }}
           />
         </RightBoxContainer>
       </TotalContainer>

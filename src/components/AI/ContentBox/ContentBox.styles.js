@@ -34,9 +34,10 @@ export const OrangeLine = styled.div`
 
 export const TitleText = styled.h2`
   font-family: Pretendard;
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
+  font-size: ${(props) => props.$fontSize || "16px"};
+  font-weight: ${(props) => props.$fontWeight || "500"};
+  font-style: ${(props) => props.$fontStyle || "normal"};
+  color: ${(props) => props.$color || "#333"};
   margin: 0;
 `;
 
@@ -101,9 +102,10 @@ export const SlideNumberSlot = styled.div`
 
 export const ContentText = styled.p`
   font-family: Pretendard;
-  font-size: 14px;
-  font-weight: 400;
-  color: #333;
+  font-size: ${(props) => props.$fontSize || "14px"};
+  font-weight: ${(props) => props.$fontWeight || "400"};
+  font-style: ${(props) => props.$fontStyle || "normal"};
+  color: ${(props) => props.$color || "#333"};
   margin: 0;
   line-height: 1.5;
   margin-top: 12px;

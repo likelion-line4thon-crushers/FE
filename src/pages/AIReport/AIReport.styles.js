@@ -25,8 +25,8 @@ export const FooterContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 12px 40px;
-  margin-bottom: 50px;
+
+  margin-bottom: 60px;
 
   img {
     height: 24px;
