@@ -12,7 +12,19 @@ export const Main = styled.div`
   background: #fff;
 `;
 
-/* 상단 집중 유도 바 */
+export const RightContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 180px;
+  height: 30px;
+`;
+export const ToggleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+`;
 export const FocusBar = styled.div`
   display: flex;
   align-self: flex-start;

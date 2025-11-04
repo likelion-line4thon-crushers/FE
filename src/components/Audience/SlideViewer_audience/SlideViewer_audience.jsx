@@ -11,9 +11,12 @@ import {
   WaitingState,
   WaitingImage,
   WaitingText,
+  RightContainer,
+  ToggleContainer,
 } from "./SlideViewer_audience.styles";
 import openeyes from "../../../assets/images/openeyes.png";
 import closeeyes from "../../../assets/images/closeeyes.png";
+import TipIcon from "../../../assets/images/tooltip.png";
 
 const SlideViewer = ({
   slides = [],
@@ -61,14 +64,18 @@ const SlideViewer = ({
   return (
     <Main>
       <FocusBar>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <ToggleContainer>
           <SingleToggleInput
             checked={followPresenter}
             onChange={handleToggleFollowChange}
             disabled={isWaiting}
           />
-          <ToggleText>발표자와 함께 보기</ToggleText>
-        </div>
+          <RightContainer>
+            <ToggleText>발표자와 함께 보기</ToggleText>
+            <img src={TipIcon} alt="tip" style={{ width: 30, height: 50 }} />
+          </RightContainer>
+        </ToggleContainer>
+
         {!isWaiting && (
           <TooltipHoverArea>
             <Tooltip>리액션 스티커 보이기</Tooltip>
