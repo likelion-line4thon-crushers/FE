@@ -29,6 +29,10 @@ const router = createBrowserRouter([
         element: <AudienceViewPage />,
       },
       {
+        path: ":code",
+        element: <AudienceViewPage />,
+      },
+      {
         path: "ai-report",
         element: <AiReportPage />,
       },
@@ -37,11 +41,6 @@ const router = createBrowserRouter([
         element: <RatingPage />,
       },
     ],
-  },
-
-  {
-    path: "/:code",
-    element: <AudienceViewPage />,
   },
 ]);
 
