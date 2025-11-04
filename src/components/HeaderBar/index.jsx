@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import styled, { css } from "styled-components";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useMatch } from "react-router-dom";
 import BoiniLogo from "../../assets/images/Boini_logo.svg";
 import LiveIcon from "../../assets/images/live.png";
 import ShareModal from "../modal/ShareModal";
@@ -104,6 +104,8 @@ function HeaderBar() {
   const isAiReport = location.pathname === "/ai-report";
   const isAudienceView = location.pathname === "/audience";
   const isPrep = location.pathname === "/create-presentation";
+  const isCodeRoute = Boolean(useMatch(":code"));
+  const isAudienceLike = isAudienceView || isCodeRoute;
 
   const fileName = location.state?.fileName;
   const { slides, sessionId, features, maxParticipants } = location.state || {};
@@ -136,7 +138,7 @@ function HeaderBar() {
         {/* ===== 중앙 내용 ===== */}
         {!isMain && (
           <Body>
-            {isAudienceView && (
+            {isAudienceLike && (
               <LiveBadge>
                 <img src={LiveIcon} alt="live" />
                 라이브 진행 중
@@ -147,9 +149,9 @@ function HeaderBar() {
         )}
 
         {/* ===== 우측 버튼 ===== */}
-        {(isAudienceView || isPrep || isAiReport) && (
+        {(isAudienceLike || isPrep || isAiReport) && (
           <RightActions>
-            {(isAudienceView || isPrep) && (
+            {(isAudienceLike || isPrep) && (
               <ShareButton onClick={handleShareClick} disabled={loading} />
             )}
             {isPrep ? (
