@@ -53,12 +53,24 @@ const QuestionSlide = () => {
         <RightBoxContainer>
           <ContentBox
             title="받았던 질문들"
+            titleStyle={{
+              color: "#434343",
+              fontSize: "20px",
+              fontWeight: "600",
+              fontStyle: "normal",
+            }}
             content={
               "• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)\n• (질문 내용)"
             }
             variant="text"
             width="auto"
             height="760px"
+            contentStyle={{
+              color: "#5C5C5C",
+              fontSize: "24px",
+              fontWeight: "400",
+              fontStyle: "normal",
+            }}
           />
         </RightBoxContainer>
       </TotalContainer>

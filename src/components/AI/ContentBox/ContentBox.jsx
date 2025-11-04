@@ -29,6 +29,8 @@ const ContentBox = ({
   slideImageWidth,
   slideImageHeight,
   children,
+  contentStyle,
+  titleStyle,
 }) => {
   let determinedVariant = variant;
   if (!determinedVariant) {
@@ -57,7 +59,14 @@ const ContentBox = ({
     >
       <TopSection>
         <OrangeLine />
-        <TitleText>{title}</TitleText>
+        <TitleText
+          $color={titleStyle?.color}
+          $fontSize={titleStyle?.fontSize}
+          $fontWeight={titleStyle?.fontWeight}
+          $fontStyle={titleStyle?.fontStyle}
+        >
+          {title}
+        </TitleText>
       </TopSection>
       {determinedVariant === "custom" && children ? (
         children
@@ -80,7 +89,14 @@ const ContentBox = ({
           )}
         </>
       ) : determinedVariant === "text" && content ? (
-        <ContentText>{content}</ContentText>
+        <ContentText
+          $color={contentStyle?.color}
+          $fontSize={contentStyle?.fontSize}
+          $fontWeight={contentStyle?.fontWeight}
+          $fontStyle={contentStyle?.fontStyle}
+        >
+          {content}
+        </ContentText>
       ) : (
         <BottomSection>
           <NumberDisplay>{value}</NumberDisplay>
