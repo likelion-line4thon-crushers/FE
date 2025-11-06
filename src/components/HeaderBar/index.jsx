@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import styled, { css } from "styled-components";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useMatch } from "react-router-dom";
 import BoiniLogo from "../../assets/images/Boini_logo.svg";
 import LiveIcon from "../../assets/images/live.png";
 import ShareModal from "../modal/ShareModal";
@@ -11,6 +11,7 @@ import {
   StartSessionButton,
 } from "../common/HeaderButtons";
 
+/* ===== 헤더 전체 래퍼 ===== */
 const HeaderWrapper = styled.header`
   width: 100vw;
   height: 5.2vh;
@@ -26,6 +27,7 @@ const HeaderWrapper = styled.header`
   box-sizing: border-box;
 `;
 
+/* ===== 로고 ===== */
 const Logo = styled.div`
   display: flex;
   align-items: center;
@@ -47,6 +49,7 @@ const Logo = styled.div`
         `}
 `;
 
+/* ===== 중앙 영역 ===== */
 const Body = styled.div`
   flex: 1;
   display: flex;
@@ -54,6 +57,7 @@ const Body = styled.div`
   justify-content: center;
 `;
 
+/* ===== 파일명 표시 ===== */
 const FileName = styled.div`
   font-size: clamp(12px, 0.95vw, 18px);
   color: #5c5c5c;
@@ -64,6 +68,7 @@ const FileName = styled.div`
   max-width: 50vw;
 `;
 
+/* ===== 라이브 뱃지 ===== */
 const LiveBadge = styled.div`
   display: inline-flex;
   align-items: center;
@@ -83,6 +88,7 @@ const LiveBadge = styled.div`
   }
 `;
 
+/* ===== 우측 버튼 영역 ===== */
 const RightActions = styled.div`
   display: inline-flex;
   align-items: center;
@@ -100,6 +106,8 @@ function HeaderBar() {
   const isAudienceView = location.pathname === "/audience";
   const isPrep = location.pathname === "/create-presentation";
   const isPresenter = location.pathname === "/presentation";
+  const isCodeRoute = Boolean(useMatch(":code"));
+  const isAudienceLike = isAudienceView || isCodeRoute;
 
   const fileName = location.state?.fileName;
   const { slides, sessionId, features, maxParticipants } = location.state || {};
