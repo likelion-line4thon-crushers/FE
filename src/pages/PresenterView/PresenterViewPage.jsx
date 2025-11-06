@@ -1,11 +1,12 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+// src/pages/Presentation/PresenterViewPage.jsx
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "../../components/Layout/LayoutContainer";
 import SidebarSlides from "../../components/SidebarSlides";
 import SlideViewer from "../../components/SlideViewer";
 import QuestionList from "../../components/QuestionList";
 
-// SettingsPanel 스타일과 구성 요소 재사용
+// SettingsPanel 스타일 재사용
 import {
     PanelWrapper,
     Section,
@@ -23,43 +24,116 @@ import AudienceSVG from "../../assets/images/people.svg";
 
 const PresenterViewPage = () => {
     const navigate = useNavigate();
-    const [currentSlide, setCurrentSlide] = useState(0);
+    const location = useLocation();
+    const { roomId, deckId, totalPages } = location.state || {};
 
-    // ✅ UI 테스트용 더미 슬라이드 이미지
-    const dummySlides = [
-        "https://picsum.photos/seed/slide1/1280/720",
-        "https://picsum.photos/seed/slide2/1280/720",
-        "https://picsum.photos/seed/slide3/1280/720",
-        "https://picsum.photos/seed/slide4/1280/720",
-    ];
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [thumbnails, setThumbnails] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    // ✅ 서버 이미지 경로 직접 조합해서 불러오기
+    useEffect(() => {
+        if (!roomId || !deckId || !totalPages) {
+            console.warn("⚠️ [PresenterViewPage] 필수 파라미터 누락:", {
+                roomId,
+                deckId,
+                totalPages,
+            });
+            setLoading(false);
+            return;
+        }
+
+        const loadSlides = async () => {
+            try {
+                console.log("🖼️ [PresenterViewPage] 슬라이드 경로 생성 시작:", {
+                    roomId,
+                    deckId,
+                    totalPages,
+                });
+
+                // ✅ totalPages만큼 슬라이드 경로 생성
+                const slideUrls = Array.from({ length: totalPages }, (_, i) => ({
+                    page: i + 1,
+                    thumbnailUrl: `/api/presentations/${roomId}/${deckId}/pages/${i + 1
+                        }?ext=png`,
+                }));
+
+                setThumbnails(slideUrls);
+                console.log("✅ [PresenterViewPage] 슬라이드 URL 자동 생성 완료:", {
+                    slideCount: slideUrls.length,
+                });
+            } catch (err) {
+                console.error("❌ [PresenterViewPage] 슬라이드 생성 실패:", err);
+                setThumbnails([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadSlides();
+    }, [roomId, deckId, totalPages]);
 
     const handleEndSession = () => {
         alert("세션이 종료되었습니다!");
         navigate("/");
     };
 
+    // ✅ 로딩 중일 때 표시
+    if (loading) {
+        return (
+            <Layout>
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        height: "100vh",
+                    }}
+                >
+                    <p>슬라이드 로딩 중...</p>
+                </div>
+            </Layout>
+        );
+    }
+
+    // ✅ 썸네일이 없을 때 표시
+    if (!thumbnails.length) {
+        return (
+            <Layout>
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        height: "100vh",
+                    }}
+                >
+                    <p>슬라이드를 불러올 수 없습니다.</p>
+                </div>
+            </Layout>
+        );
+    }
+
     return (
         <Layout>
-            {/* 좌측: 슬라이드 썸네일 */}
+            {/* 🔹 좌측: 슬라이드 썸네일 리스트 */}
             <SidebarSlides
-                slides={dummySlides}
+                slides={thumbnails}
                 currentSlide={currentSlide}
                 setCurrentSlide={setCurrentSlide}
-                participantCount={3}
-                maxParticipants={50}
             />
 
-            {/* 중앙: 현재 슬라이드 */}
+            {/* 🔹 중앙: 현재 슬라이드 */}
             <SlideViewer
-                slides={dummySlides}
+                slides={thumbnails}
                 currentSlide={currentSlide}
                 setCurrentSlide={setCurrentSlide}
                 mode="present"
             />
 
-            {/* 우측: 빠른 설정 + 실시간 질문 */}
+            {/* 🔹 우측: 빠른 설정 + 실시간 질문 */}
             <PanelWrapper>
-                {/* 🧩 빠른 설정 섹션 */}
+                {/* === 빠른 설정 섹션 === */}
                 <Section>
                     <Title>빠른 설정</Title>
                     <AudienceCountWrapper>
@@ -88,7 +162,7 @@ const PresenterViewPage = () => {
                     </QuickTogglesGrid>
                 </Section>
 
-                {/* 실시간 질문 섹션 (LiveWaitingBox → QuestionList 대체) */}
+                {/* === 실시간 질문 섹션 === */}
                 <Section>
                     <Title>실시간 질문</Title>
                     <QuestionList onEndSession={handleEndSession} />
@@ -100,7 +174,7 @@ const PresenterViewPage = () => {
 
 export default PresenterViewPage;
 
-// ✅ SettingsPanel의 toggle 요소 재활용
+// ✅ 빠른 설정 토글 UI
 const QuickSettingToggle = ({ label, description }) => (
     <ToggleBox>
         <ToggleLabel>{label}</ToggleLabel>

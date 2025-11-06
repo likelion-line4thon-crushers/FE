@@ -122,13 +122,22 @@ const CloseBtn = styled.button`
 `;
 
 /* ============ 컴포넌트 ============ */
-const ShareModal = ({ totalPages = 10, onClose }) => {
+const ShareModal = ({ roomData, totalPages = 10, onClose }) => {
     const [sessionLink, setSessionLink] = useState("");
     const [qrBase64, setQrBase64] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
     useEffect(() => {
+        // roomData가 이미 전달된 경우 (CreateSessionPage에서 생성된 방 사용)
+        if (roomData) {
+            setSessionLink(roomData.joinUrl);
+            setQrBase64(roomData.qrPngBase64);
+            setLoading(false);
+            return;
+        }
+
+        // roomData가 없을 때만 새로 방 생성 (다른 곳에서 사용할 수도 있음)
         const initRoom = async () => {
             try {
                 const data = await createRoom(totalPages);
@@ -142,7 +151,7 @@ const ShareModal = ({ totalPages = 10, onClose }) => {
             }
         };
         initRoom();
-    }, [totalPages]);
+    }, [roomData, totalPages]);
 
     const handleCopy = () => {
         if (!sessionLink) return;
