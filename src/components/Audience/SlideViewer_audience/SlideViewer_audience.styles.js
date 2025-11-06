@@ -22,14 +22,14 @@ export const RightContainer = styled.div`
 export const ToggleContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   position: relative;
 `;
 export const FocusBar = styled.div`
   display: flex;
   align-self: flex-start;
   justify-content: flex-start;
-  gap: 900px;
+  gap: 850px;
 `;
 
 export const SingleToggleInput = styled(ToggleInput)`

@@ -13,7 +13,7 @@ export const PanelWrapper = styled.div`
 export const HeaderBox = styled.div`
   display: flex;
   height: 3.52vh;
-  width: 17.03vw;
+  width: 15.78vw;
   padding: 0.74vh 0 0.74vh 1.25vw;
   align-items: center;
   border: 1px solid #eaeaea;
