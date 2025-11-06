@@ -4,7 +4,7 @@ export const PanelWrapper = styled.div`
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   width: 15.78vw;
-  height: 98.15vh;
+  height: 96vh;
   display: flex;
   flex-direction: column;
   border: 1px solid #eaeaea;
@@ -188,7 +188,7 @@ export const QuestionInputContainer = styled.div`
   display: flex;
   width: 12.14vw;
   height: 4.44vh;
-  padding: 10px 1px;
+  padding: 0 1px;
   justify-content: ${(props) =>
     props.$isInputting ? "center" : "space-between"};
   align-items: center;
@@ -213,10 +213,12 @@ export const QuestionInput = styled.textarea`
   resize: none;
   min-height: 1.85vh;
   max-height: 4.7vh;
-  line-height: 1.4;
-  padding: 10px;
+  line-height: 20px;
+  padding: 8px 10px;
   height: 100%;
   text-align: left;
+  box-sizing: border-box;
+  overflow: hidden;
 
   &::placeholder {
     color: #999;
@@ -234,7 +236,7 @@ export const QuestionInput = styled.textarea`
 
   &:placeholder-shown {
     text-align: left;
-    line-height: 4.44vh;
+    line-height: 20px;
 
     margin-left: 5px;
   }

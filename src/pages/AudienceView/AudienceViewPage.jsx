@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import AudiencePanel from "../../components/Audience/AudiencePanel";
 import SidebarSlides from "../../components/SidebarSlides";
 import {
@@ -9,8 +10,11 @@ import {
 import RabbitSVG from "../../assets/images/rabbit.jpg";
 import SlideViewer from "../../components/Audience/SlideViewer_audience/SlideViewer_audience";
 import EmojiPanel from "../../components/Audience/EmojiPanel";
+import { joinRoom } from "../../services/roomService";
 
 const AudienceViewPage = () => {
+  const { code } = useParams();
+
   // 임시 슬라이드 데이터
   const [slides] = useState([
     RabbitSVG,
@@ -25,6 +29,25 @@ const AudienceViewPage = () => {
   const [selectedEmoji, setSelectedEmoji] = useState(null);
   const [stampsBySlide, setStampsBySlide] = useState({});
   const [showStamps, setShowStamps] = useState(true);
+
+  // 코드로 방 입장 처리
+  useEffect(() => {
+    if (code) {
+      const handleJoinRoom = async () => {
+        try {
+          const joinData = await joinRoom(code);
+
+          window.roomId = joinData.roomId;
+          window.audienceId = joinData.audienceId;
+          window.audienceToken = joinData.audienceToken;
+          console.log("방 입장 성공:", joinData);
+        } catch (err) {
+          alert("방 입장에 실패했습니다. 코드를 확인해주세요.");
+        }
+      };
+      handleJoinRoom();
+    }
+  }, [code]);
 
   const handleSelectEmoji = (emoji) => setSelectedEmoji(emoji);
 
