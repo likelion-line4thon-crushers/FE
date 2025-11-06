@@ -20,7 +20,8 @@
     "react-router-dom": "^6.8.1",
     "recharts": "^3.2.1",
     "sockjs-client": "^1.6.1",
-    "styled-components": "^6.1.19"
+    "styled-components": "^6.1.19",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

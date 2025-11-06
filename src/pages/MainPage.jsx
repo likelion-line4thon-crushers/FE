@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styled, { css } from "styled-components";
-import BoiniSymbol from "../assets/images/Boini_logo.svg";
 import TitleSVG from "../assets/images/title.svg";
 import Emoji1 from "../assets/images/emoji1.svg";
 import Emoji2 from "../assets/images/emoji2.svg";

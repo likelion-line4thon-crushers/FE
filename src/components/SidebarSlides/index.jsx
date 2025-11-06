@@ -36,7 +36,7 @@ const SidebarSlides = ({
             {isWaiting ? (
               <SlidePlaceholder />
             ) : (
-              <SlideImage src={slide} alt={`슬라이드 ${i + 1}`} />
+              <SlideImage src={slide.thumbnailUrl || slide} alt={`슬라이드 ${i + 1}`} />
             )}
             {/* <SlideIndex>{i + 1}</SlideIndex> */}
             <SlideIndex $active={!isWaiting && i === currentSlide}>

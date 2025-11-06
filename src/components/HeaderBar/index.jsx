@@ -99,11 +99,13 @@ const RightActions = styled.div`
 function HeaderBar() {
   const location = useLocation();
   const navigate = useNavigate();
+
   const isMain = location.pathname === "/";
   const isRating = location.pathname === "/rating";
   const isAiReport = location.pathname === "/ai-report";
   const isAudienceView = location.pathname === "/audience";
   const isPrep = location.pathname === "/create-presentation";
+  const isPresenter = location.pathname === "/presentation";
   const isCodeRoute = Boolean(useMatch(":code"));
   const isAudienceLike = isAudienceView || isCodeRoute;
 
@@ -113,16 +115,25 @@ function HeaderBar() {
   const [showShareModal, setShowShareModal] = useState(false);
   const { roomData, loading, initRoom } = useRoom();
 
-  const handleStartSession = () => {
-    navigate("/presentation", {
-      state: { slides, sessionId, features, maxParticipants },
-    });
+  const handleSessionAction = () => {
+    if (isPrep) {
+      navigate("/presentation", {
+        state: {
+          slides,
+          sessionId,
+          features,
+          maxParticipants,
+          fileName,
+        },
+      });
+    } else if (isPresenter) {
+      navigate("/");
+    }
   };
 
-  // === 공유하기 버튼 클릭 시 ===
   const handleShareClick = async () => {
     if (!roomData) {
-      await initRoom(slides?.length || 10); // PDF 페이지 수 넘겨줌
+      await initRoom(slides?.length || 10);
     }
     setShowShareModal(true);
   };
@@ -130,40 +141,41 @@ function HeaderBar() {
   return (
     <>
       <HeaderWrapper>
-        {/* ===== 로고 ===== */}
         <Logo $isMain={isMain || isRating || isAiReport}>
           <img src={BoiniLogo} alt="Boini logo" />
         </Logo>
 
-        {/* ===== 중앙 내용 ===== */}
         {!isMain && (
           <Body>
-            {isAudienceLike && (
+            {isAudienceView && (
               <LiveBadge>
                 <img src={LiveIcon} alt="live" />
                 라이브 진행 중
               </LiveBadge>
             )}
-            {isPrep && <FileName>{fileName || "파일명 없음"}</FileName>}
+            {(isPrep || isPresenter) && (
+              <FileName>{fileName || "파일명 없음"}</FileName>
+            )}
           </Body>
         )}
 
-        {/* ===== 우측 버튼 ===== */}
-        {(isAudienceLike || isPrep || isAiReport) && (
+        {(isAudienceView || isPrep || isPresenter || isAiReport) && (
           <RightActions>
-            {(isAudienceLike || isPrep) && (
+            {(isAudienceView || isPrep || isPresenter) && (
               <ShareButton onClick={handleShareClick} disabled={loading} />
             )}
-            {isPrep ? (
-              <StartSessionButton onClick={handleStartSession} />
-            ) : (
-              <ExitButton />
+
+            {(isPrep || isPresenter) && (
+              <StartSessionButton onClick={handleSessionAction}>
+                {isPrep ? "세션 시작" : "세션 종료"}
+              </StartSessionButton>
             )}
+
+            {isAudienceView && <ExitButton />}
           </RightActions>
         )}
       </HeaderWrapper>
 
-      {/* ===== 공유 모달 ===== */}
       {showShareModal && roomData && (
         <ShareModal
           sessionLink={roomData.joinUrl}
