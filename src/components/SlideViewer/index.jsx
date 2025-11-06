@@ -86,8 +86,9 @@ const SlideViewer = ({
 
       {/* 🔹 슬라이드 */}
       <SlideContainer
-        src={slides[currentSlide]}
+        src={slides[currentSlide]?.thumbnailUrl || slides[currentSlide]}
         alt={`슬라이드 ${currentSlide + 1}`}
+        style={{ objectFit: "contain" }}
       />
     </Main>
   );
