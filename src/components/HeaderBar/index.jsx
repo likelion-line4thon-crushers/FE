@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled, { css } from "styled-components";
 import { useLocation, useNavigate, useMatch } from "react-router-dom";
 import BoiniLogo from "../../assets/images/Boini_logo.svg";
 import LiveIcon from "../../assets/images/live.png";
 import ShareModal from "../modal/ShareModal";
-import useRoom from "../../hooks/useRoom";
 import {
   ShareButton,
   ExitButton,
@@ -96,7 +95,7 @@ const RightActions = styled.div`
   margin-right: 1vw;
 `;
 
-function HeaderBar() {
+function HeaderBar({ roomData: propRoomData, totalPages }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -104,26 +103,44 @@ function HeaderBar() {
   const isRating = location.pathname === "/rating";
   const isAiReport = location.pathname === "/ai-report";
   const isAudienceView = location.pathname === "/audience";
-  const isPrep = location.pathname === "/create-presentation";
-  const isPresenter = location.pathname === "/presentation";
+  const isPrep = location.pathname.startsWith("/create-presentation");
+  const isPresenter = location.pathname.startsWith("/presentation");
   const isCodeRoute = Boolean(useMatch(":code"));
-  const isAudienceLike = isAudienceView || isCodeRoute;
-
-  const fileName = location.state?.fileName;
-  const { slides, sessionId, features, maxParticipants } = location.state || {};
 
   const [showShareModal, setShowShareModal] = useState(false);
-  const { roomData, loading, initRoom } = useRoom();
+  const [roomData, setRoomData] = useState(propRoomData || null);
+  const [fileName, setFileName] = useState(location.state?.fileName || "");
 
+  /* ✅ 새로고침 또는 state 유실 시 sessionStorage 복구 */
+  useEffect(() => {
+    if (!roomData) {
+      const stored = sessionStorage.getItem("boini_room") || sessionStorage.getItem("roomData");
+      if (stored) {
+        setRoomData(JSON.parse(stored));
+      }
+    }
+  }, [roomData]);
+
+  useEffect(() => {
+    if (!fileName && location.state?.fileName) {
+      setFileName(location.state.fileName);
+    }
+  }, [location.state]);
+
+  /* ✅ 세션 시작 / 종료 버튼 */
   const handleSessionAction = () => {
     if (isPrep) {
-      navigate("/presentation", {
+      if (!roomData?.roomId || !roomData?.deckId) {
+        alert("⚠️ 방 정보가 아직 준비되지 않았습니다.");
+        return;
+      }
+
+      navigate(`/presentation/${roomData.roomId}`, {
         state: {
-          slides,
-          sessionId,
-          features,
-          maxParticipants,
           fileName,
+          roomId: roomData.roomId,
+          deckId: roomData.deckId,
+          totalPages: totalPages || 0,
         },
       });
     } else if (isPresenter) {
@@ -131,9 +148,11 @@ function HeaderBar() {
     }
   };
 
-  const handleShareClick = async () => {
-    if (!roomData) {
-      await initRoom(slides?.length || 10);
+
+  const handleShareClick = () => {
+    if (!roomData || !roomData.joinUrl) {
+      alert("⚠️ 방 정보가 없습니다. 발표 준비 완료 후 다시 시도해주세요.");
+      return;
     }
     setShowShareModal(true);
   };
@@ -162,7 +181,7 @@ function HeaderBar() {
         {(isAudienceView || isPrep || isPresenter || isAiReport) && (
           <RightActions>
             {(isAudienceView || isPrep || isPresenter) && (
-              <ShareButton onClick={handleShareClick} disabled={loading} />
+              <ShareButton onClick={handleShareClick} />
             )}
 
             {(isPrep || isPresenter) && (
@@ -178,8 +197,7 @@ function HeaderBar() {
 
       {showShareModal && roomData && (
         <ShareModal
-          sessionLink={roomData.joinUrl}
-          qrBase64={roomData.qrPngBase64}
+          roomData={roomData}
           onClose={() => setShowShareModal(false)}
         />
       )}

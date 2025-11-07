@@ -21,7 +21,11 @@ const router = createBrowserRouter([
         element: <CreateSessionPage />,
       },
       {
-        path: "presentation",
+        path: "create-presentation/:roomId",
+        element: <CreateSessionPage />,
+      },
+      {
+        path: "presentation/:roomId",
         element: <PresenterViewPage />,
       },
       {

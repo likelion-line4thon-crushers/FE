@@ -1,4 +1,3 @@
-// src/components/Layout/Layout.jsx
 import React from "react";
 import HeaderBar from "../HeaderBar";
 import { LayoutContainer } from "./Layout.styles";
@@ -7,6 +6,7 @@ const Layout = ({ children, headerProps = {} }) => {
     return (
         <LayoutContainer style={{ flexDirection: "column" }}>
             <HeaderBar
+                roomData={headerProps.roomData} 
                 roomId={headerProps.roomId}
                 deckId={headerProps.deckId}
                 totalPages={headerProps.totalPages}

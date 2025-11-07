@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import usePdfConverter from "../../hooks/usePdfConverter";
 import { createRoom } from "../../services/roomService";
+import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
 import api from "../../services/api";
-
-// 🔹 HeaderBar 포함 Layout 사용 (새로운 Layout.jsx)
 import Layout from "../../components/Layout/Layout";
-
 import SidebarSlides from "../../components/SidebarSlides";
 import SlideViewer from "../../components/SlideViewer";
 import SettingsPanel from "../../components/SettingsPanel";
@@ -17,77 +15,116 @@ import ShareModal from "../../components/modal/ShareModal";
 const PresentationPrepPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { roomId: roomIdParam } = useParams();
   const { pdfFile } = location.state || {};
 
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [roomId, setRoomId] = useState(null);
   const [roomData, setRoomData] = useState(null);
-  const [deckId] = useState(uuidv4());
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [deckId, setDeckId] = useState(null);
+  const [slideImageFiles, setSlideImageFiles] = useState([]);
+  const [slideUrls, setSlideUrls] = useState([]);
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
-  const { slides, setSlides, convertPdfToImages } = usePdfConverter();
+  const hasInitializedRef = useRef(false);
 
+  const { convertPdfToImages } = usePdfConverter();
+
+  // 1. PDF → 이미지 변환
   useEffect(() => {
     if (pdfFile) {
-      convertPdfToImages(pdfFile);
+      convertPdfToImages(pdfFile).then(setSlideImageFiles);
     } else {
       navigate("/");
     }
-  }, [pdfFile]);
+  }, [pdfFile, navigate, convertPdfToImages]);
 
+  // 2. 이미지 업로드 + 방 생성
   useEffect(() => {
-    if (!slides || slides.length === 0) return;
+    if (!slideImageFiles || slideImageFiles.length === 0) {
+      return;
+    }
 
-    const initRoom = async () => {
+    if (hasInitializedRef.current) {
+      return;
+    }
+
+    const initRoomAndUpload = async () => {
       try {
-        const room = await createRoom(slides.length);
-        setRoomId(room.roomId);
+        hasInitializedRef.current = true;
+        console.log("📄 변환된 슬라이드 개수:", slideImageFiles.length);
+
+        // 1️⃣ 방 생성
+        const room = await createRoom(slideImageFiles.length);
+        console.log("🏠 방 생성 완료:", room);
+        const { roomId, deckId: serverDeckId } = room;
+        setDeckId(serverDeckId);
+
+        // 2️⃣ 이미지 업로드 (API 명세에 맞게 한번에 전송)
+        const formData = new FormData();
+        slideImageFiles.forEach((dataUrl, idx) => {
+          const blob = dataURLtoBlob(dataUrl);
+          // API 명세에 따라 필드명을 'files'로 지정
+          formData.append("files", blob, `page_${idx + 1}.png`);
+        });
+
+        const uploadRes = await api.post(
+          `/api/presentations/${roomId}/${serverDeckId}/pages`,
+          formData
+        );
+        console.log("📤 슬라이드 업로드 완료:", uploadRes.data);
+
+        // 3️⃣ Presigned URL로 원본 슬라이드 불러오기
+        console.log("🔹 fetchAllOriginalSlideUrls 호출 인자:", {
+          roomId,
+          deckId: serverDeckId,
+          totalPages: slideImageFiles.length,
+        });
+        const originalUrls = await fetchAllOriginalSlideUrls(
+          roomId,
+          serverDeckId,
+          slideImageFiles.length
+        );
+        
+
+        // 4️⃣ 상태 저장 + sessionStorage
+        setSlideUrls(originalUrls);
         setRoomData(room);
-        console.log("🏠 방 생성 완료:", room.roomId);
-      } catch {
-        alert("방 생성 중 오류가 발생했습니다.");
-      }
-    };
+        sessionStorage.setItem(
+          "boini_room",
+          JSON.stringify({ ...room, deckId: serverDeckId })
+        );
+        sessionStorage.setItem(
+          "roomData",
+          JSON.stringify({ ...room, deckId: serverDeckId })
+        );
 
-    initRoom();
-  }, [slides.length, deckId]);
+        if (roomIdParam !== roomId) {
+          navigate(`/create-presentation/${roomId}`, {
+            replace: true,
+            state: location.state,
+          });
+        }
 
-  useEffect(() => {
-    const uploadSlides = async () => {
-      if (!roomId || !slides || slides.length === 0) return;
-
-      const formData = new FormData();
-      slides.forEach((dataUrl, idx) => {
-        const blob = dataURLtoBlob(dataUrl);
-        formData.append("files", blob, `page_${idx + 1}.png`);
-      });
-
-      try {
-        const res = await api.post(`/api/presentations/${roomId}/${deckId}/pages`, formData);
-        console.log(" 업로드 성공:", res.data);
-
-        const totalPages = res.data?.data?.totalPages || slides.length;
-        const slideUrls = Array.from({ length: totalPages }, (_, i) => ({
-          page: i + 1,
-          thumbnailUrl: `/api/presentations/${roomId}/${deckId}/pages/${i + 1}?ext=png`,
-        }));
-
-        setSlides(slideUrls);
-        console.log("서버 경로 기반 slides 생성 완료:", slideUrls);
+        console.log(" 세션 초기화 완료");
       } catch (err) {
-        console.error("❌ 슬라이드 업로드 실패:", err);
+        hasInitializedRef.current = false;
+        console.error("❌ [initRoomAndUpload] 세션 초기화 실패:", {
+          name: err.name,
+          message: err.message,
+          stack: err.stack,
+          response: err.response?.data,
+        });
       }
     };
 
-    uploadSlides();
-  }, [roomId, slides, deckId]);
+    initRoomAndUpload();
+  }, [slideImageFiles, navigate, roomIdParam, pdfFile]);
 
-
+  // 3. 슬라이드 이미지 로딩 확인
   useEffect(() => {
-    if (!slides || slides.length === 0) return;
+    if (!slideUrls || slideUrls.length === 0) return;
 
-    const loadPromises = slides.map((slide) => {
+    const loadPromises = slideUrls.map((slide) => {
       return new Promise((resolve) => {
         const img = new Image();
         img.src = slide.thumbnailUrl || slide;
@@ -100,44 +137,39 @@ const PresentationPrepPage = () => {
       setImagesLoaded(true);
       console.log("🖼️ 모든 슬라이드 이미지 로드 완료");
     });
-  }, [slides]);
+  }, [slideUrls]);
 
-  if (!slides || slides.length === 0 || !imagesLoaded)
+  if (!slideUrls || slideUrls.length === 0 || !imagesLoaded)
     return <LandingPage message="세션 자료 준비 중..." />;
 
   return (
     <Layout
       headerProps={{
-        roomId,
-        deckId,
-        totalPages: slides.length,
+        roomId: roomData?.roomId,
+        deckId: deckId || roomData?.deckId,
+        totalPages: slideUrls.length,
+        roomData,
       }}
     >
       <SidebarSlides
-        slides={slides}
+        slides={slideUrls}
         currentSlide={currentSlide}
         setCurrentSlide={setCurrentSlide}
       />
       <SlideViewer
-        slides={slides}
+        slides={slideUrls}
         currentSlide={currentSlide}
         setCurrentSlide={setCurrentSlide}
         mode="prepare"
       />
       <SettingsPanel />
-
-      {isShareModalOpen && (
-        <ShareModal
-          roomData={roomData}
-          onClose={() => setIsShareModalOpen(false)}
-        />
-      )}
     </Layout>
   );
 };
 
 export default PresentationPrepPage;
 
+// 유틸: dataURL → Blob 변환
 function dataURLtoBlob(dataUrl) {
   const arr = dataUrl.split(",");
   const mime = arr[0].match(/:(.*?);/)[1];
