@@ -7,11 +7,11 @@ import {
   CenterContainer,
   RightPanelContainer,
 } from "./AudienceViewPage.styles";
-import RabbitSVG from "../../assets/images/rabbit.jpg";
 import SlideViewer from "../../components/Audience/SlideViewer_audience/SlideViewer_audience";
 import EmojiPanel from "../../components/Audience/EmojiPanel";
 import { joinRoom } from "../../services/roomService";
 import websocketService from "../../services/websocketService";
+import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
 import interestSelected from "../../assets/icons/Emoji_selected/Interesting_selected.png";
 import surpriseSelected from "../../assets/icons/Emoji_selected/surprising_selected.png";
 import curiousSelected from "../../assets/icons/Emoji_selected/curious_selected.png";
@@ -22,23 +22,18 @@ import sadSelected from "../../assets/icons/Emoji_selected/Sad_selected.png";
 const AudienceViewPage = () => {
   const { code } = useParams();
 
-  // 임시 슬라이드 데이터
-  const [slides] = useState([
-    RabbitSVG,
-    RabbitSVG,
-    RabbitSVG,
-    RabbitSVG,
-    RabbitSVG,
-  ]);
-
+  const [slides, setSlides] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [followPresenter, setFollowPresenter] = useState(true);
   const [selectedEmoji, setSelectedEmoji] = useState(null);
   const [stampsBySlide, setStampsBySlide] = useState({});
   const [showStamps, setShowStamps] = useState(true);
   const [roomId, setRoomId] = useState(null);
+  const [deckId, setDeckId] = useState(null);
+  const [totalPages, setTotalPages] = useState(0);
   const [audienceId, setAudienceId] = useState(null);
   const [wsUrl, setWsUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // 코드로 방 입장 처리
   useEffect(() => {
@@ -52,8 +47,11 @@ const AudienceViewPage = () => {
           window.audienceToken = joinData.audienceToken;
 
           setRoomId(joinData.roomId);
+          setDeckId(joinData.deckId);
+          setTotalPages(joinData.totalPages || 0);
           setAudienceId(joinData.audienceId);
 
+          // WebSocket URL 설정
           let wsUrlValue = joinData.wsUrl;
           if (!wsUrlValue) {
             const apiBaseUrl =
@@ -61,14 +59,40 @@ const AudienceViewPage = () => {
             wsUrlValue = `${apiBaseUrl}/ws/audience`;
           }
           setWsUrl(wsUrlValue);
+
+          setLoading(false);
         } catch (err) {
           console.error("방 입장 실패:", err);
           alert("방 입장에 실패했습니다. 코드를 확인해주세요.");
+          setLoading(false);
         }
       };
       handleJoinRoom();
     }
   }, [code]);
+
+  // 모든 슬라이드 URL 가져오기 (발표자와 동일한 방식)
+  useEffect(() => {
+    if (!roomId || !deckId || !totalPages || loading) return;
+
+    const loadAllSlideUrls = async () => {
+      try {
+        const urls = await fetchAllOriginalSlideUrls(
+          roomId,
+          deckId,
+          totalPages
+        );
+
+        setSlides(urls);
+      } catch (err) {
+        console.error("[AudienceViewPage] 슬라이드 URL 가져오기 실패:", err);
+        // 에러 발생 시 빈 배열로 설정
+        setSlides([]);
+      }
+    };
+
+    loadAllSlideUrls();
+  }, [roomId, deckId, totalPages, loading]);
 
   useEffect(() => {
     if (!roomId || !audienceId || !wsUrl || !window.audienceToken) return;
@@ -79,8 +103,6 @@ const AudienceViewPage = () => {
         wsUrl,
         window.audienceToken,
         () => {
-          console.log("[WebSocket] 연결 성공");
-
           // 다른 청중의 이모지 반응 구독
           const reactionTopic = `/topic/presentation/${roomId}/reactions`;
           websocketService.subscribe(reactionTopic, (data) => {
@@ -156,7 +178,6 @@ const AudienceViewPage = () => {
       };
 
       websocketService.send(destination, message);
-      console.log("[WebSocket] 이모지 반응 전송:", message);
     }
 
     // 로컬 상태에도 추가
@@ -190,6 +211,7 @@ const AudienceViewPage = () => {
         slides={slides}
         currentSlide={currentSlide}
         setCurrentSlide={setCurrentSlide}
+        isWaiting={loading}
       />
       <CenterContainer>
         <SlideViewer
@@ -202,6 +224,10 @@ const AudienceViewPage = () => {
           onToggleFollow={handleToggleFollowPresenter}
           showStamps={showStamps}
           onToggleShowStamps={handleToggleShowStamps}
+          isWaiting={loading}
+          waitingMessage={
+            loading ? "슬라이드를 불러오는 중..." : "현재 라이브 대기중입니다."
+          }
         />
         <EmojiPanel
           selectedId={selectedEmoji?.id}
