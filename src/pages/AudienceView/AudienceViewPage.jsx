@@ -12,68 +12,13 @@ import EmojiPanel from "../../components/Audience/EmojiPanel";
 import { joinRoom } from "../../services/roomService";
 import websocketService from "../../services/websocketService";
 import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
-import { fetchRoomQuestions } from "../../services/questionService";
+import useAudienceQuestions from "../../hooks/useAudienceQuestions";
 import interestSelected from "../../assets/icons/Emoji_selected/Interesting_selected.png";
 import surpriseSelected from "../../assets/icons/Emoji_selected/surprising_selected.png";
 import curiousSelected from "../../assets/icons/Emoji_selected/curious_selected.png";
 import excitingSelected from "../../assets/icons/Emoji_selected/Exciting_selected.png";
 import angrySelected from "../../assets/icons/Emoji_selected/angry_selected.png";
 import sadSelected from "../../assets/icons/Emoji_selected/Sad_selected.png";
-
-const normalizeQuestion = (rawQuestion) => {
-  if (!rawQuestion || typeof rawQuestion !== "object") return null;
-
-  const id = rawQuestion.id ?? rawQuestion.questionId;
-  if (!id) return null;
-
-  const slideRaw =
-    rawQuestion.slide ??
-    (typeof rawQuestion.slideIndex === "number"
-      ? rawQuestion.slideIndex + 1
-      : undefined);
-  const slideNumber = Number(slideRaw);
-  const slide =
-    Number.isFinite(slideNumber) && slideNumber > 0 ? slideNumber : 1;
-
-  const tsRaw = rawQuestion.ts ?? rawQuestion.timestamp ?? Date.now();
-  const tsNumber = Number(tsRaw);
-  const ts = Number.isFinite(tsNumber) ? tsNumber : Date.now();
-
-  return {
-    id,
-    roomId: rawQuestion.roomId ?? null,
-    slide,
-    audienceId: rawQuestion.audienceId ?? rawQuestion.userId ?? null,
-    content: rawQuestion.content ?? rawQuestion.text ?? "",
-    ts,
-  };
-};
-
-const sortQuestionsAsc = (questions) =>
-  [...questions].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
-
-const upsertQuestion = (questions, incoming) => {
-  if (!incoming) return questions;
-
-  const next = [...questions];
-  const existingIndex = next.findIndex((item) => item.id === incoming.id);
-
-  if (existingIndex >= 0) {
-    next[existingIndex] = incoming;
-  } else {
-    next.push(incoming);
-  }
-
-  return sortQuestionsAsc(next);
-};
-
-const buildQuestionTopics = (roomId) => {
-  if (!roomId) return [];
-
-  const topics = [`/topic/p/${roomId}/public`, `/topic/p/${roomId}/presenter`];
-
-  return [...new Set(topics)];
-};
 
 const AudienceViewPage = () => {
   const { code } = useParams();
@@ -91,11 +36,21 @@ const AudienceViewPage = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loadingSlides, setLoadingSlides] = useState(false);
   const [slidesError, setSlidesError] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [questionsLoading, setQuestionsLoading] = useState(false);
-  const [questionsError, setQuestionsError] = useState(null);
   const [isWebsocketReady, setIsWebsocketReady] = useState(false);
   const questionSubscriptionsRef = useRef([]);
+
+  const {
+    questions,
+    questionsLoading,
+    questionsError,
+    submitQuestion,
+    handleIncomingQuestion,
+    questionTopics,
+  } = useAudienceQuestions({
+    roomId,
+    audienceId,
+    currentSlide,
+  });
 
   const loadSlides = useCallback(
     async ({ signal } = {}) => {
@@ -197,50 +152,6 @@ const AudienceViewPage = () => {
     };
   }, [roomId, deckId, totalPages, loadSlides]);
 
-  const fetchQuestionsFromApi = useCallback(
-    async (options = {}) => {
-      if (!roomId) return [];
-      const list = await fetchRoomQuestions(roomId, options);
-      return list;
-    },
-    [roomId]
-  );
-
-  useEffect(() => {
-    if (!roomId) {
-      setQuestions([]);
-      setQuestionsLoading(false);
-      setQuestionsError(null);
-      return;
-    }
-
-    let cancelled = false;
-    setQuestions([]);
-    setQuestionsLoading(true);
-    setQuestionsError(null);
-
-    fetchQuestionsFromApi()
-      .then((list) => {
-        if (cancelled) return;
-        const normalized = list.map(normalizeQuestion).filter(Boolean);
-        setQuestions(sortQuestionsAsc(normalized));
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        console.error("[AudienceViewPage] 질문 목록 불러오기 실패:", error);
-        setQuestionsError(error);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setQuestionsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId, fetchQuestionsFromApi]);
-
   useEffect(() => {
     if (slides.length === 0) return;
     setCurrentSlide((prev) => {
@@ -253,17 +164,6 @@ const AudienceViewPage = () => {
       return prev;
     });
   }, [slides]);
-
-  const handleQuestionMessage = useCallback((payload) => {
-    const raw = payload?.data ?? payload;
-    const normalized = normalizeQuestion(raw);
-    if (!normalized) return;
-
-    setQuestions((prev) => {
-      const next = upsertQuestion(prev, normalized);
-      return next;
-    });
-  }, []);
 
   useEffect(() => {
     if (!roomId || !audienceId || !wsUrl || !window.audienceToken) return;
@@ -286,11 +186,10 @@ const AudienceViewPage = () => {
           });
           questionSubscriptionsRef.current = [];
 
-          const questionTopics = buildQuestionTopics(roomId);
           questionTopics.forEach((topic) => {
             const unsubscribe = websocketService.subscribe(
               topic,
-              handleQuestionMessage
+              handleIncomingQuestion
             );
             if (typeof unsubscribe === "function") {
               questionSubscriptionsRef.current.push(unsubscribe);
@@ -352,7 +251,7 @@ const AudienceViewPage = () => {
       setIsWebsocketReady(false);
       websocketService.disconnect();
     };
-  }, [roomId, audienceId, wsUrl, handleQuestionMessage]);
+  }, [roomId, audienceId, wsUrl, questionTopics, handleIncomingQuestion]);
 
   const handleSelectEmoji = (emoji) => setSelectedEmoji(emoji);
 
@@ -392,40 +291,6 @@ const AudienceViewPage = () => {
       return next;
     });
   };
-
-  const handleSubmitQuestion = useCallback(
-    async (content) => {
-      const trimmed = (content ?? "").trim();
-      if (!trimmed) {
-        throw new Error("질문 내용을 입력해 주세요.");
-      }
-
-      if (!roomId || !audienceId) {
-        throw new Error("방 정보를 찾을 수 없습니다.");
-      }
-
-      if (!websocketService.getIsConnected()) {
-        throw new Error("연결 상태를 확인한 후 다시 시도해 주세요.");
-      }
-
-      const payload = {
-        audienceId,
-        slide: currentSlide + 1,
-        content: trimmed,
-        ts: Date.now(),
-      };
-
-      const destination = `/app/p/${roomId}/question.create`;
-
-      try {
-        websocketService.send(destination, payload);
-      } catch (error) {
-        console.error("[WebSocket] 질문 전송 실패:", error);
-        throw new Error("질문 전송 중 오류가 발생했습니다.");
-      }
-    },
-    [roomId, audienceId, currentSlide]
-  );
 
   const handleToggleFollowPresenter = (checked) => {
     setFollowPresenter(checked);
@@ -522,7 +387,7 @@ const AudienceViewPage = () => {
           waitingMessage={
             isQuestionListWaiting ? "질문을 불러오는 중입니다." : undefined
           }
-          onSubmitQuestion={handleSubmitQuestion}
+          onSubmitQuestion={submitQuestion}
           canSubmit={isWebsocketReady}
         />
       </RightPanelContainer>
