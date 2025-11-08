@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import AudiencePanel from "../../components/Audience/AudiencePanel";
 import SidebarSlides from "../../components/SidebarSlides";
@@ -29,11 +29,42 @@ const AudienceViewPage = () => {
   const [stampsBySlide, setStampsBySlide] = useState({});
   const [showStamps, setShowStamps] = useState(true);
   const [roomId, setRoomId] = useState(null);
-  const [deckId, setDeckId] = useState(null);
-  const [totalPages, setTotalPages] = useState(0);
   const [audienceId, setAudienceId] = useState(null);
   const [wsUrl, setWsUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [deckId, setDeckId] = useState(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loadingSlides, setLoadingSlides] = useState(false);
+  const [slidesError, setSlidesError] = useState(null);
+
+  const loadSlides = useCallback(
+    async ({ signal } = {}) => {
+      if (!roomId || !deckId || !totalPages) return;
+
+      if (signal?.aborted) return;
+
+      setLoadingSlides(true);
+      setSlidesError(null);
+
+      try {
+        const urls = await fetchAllOriginalSlideUrls(
+          roomId,
+          deckId,
+          totalPages
+        );
+
+        if (signal?.aborted) return;
+        setSlides(urls);
+      } catch (error) {
+        if (signal?.aborted) return;
+        console.error("[AudienceViewPage] 슬라이드 URL 불러오기 실패:", error);
+        setSlidesError(error);
+      } finally {
+        if (signal?.aborted) return;
+        setLoadingSlides(false);
+      }
+    },
+    [roomId, deckId, totalPages]
+  );
 
   // 코드로 방 입장 처리
   useEffect(() => {
@@ -47,11 +78,37 @@ const AudienceViewPage = () => {
           window.audienceToken = joinData.audienceToken;
 
           setRoomId(joinData.roomId);
-          setDeckId(joinData.deckId);
-          setTotalPages(joinData.totalPages || 0);
           setAudienceId(joinData.audienceId);
 
-          // WebSocket URL 설정
+          if (joinData.deckId || joinData.deckID) {
+            setDeckId(joinData.deckId || joinData.deckID);
+          } else if (joinData.deck?.deckId) {
+            setDeckId(joinData.deck.deckId);
+          } else if (joinData.presentation?.deckId) {
+            setDeckId(joinData.presentation.deckId);
+          } else {
+            console.warn(
+              "[AudienceViewPage] deckId가 응답에 없습니다:",
+              joinData
+            );
+          }
+
+          if (
+            joinData.totalPages !== undefined &&
+            joinData.totalPages !== null
+          ) {
+            setTotalPages(Number(joinData.totalPages));
+          } else if (joinData.deck?.totalPages) {
+            setTotalPages(Number(joinData.deck.totalPages));
+          } else if (joinData.presentation?.totalPages) {
+            setTotalPages(Number(joinData.presentation.totalPages));
+          } else {
+            console.warn(
+              "[AudienceViewPage] totalPages가 응답에 없습니다:",
+              joinData
+            );
+          }
+
           let wsUrlValue = joinData.wsUrl;
           if (!wsUrlValue) {
             const apiBaseUrl =
@@ -59,40 +116,38 @@ const AudienceViewPage = () => {
             wsUrlValue = `${apiBaseUrl}/ws/audience`;
           }
           setWsUrl(wsUrlValue);
-
-          setLoading(false);
         } catch (err) {
           console.error("방 입장 실패:", err);
           alert("방 입장에 실패했습니다. 코드를 확인해주세요.");
-          setLoading(false);
         }
       };
       handleJoinRoom();
     }
   }, [code]);
 
-  // 모든 슬라이드 URL 가져오기 (발표자와 동일한 방식)
   useEffect(() => {
-    if (!roomId || !deckId || !totalPages || loading) return;
+    if (!roomId || !deckId || !totalPages) return;
 
-    const loadAllSlideUrls = async () => {
-      try {
-        const urls = await fetchAllOriginalSlideUrls(
-          roomId,
-          deckId,
-          totalPages
-        );
+    const controller = new AbortController();
+    loadSlides({ signal: controller.signal });
 
-        setSlides(urls);
-      } catch (err) {
-        console.error("[AudienceViewPage] 슬라이드 URL 가져오기 실패:", err);
-        // 에러 발생 시 빈 배열로 설정
-        setSlides([]);
-      }
+    return () => {
+      controller.abort();
     };
+  }, [roomId, deckId, totalPages, loadSlides]);
 
-    loadAllSlideUrls();
-  }, [roomId, deckId, totalPages, loading]);
+  useEffect(() => {
+    if (slides.length === 0) return;
+    setCurrentSlide((prev) => {
+      if (prev >= slides.length) {
+        return slides.length - 1;
+      }
+      if (prev < 0) {
+        return 0;
+      }
+      return prev;
+    });
+  }, [slides]);
 
   useEffect(() => {
     if (!roomId || !audienceId || !wsUrl || !window.audienceToken) return;
@@ -103,6 +158,8 @@ const AudienceViewPage = () => {
         wsUrl,
         window.audienceToken,
         () => {
+          console.log("[WebSocket] 연결 성공");
+
           // 다른 청중의 이모지 반응 구독
           const reactionTopic = `/topic/presentation/${roomId}/reactions`;
           websocketService.subscribe(reactionTopic, (data) => {
@@ -178,6 +235,7 @@ const AudienceViewPage = () => {
       };
 
       websocketService.send(destination, message);
+      console.log("[WebSocket] 이모지 반응 전송:", message);
     }
 
     // 로컬 상태에도 추가
@@ -204,6 +262,18 @@ const AudienceViewPage = () => {
     setCurrentSlide(slideIndex);
   };
 
+  const handleRetryFetchSlides = () => {
+    if (!roomId || !deckId || !totalPages) return;
+    loadSlides();
+  };
+
+  const isSlidesLoading = loadingSlides && slides.length === 0;
+  const hasSlidesError = !loadingSlides && !!slidesError && slides.length === 0;
+  const showSlidesPlaceholder = isSlidesLoading || hasSlidesError;
+  const waitingMessage = hasSlidesError
+    ? "슬라이드를 불러오는 중 오류가 발생했습니다."
+    : "슬라이드를 불러오는 중입니다.";
+
   return (
     <PageContainer>
       {/* 왼쪽 슬라이드 바 */}
@@ -211,7 +281,8 @@ const AudienceViewPage = () => {
         slides={slides}
         currentSlide={currentSlide}
         setCurrentSlide={setCurrentSlide}
-        isWaiting={loading}
+        isWaiting={showSlidesPlaceholder}
+        placeholderCount={totalPages || 10}
       />
       <CenterContainer>
         <SlideViewer
@@ -224,11 +295,37 @@ const AudienceViewPage = () => {
           onToggleFollow={handleToggleFollowPresenter}
           showStamps={showStamps}
           onToggleShowStamps={handleToggleShowStamps}
-          isWaiting={loading}
-          waitingMessage={
-            loading ? "슬라이드를 불러오는 중..." : "현재 라이브 대기중입니다."
-          }
+          isWaiting={showSlidesPlaceholder}
+          waitingMessage={showSlidesPlaceholder ? waitingMessage : undefined}
         />
+        {hasSlidesError && (
+          <div
+            style={{
+              marginTop: "16px",
+              color: "#d14343",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span>슬라이드를 불러오는 중 문제가 발생했습니다.</span>
+            <button
+              type="button"
+              onClick={handleRetryFetchSlides}
+              style={{
+                padding: "8px 16px",
+                border: "none",
+                borderRadius: "6px",
+                backgroundColor: "#4f46e5",
+                color: "#ffffff",
+                cursor: "pointer",
+              }}
+            >
+              다시 시도
+            </button>
+          </div>
+        )}
         <EmojiPanel
           selectedId={selectedEmoji?.id}
           onSelect={handleSelectEmoji}
