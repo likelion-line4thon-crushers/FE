@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import AudiencePanel from "../../components/Audience/AudiencePanel";
 import SidebarSlides from "../../components/SidebarSlides";
@@ -12,12 +12,68 @@ import EmojiPanel from "../../components/Audience/EmojiPanel";
 import { joinRoom } from "../../services/roomService";
 import websocketService from "../../services/websocketService";
 import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
+import { fetchRoomQuestions } from "../../services/questionService";
 import interestSelected from "../../assets/icons/Emoji_selected/Interesting_selected.png";
 import surpriseSelected from "../../assets/icons/Emoji_selected/surprising_selected.png";
 import curiousSelected from "../../assets/icons/Emoji_selected/curious_selected.png";
 import excitingSelected from "../../assets/icons/Emoji_selected/Exciting_selected.png";
 import angrySelected from "../../assets/icons/Emoji_selected/angry_selected.png";
 import sadSelected from "../../assets/icons/Emoji_selected/Sad_selected.png";
+
+const normalizeQuestion = (rawQuestion) => {
+  if (!rawQuestion || typeof rawQuestion !== "object") return null;
+
+  const id = rawQuestion.id ?? rawQuestion.questionId;
+  if (!id) return null;
+
+  const slideRaw =
+    rawQuestion.slide ??
+    (typeof rawQuestion.slideIndex === "number"
+      ? rawQuestion.slideIndex + 1
+      : undefined);
+  const slideNumber = Number(slideRaw);
+  const slide =
+    Number.isFinite(slideNumber) && slideNumber > 0 ? slideNumber : 1;
+
+  const tsRaw = rawQuestion.ts ?? rawQuestion.timestamp ?? Date.now();
+  const tsNumber = Number(tsRaw);
+  const ts = Number.isFinite(tsNumber) ? tsNumber : Date.now();
+
+  return {
+    id,
+    roomId: rawQuestion.roomId ?? null,
+    slide,
+    audienceId: rawQuestion.audienceId ?? rawQuestion.userId ?? null,
+    content: rawQuestion.content ?? rawQuestion.text ?? "",
+    ts,
+  };
+};
+
+const sortQuestionsAsc = (questions) =>
+  [...questions].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0));
+
+const upsertQuestion = (questions, incoming) => {
+  if (!incoming) return questions;
+
+  const next = [...questions];
+  const existingIndex = next.findIndex((item) => item.id === incoming.id);
+
+  if (existingIndex >= 0) {
+    next[existingIndex] = incoming;
+  } else {
+    next.push(incoming);
+  }
+
+  return sortQuestionsAsc(next);
+};
+
+const buildQuestionTopics = (roomId) => {
+  if (!roomId) return [];
+
+  const topics = [`/topic/p/${roomId}/public`, `/topic/p/${roomId}/presenter`];
+
+  return [...new Set(topics)];
+};
 
 const AudienceViewPage = () => {
   const { code } = useParams();
@@ -35,6 +91,11 @@ const AudienceViewPage = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loadingSlides, setLoadingSlides] = useState(false);
   const [slidesError, setSlidesError] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [questionsError, setQuestionsError] = useState(null);
+  const [isWebsocketReady, setIsWebsocketReady] = useState(false);
+  const questionSubscriptionsRef = useRef([]);
 
   const loadSlides = useCallback(
     async ({ signal } = {}) => {
@@ -136,6 +197,50 @@ const AudienceViewPage = () => {
     };
   }, [roomId, deckId, totalPages, loadSlides]);
 
+  const fetchQuestionsFromApi = useCallback(
+    async (options = {}) => {
+      if (!roomId) return [];
+      const list = await fetchRoomQuestions(roomId, options);
+      return list;
+    },
+    [roomId]
+  );
+
+  useEffect(() => {
+    if (!roomId) {
+      setQuestions([]);
+      setQuestionsLoading(false);
+      setQuestionsError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setQuestions([]);
+    setQuestionsLoading(true);
+    setQuestionsError(null);
+
+    fetchQuestionsFromApi()
+      .then((list) => {
+        if (cancelled) return;
+        const normalized = list.map(normalizeQuestion).filter(Boolean);
+        setQuestions(sortQuestionsAsc(normalized));
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("[AudienceViewPage] 질문 목록 불러오기 실패:", error);
+        setQuestionsError(error);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setQuestionsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId, fetchQuestionsFromApi]);
+
   useEffect(() => {
     if (slides.length === 0) return;
     setCurrentSlide((prev) => {
@@ -149,16 +254,48 @@ const AudienceViewPage = () => {
     });
   }, [slides]);
 
+  const handleQuestionMessage = useCallback((payload) => {
+    const raw = payload?.data ?? payload;
+    const normalized = normalizeQuestion(raw);
+    if (!normalized) return;
+
+    setQuestions((prev) => {
+      const next = upsertQuestion(prev, normalized);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!roomId || !audienceId || !wsUrl || !window.audienceToken) return;
 
+    setIsWebsocketReady(false);
+
     const connectWebSocket = () => {
-      // 웹소켓 연결
       websocketService.connect(
         wsUrl,
         window.audienceToken,
         () => {
           console.log("[WebSocket] 연결 성공");
+          setIsWebsocketReady(true);
+
+          // 기존 질문 구독 제거 후 재설정
+          questionSubscriptionsRef.current.forEach((unsubscribe) => {
+            if (typeof unsubscribe === "function") {
+              unsubscribe();
+            }
+          });
+          questionSubscriptionsRef.current = [];
+
+          const questionTopics = buildQuestionTopics(roomId);
+          questionTopics.forEach((topic) => {
+            const unsubscribe = websocketService.subscribe(
+              topic,
+              handleQuestionMessage
+            );
+            if (typeof unsubscribe === "function") {
+              questionSubscriptionsRef.current.push(unsubscribe);
+            }
+          });
 
           // 다른 청중의 이모지 반응 구독
           const reactionTopic = `/topic/presentation/${roomId}/reactions`;
@@ -198,17 +335,24 @@ const AudienceViewPage = () => {
         },
         (error) => {
           console.error("[WebSocket] 연결 실패:", error);
+          setIsWebsocketReady(false);
         }
       );
     };
 
     connectWebSocket();
 
-    // 컴포넌트 언마운트 시 웹소켓 연결 해제
     return () => {
+      questionSubscriptionsRef.current.forEach((unsubscribe) => {
+        if (typeof unsubscribe === "function") {
+          unsubscribe();
+        }
+      });
+      questionSubscriptionsRef.current = [];
+      setIsWebsocketReady(false);
       websocketService.disconnect();
     };
-  }, [roomId, audienceId, wsUrl]);
+  }, [roomId, audienceId, wsUrl, handleQuestionMessage]);
 
   const handleSelectEmoji = (emoji) => setSelectedEmoji(emoji);
 
@@ -249,6 +393,40 @@ const AudienceViewPage = () => {
     });
   };
 
+  const handleSubmitQuestion = useCallback(
+    async (content) => {
+      const trimmed = (content ?? "").trim();
+      if (!trimmed) {
+        throw new Error("질문 내용을 입력해 주세요.");
+      }
+
+      if (!roomId || !audienceId) {
+        throw new Error("방 정보를 찾을 수 없습니다.");
+      }
+
+      if (!websocketService.getIsConnected()) {
+        throw new Error("연결 상태를 확인한 후 다시 시도해 주세요.");
+      }
+
+      const payload = {
+        audienceId,
+        slide: currentSlide + 1,
+        content: trimmed,
+        ts: Date.now(),
+      };
+
+      const destination = `/app/p/${roomId}/question.create`;
+
+      try {
+        websocketService.send(destination, payload);
+      } catch (error) {
+        console.error("[WebSocket] 질문 전송 실패:", error);
+        throw new Error("질문 전송 중 오류가 발생했습니다.");
+      }
+    },
+    [roomId, audienceId, currentSlide]
+  );
+
   const handleToggleFollowPresenter = (checked) => {
     setFollowPresenter(checked);
   };
@@ -273,6 +451,7 @@ const AudienceViewPage = () => {
   const waitingMessage = hasSlidesError
     ? "슬라이드를 불러오는 중 오류가 발생했습니다."
     : "슬라이드를 불러오는 중입니다.";
+  const isQuestionListWaiting = questionsLoading && questions.length === 0;
 
   return (
     <PageContainer>
@@ -336,6 +515,15 @@ const AudienceViewPage = () => {
         <AudiencePanel
           currentSlide={currentSlide}
           onSelectSlide={handleAudienceSelectSlide}
+          questions={questions}
+          questionsLoading={questionsLoading}
+          questionsError={questionsError}
+          isWaiting={isQuestionListWaiting}
+          waitingMessage={
+            isQuestionListWaiting ? "질문을 불러오는 중입니다." : undefined
+          }
+          onSubmitQuestion={handleSubmitQuestion}
+          canSubmit={isWebsocketReady}
         />
       </RightPanelContainer>
     </PageContainer>

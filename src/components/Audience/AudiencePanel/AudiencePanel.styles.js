@@ -201,6 +201,7 @@ export const QuestionInputContainer = styled.div`
   transition: all 0.3s ease;
   flex-shrink: 0;
   box-sizing: border-box;
+  opacity: ${(props) => (props.$disabled ? 0.6 : 1)};
 `;
 
 export const QuestionInput = styled.textarea`
@@ -240,6 +241,12 @@ export const QuestionInput = styled.textarea`
 
     margin-left: 5px;
   }
+
+  &[disabled] {
+    background: #f5f5f5;
+    cursor: not-allowed;
+    color: #999;
+  }
 `;
 
 export const SubmitButton = styled.button`
@@ -259,4 +266,29 @@ export const SubmitButton = styled.button`
   &:hover {
     background: #4a4a4a;
   }
+
+  &:disabled {
+    background: #b3b3b3;
+    cursor: not-allowed;
+  }
+`;
+
+export const StatusMessage = styled.div`
+  color: #5c5c5c;
+  font-family: Pretendard;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.325px;
+  margin: 12px 0;
+  text-align: center;
+`;
+
+export const ErrorMessage = styled(StatusMessage)`
+  color: #d14343;
+`;
+
+export const EmptyMessage = styled(StatusMessage)`
+  color: #767676;
 `;
