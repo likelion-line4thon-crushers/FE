@@ -13,12 +13,7 @@ import { joinRoom } from "../../services/roomService";
 import websocketService from "../../services/websocketService";
 import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
 import useAudienceQuestions from "../../hooks/useAudienceQuestions";
-import interestSelected from "../../assets/icons/Emoji_selected/Interesting_selected.png";
-import surpriseSelected from "../../assets/icons/Emoji_selected/surprising_selected.png";
-import curiousSelected from "../../assets/icons/Emoji_selected/curious_selected.png";
-import excitingSelected from "../../assets/icons/Emoji_selected/Exciting_selected.png";
-import angrySelected from "../../assets/icons/Emoji_selected/angry_selected.png";
-import sadSelected from "../../assets/icons/Emoji_selected/Sad_selected.png";
+import useEmojiReactions from "../../hooks/useEmojiReactions";
 
 const AudienceViewPage = () => {
   const { code } = useParams();
@@ -27,16 +22,15 @@ const AudienceViewPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [followPresenter, setFollowPresenter] = useState(true);
   const [selectedEmoji, setSelectedEmoji] = useState(null);
-  const [stampsBySlide, setStampsBySlide] = useState({});
   const [showStamps, setShowStamps] = useState(true);
   const [roomId, setRoomId] = useState(null);
   const [audienceId, setAudienceId] = useState(null);
+  const [audienceToken, setAudienceToken] = useState(null);
   const [wsUrl, setWsUrl] = useState(null);
   const [deckId, setDeckId] = useState(null);
   const [totalPages, setTotalPages] = useState(0);
   const [loadingSlides, setLoadingSlides] = useState(false);
   const [slidesError, setSlidesError] = useState(null);
-  const [isWebsocketReady, setIsWebsocketReady] = useState(false);
   const questionSubscriptionsRef = useRef([]);
 
   const {
@@ -50,6 +44,17 @@ const AudienceViewPage = () => {
     roomId,
     audienceId,
     currentSlide,
+  });
+
+  const {
+    stampsBySlide,
+    isReady: isReactionReady,
+    addLocalStamp,
+  } = useEmojiReactions({
+    sessionId: roomId,
+    token: audienceToken,
+    wsUrl,
+    enabled: Boolean(roomId && audienceToken && wsUrl),
   });
 
   const loadSlides = useCallback(
@@ -95,6 +100,7 @@ const AudienceViewPage = () => {
 
           setRoomId(joinData.roomId);
           setAudienceId(joinData.audienceId);
+          setAudienceToken(joinData.audienceToken);
 
           if (joinData.deckId || joinData.deckID) {
             setDeckId(joinData.deckId || joinData.deckID);
@@ -166,80 +172,26 @@ const AudienceViewPage = () => {
   }, [slides]);
 
   useEffect(() => {
-    if (!roomId || !audienceId || !wsUrl || !window.audienceToken) return;
+    questionSubscriptionsRef.current.forEach((unsubscribe) => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    });
+    questionSubscriptionsRef.current = [];
 
-    setIsWebsocketReady(false);
+    if (!isReactionReady || !questionTopics?.length) {
+      return () => {};
+    }
 
-    const connectWebSocket = () => {
-      websocketService.connect(
-        wsUrl,
-        window.audienceToken,
-        () => {
-          console.log("[WebSocket] 연결 성공");
-          setIsWebsocketReady(true);
-
-          // 기존 질문 구독 제거 후 재설정
-          questionSubscriptionsRef.current.forEach((unsubscribe) => {
-            if (typeof unsubscribe === "function") {
-              unsubscribe();
-            }
-          });
-          questionSubscriptionsRef.current = [];
-
-          questionTopics.forEach((topic) => {
-            const unsubscribe = websocketService.subscribe(
-              topic,
-              handleIncomingQuestion
-            );
-            if (typeof unsubscribe === "function") {
-              questionSubscriptionsRef.current.push(unsubscribe);
-            }
-          });
-
-          // 다른 청중의 이모지 반응 구독
-          const reactionTopic = `/topic/presentation/${roomId}/reactions`;
-          websocketService.subscribe(reactionTopic, (data) => {
-            // 다른 청중이 보낸 이모지 반응 처리
-            if (data && data.emoji && data.slide !== undefined) {
-              const slideIndex = data.slide - 1;
-              const emojiId = data.emoji;
-
-              const emojiIcons = {
-                1: interestSelected,
-                2: surpriseSelected,
-                3: curiousSelected,
-                4: excitingSelected,
-                5: angrySelected,
-                6: sadSelected,
-              };
-
-              const emojiSrc = emojiIcons[emojiId];
-              if (emojiSrc) {
-                // x, y 좌표를 퍼센트로 변환
-
-                const xPct = data.x;
-                const yPct = data.y;
-
-                setStampsBySlide((prev) => {
-                  const next = { ...prev };
-                  const key = String(slideIndex);
-                  const list = next[key] ? [...next[key]] : [];
-                  list.push({ xPct, yPct, src: emojiSrc });
-                  next[key] = list;
-                  return next;
-                });
-              }
-            }
-          });
-        },
-        (error) => {
-          console.error("[WebSocket] 연결 실패:", error);
-          setIsWebsocketReady(false);
-        }
+    questionTopics.forEach((topic) => {
+      const unsubscribe = websocketService.subscribe(
+        topic,
+        handleIncomingQuestion
       );
-    };
-
-    connectWebSocket();
+      if (typeof unsubscribe === "function") {
+        questionSubscriptionsRef.current.push(unsubscribe);
+      }
+    });
 
     return () => {
       questionSubscriptionsRef.current.forEach((unsubscribe) => {
@@ -248,15 +200,13 @@ const AudienceViewPage = () => {
         }
       });
       questionSubscriptionsRef.current = [];
-      setIsWebsocketReady(false);
-      websocketService.disconnect();
     };
-  }, [roomId, audienceId, wsUrl, questionTopics, handleIncomingQuestion]);
+  }, [isReactionReady, questionTopics, handleIncomingQuestion]);
 
   const handleSelectEmoji = (emoji) => setSelectedEmoji(emoji);
 
   const handlePlaceStamp = ({ xPct, yPct }) => {
-    if (!selectedEmoji) return;
+    if (!selectedEmoji || !isReactionReady) return;
 
     if (
       selectedEmoji.id >= 1 &&
@@ -279,17 +229,14 @@ const AudienceViewPage = () => {
 
       websocketService.send(destination, message);
       console.log("[WebSocket] 이모지 반응 전송:", message);
-    }
 
-    // 로컬 상태에도 추가
-    setStampsBySlide((prev) => {
-      const next = { ...prev };
-      const key = String(currentSlide);
-      const list = next[key] ? [...next[key]] : [];
-      list.push({ xPct, yPct, src: selectedEmoji.selectedIcon });
-      next[key] = list;
-      return next;
-    });
+      addLocalStamp(currentSlide, {
+        id: now,
+        xPct,
+        yPct,
+        src: selectedEmoji.selectedIcon,
+      });
+    }
   };
 
   const handleToggleFollowPresenter = (checked) => {
@@ -388,7 +335,7 @@ const AudienceViewPage = () => {
             isQuestionListWaiting ? "질문을 불러오는 중입니다." : undefined
           }
           onSubmitQuestion={submitQuestion}
-          canSubmit={isWebsocketReady}
+          canSubmit={isReactionReady}
         />
       </RightPanelContainer>
     </PageContainer>
