@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import Layout from "../../components/Layout/Layout"; // ✅ LayoutContainer 말고 이거
 import SidebarSlides from "../../components/SidebarSlides";
 import SlideViewer from "../../components/SlideViewer";
@@ -15,6 +15,7 @@ import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
 import websocketService from "../../services/websocketService";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
 import { WebSocketService } from "../../services/websocketService";
+import usePresenterQuestions from "../../hooks/usePresenterQuestions";
 
 // SettingsPanel 스타일 재사용
 import {
@@ -33,7 +34,6 @@ import {
 import AudienceSVG from "../../assets/images/people.svg";
 
 const PresenterViewPage = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { roomId: roomIdParam } = useParams();
 
@@ -92,6 +92,7 @@ const PresenterViewPage = () => {
   const [slideUrls, setSlideUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showReactions, setShowReactions] = useState(true);
+  const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
   const presenterSocketService = useMemo(() => new WebSocketService(), []);
   const { stampsBySlide: reactionStamps, isReady: reactionsReady } =
     useEmojiReactions({
@@ -104,6 +105,16 @@ const PresenterViewPage = () => {
     });
 
   const currentReactionStamps = reactionStamps[String(currentSlide)] || [];
+
+  const {
+    questions: presenterQuestions,
+    questionsLoading,
+    questionsError,
+  } = usePresenterQuestions({
+    roomId,
+    enabled: Boolean(roomId),
+    subscribe: Boolean(roomId && isPresenterWsReady),
+  });
 
   // 서버에서 presigned URL 하나씩 가져와서 썸네일로 사용
   const currentSlideRef = useRef(0);
@@ -132,6 +143,7 @@ const PresenterViewPage = () => {
           websocketService.sendPageChange(roomId, prev, clamped);
         }
 
+        currentSlideRef.current = clamped;
         return clamped;
       });
     },
@@ -177,6 +189,7 @@ const PresenterViewPage = () => {
 
     const onConnect = () => {
       console.log("✅ [Presenter] 웹소켓 연결 성공");
+      setIsPresenterWsReady(true);
       websocketService.sendPageChange(
         roomId,
         currentSlideRef.current,
@@ -186,6 +199,7 @@ const PresenterViewPage = () => {
 
     const onError = (error) => {
       console.error("🚨 [Presenter] 웹소켓 연결 실패:", error);
+      setIsPresenterWsReady(false);
     };
 
     websocketService.connect(
@@ -196,6 +210,7 @@ const PresenterViewPage = () => {
     );
 
     return () => {
+      setIsPresenterWsReady(false);
       websocketService.disconnect();
     };
   }, [roomId, presenterToken, presenterWsUrl]);
@@ -245,10 +260,12 @@ const PresenterViewPage = () => {
     };
   }, [currentSlide, changeSlide]);
 
-  const handleEndSession = () => {
-    alert("세션이 종료되었습니다!");
-    navigate("/");
-  };
+  const handleSelectQuestionSlide = useCallback(
+    (slideIndex) => {
+      changeSlide(slideIndex, { broadcast: true });
+    },
+    [changeSlide]
+  );
 
   // ✅ 로딩 중일 때 표시
   if (loading) {
@@ -346,7 +363,13 @@ const PresenterViewPage = () => {
         {/* === 실시간 질문 섹션 === */}
         <Section>
           <Title>실시간 질문</Title>
-          <QuestionList onEndSession={handleEndSession} />
+          <QuestionList
+            questions={presenterQuestions}
+            loading={questionsLoading}
+            error={questionsError}
+            currentSlide={currentSlide}
+            onSelectSlide={handleSelectQuestionSlide}
+          />
         </Section>
       </PanelWrapper>
     </Layout>

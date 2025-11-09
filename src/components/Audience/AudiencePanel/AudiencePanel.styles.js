@@ -72,14 +72,18 @@ export const QuestionList = styled.div`
 `;
 
 export const QuestionItem = styled.div`
-  margin-bottom: 1.48vh;
+  margin-bottom: 0.9vh;
   padding: 1.11vh 0.63vw;
   background: ${(props) => (props.$active ? "#f1f1f1" : "#fff")};
-  border-radius: 0.31vw;
-  border: 1px solid ${(props) => (props.$active ? "#303030" : "transparent")};
+  border-radius: 0.51vw;
+  border: 1px solid ${(props) => (props.$active ? "#eaeaea" : "transparent")};
   transition: background 0.2s ease, border-color 0.2s ease;
   width: 100%;
   box-sizing: border-box;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 `;
 
 export const SlideLabel = styled.button`
@@ -140,6 +144,7 @@ export const QuestionText = styled.div`
   line-height: 18px;
   letter-spacing: -0.3px;
   margin-top: 0.37vh;
+  text-align: left;
 `;
 
 export const Scrollbar = styled.div`
