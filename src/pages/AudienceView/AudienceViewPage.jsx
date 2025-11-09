@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import AudiencePanel from "../../components/Audience/AudiencePanel";
 import SidebarSlides from "../../components/SidebarSlides";
@@ -12,6 +12,7 @@ import EmojiPanel from "../../components/Audience/EmojiPanel";
 import { joinRoom } from "../../services/roomService";
 import websocketService from "../../services/websocketService";
 import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
+import useAudienceQuestions from "../../hooks/useAudienceQuestions";
 import interestSelected from "../../assets/icons/Emoji_selected/Interesting_selected.png";
 import surpriseSelected from "../../assets/icons/Emoji_selected/surprising_selected.png";
 import curiousSelected from "../../assets/icons/Emoji_selected/curious_selected.png";
@@ -35,6 +36,21 @@ const AudienceViewPage = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loadingSlides, setLoadingSlides] = useState(false);
   const [slidesError, setSlidesError] = useState(null);
+  const [isWebsocketReady, setIsWebsocketReady] = useState(false);
+  const questionSubscriptionsRef = useRef([]);
+
+  const {
+    questions,
+    questionsLoading,
+    questionsError,
+    submitQuestion,
+    handleIncomingQuestion,
+    questionTopics,
+  } = useAudienceQuestions({
+    roomId,
+    audienceId,
+    currentSlide,
+  });
 
   const loadSlides = useCallback(
     async ({ signal } = {}) => {
@@ -152,13 +168,33 @@ const AudienceViewPage = () => {
   useEffect(() => {
     if (!roomId || !audienceId || !wsUrl || !window.audienceToken) return;
 
+    setIsWebsocketReady(false);
+
     const connectWebSocket = () => {
-      // 웹소켓 연결
       websocketService.connect(
         wsUrl,
         window.audienceToken,
         () => {
           console.log("[WebSocket] 연결 성공");
+          setIsWebsocketReady(true);
+
+          // 기존 질문 구독 제거 후 재설정
+          questionSubscriptionsRef.current.forEach((unsubscribe) => {
+            if (typeof unsubscribe === "function") {
+              unsubscribe();
+            }
+          });
+          questionSubscriptionsRef.current = [];
+
+          questionTopics.forEach((topic) => {
+            const unsubscribe = websocketService.subscribe(
+              topic,
+              handleIncomingQuestion
+            );
+            if (typeof unsubscribe === "function") {
+              questionSubscriptionsRef.current.push(unsubscribe);
+            }
+          });
 
           // 다른 청중의 이모지 반응 구독
           const reactionTopic = `/topic/presentation/${roomId}/reactions`;
@@ -198,17 +234,24 @@ const AudienceViewPage = () => {
         },
         (error) => {
           console.error("[WebSocket] 연결 실패:", error);
+          setIsWebsocketReady(false);
         }
       );
     };
 
     connectWebSocket();
 
-    // 컴포넌트 언마운트 시 웹소켓 연결 해제
     return () => {
+      questionSubscriptionsRef.current.forEach((unsubscribe) => {
+        if (typeof unsubscribe === "function") {
+          unsubscribe();
+        }
+      });
+      questionSubscriptionsRef.current = [];
+      setIsWebsocketReady(false);
       websocketService.disconnect();
     };
-  }, [roomId, audienceId, wsUrl]);
+  }, [roomId, audienceId, wsUrl, questionTopics, handleIncomingQuestion]);
 
   const handleSelectEmoji = (emoji) => setSelectedEmoji(emoji);
 
@@ -273,6 +316,7 @@ const AudienceViewPage = () => {
   const waitingMessage = hasSlidesError
     ? "슬라이드를 불러오는 중 오류가 발생했습니다."
     : "슬라이드를 불러오는 중입니다.";
+  const isQuestionListWaiting = questionsLoading && questions.length === 0;
 
   return (
     <PageContainer>
@@ -336,6 +380,15 @@ const AudienceViewPage = () => {
         <AudiencePanel
           currentSlide={currentSlide}
           onSelectSlide={handleAudienceSelectSlide}
+          questions={questions}
+          questionsLoading={questionsLoading}
+          questionsError={questionsError}
+          isWaiting={isQuestionListWaiting}
+          waitingMessage={
+            isQuestionListWaiting ? "질문을 불러오는 중입니다." : undefined
+          }
+          onSubmitQuestion={submitQuestion}
+          canSubmit={isWebsocketReady}
         />
       </RightPanelContainer>
     </PageContainer>
