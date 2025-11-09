@@ -1,11 +1,18 @@
 // src/pages/Presentation/PresenterViewPage.jsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import Layout from "../../components/Layout/Layout"; // ✅ LayoutContainer 말고 이거
 import SidebarSlides from "../../components/SidebarSlides";
 import SlideViewer from "../../components/SlideViewer";
 import QuestionList from "../../components/QuestionList";
 import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
+import websocketService from "../../services/websocketService";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
 import { WebSocketService } from "../../services/websocketService";
 
@@ -99,6 +106,38 @@ const PresenterViewPage = () => {
   const currentReactionStamps = reactionStamps[String(currentSlide)] || [];
 
   // 서버에서 presigned URL 하나씩 가져와서 썸네일로 사용
+  const currentSlideRef = useRef(0);
+
+  useEffect(() => {
+    currentSlideRef.current = currentSlide;
+  }, [currentSlide]);
+
+  const slideCount = slideUrls.length;
+
+  const changeSlide = useCallback(
+    (nextIndex, { broadcast = true } = {}) => {
+      setCurrentSlide((prev) => {
+        if (!Number.isFinite(nextIndex)) {
+          return prev;
+        }
+
+        const maxIndex = Math.max(slideCount - 1, 0);
+        const clamped = Math.min(Math.max(nextIndex, 0), maxIndex);
+
+        if (clamped === prev) {
+          return prev;
+        }
+
+        if (broadcast && roomId && websocketService.getIsConnected()) {
+          websocketService.sendPageChange(roomId, prev, clamped);
+        }
+
+        return clamped;
+      });
+    },
+    [slideCount, roomId]
+  );
+
   useEffect(() => {
     if (!roomId || !deckId || !totalPages) {
       console.warn("⚠️ [PresenterViewPage] 필수 파라미터 누락:", {
@@ -130,6 +169,62 @@ const PresenterViewPage = () => {
 
     fetchSlides();
   }, [roomId, deckId, totalPages]);
+
+  useEffect(() => {
+    if (!roomId || !presenterToken || !presenterWsUrl) {
+      return undefined;
+    }
+
+    const onConnect = () => {
+      console.log("✅ [Presenter] 웹소켓 연결 성공");
+      websocketService.sendPageChange(
+        roomId,
+        currentSlideRef.current,
+        currentSlideRef.current
+      );
+    };
+
+    const onError = (error) => {
+      console.error("🚨 [Presenter] 웹소켓 연결 실패:", error);
+    };
+
+    websocketService.connect(
+      presenterWsUrl,
+      presenterToken,
+      onConnect,
+      onError
+    );
+
+    return () => {
+      websocketService.disconnect();
+    };
+  }, [roomId, presenterToken, presenterWsUrl]);
+
+  useEffect(() => {
+    if (!roomId || !presenterToken || !presenterWsUrl) {
+      return undefined;
+    }
+
+    if (!websocketService.getIsConnected()) {
+      return undefined;
+    }
+
+    const unsubscribe = websocketService.subscribe(
+      `/topic/presentation/${roomId}/pageChange/audience`,
+      (data) => {
+        const nextSlide = Number(data?.changedPage);
+        if (Number.isFinite(nextSlide)) {
+          changeSlide(nextSlide, { broadcast: false });
+        }
+      }
+    );
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, [roomId, presenterToken, presenterWsUrl, changeSlide]);
 
   const handleEndSession = () => {
     alert("세션이 종료되었습니다!");
@@ -179,14 +274,14 @@ const PresenterViewPage = () => {
       <SidebarSlides
         slides={slideUrls} // 이 부분을 slideUrls로 변경
         currentSlide={currentSlide}
-        setCurrentSlide={setCurrentSlide}
+        setCurrentSlide={changeSlide}
       />
 
       {/* 🔹 중앙: 현재 슬라이드 */}
       <SlideViewer
         slides={slideUrls} // 이 부분을 slideUrls로 변경
         currentSlide={currentSlide}
-        setCurrentSlide={setCurrentSlide}
+        setCurrentSlide={changeSlide}
         mode="present"
         stamps={showReactions ? currentReactionStamps : []}
         showReactions={showReactions && reactionsReady}
