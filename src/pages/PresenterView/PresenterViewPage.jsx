@@ -241,6 +241,25 @@ const PresenterViewPage = () => {
     };
   }, [roomId, presenterToken, presenterWsUrl, changeSlide]);
 
+  // 🔹 방향키로 슬라이드 이동
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        // 이전 슬라이드
+        changeSlide(currentSlide - 1);
+      } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        // 다음 슬라이드
+        changeSlide(currentSlide + 1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [currentSlide, changeSlide]);
+
   const handleSelectQuestionSlide = useCallback(
     (slideIndex) => {
       changeSlide(slideIndex, { broadcast: true });

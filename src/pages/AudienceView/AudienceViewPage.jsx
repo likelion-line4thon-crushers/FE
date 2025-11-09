@@ -329,6 +329,25 @@ const AudienceViewPage = () => {
     changeCurrentSlide,
   ]);
 
+  // 🔹 방향키로 슬라이드 이동
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        // 이전 슬라이드
+        changeCurrentSlide(currentSlide - 1, { source: "audience" });
+      } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        // 다음 슬라이드
+        changeCurrentSlide(currentSlide + 1, { source: "audience" });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [currentSlide, changeCurrentSlide]);
+
   const handleSelectEmoji = (emoji) => setSelectedEmoji(emoji);
 
   const handlePlaceStamp = ({ xPct, yPct }) => {
