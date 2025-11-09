@@ -96,11 +96,14 @@ const AudienceViewPage = () => {
           audienceId &&
           websocketService.getIsConnected()
         ) {
+          const beforePage = prev + 1;
+          const changedPage = clamped + 1;
+
           websocketService.sendAudiencePageChange(
             roomId,
             audienceId,
-            prev,
-            clamped
+            beforePage,
+            changedPage
           );
         }
 
