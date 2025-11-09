@@ -38,6 +38,8 @@ const AudienceViewPage = () => {
   const [slidesError, setSlidesError] = useState(null);
   const [isWebsocketReady, setIsWebsocketReady] = useState(false);
   const questionSubscriptionsRef = useRef([]);
+  const prevSlideRef = useRef(0);
+  const followPresenterRef = useRef(followPresenter);
 
   const {
     questions,
@@ -51,6 +53,11 @@ const AudienceViewPage = () => {
     audienceId,
     currentSlide,
   });
+
+  // followPresenter 상태가 변경될 때마다 ref 업데이트
+  useEffect(() => {
+    followPresenterRef.current = followPresenter;
+  }, [followPresenter]);
 
   const loadSlides = useCallback(
     async ({ signal } = {}) => {
@@ -126,11 +133,23 @@ const AudienceViewPage = () => {
           }
 
           let wsUrlValue = joinData.wsUrl;
+          
           if (!wsUrlValue) {
             const apiBaseUrl =
               import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
             wsUrlValue = `${apiBaseUrl}/ws/audience`;
+          } else {
+            // 쉼표로 구분된 경우 첫 번째 URL만 사용
+            if (wsUrlValue.includes(",")) {
+              wsUrlValue = wsUrlValue.split(",")[0].trim();
+            }
+            
+            // /audience 엔드포인트 추가
+            if (!wsUrlValue.endsWith("/audience")) {
+              wsUrlValue = wsUrlValue.replace(/\/ws\/?$/, "/ws/audience");
+            }
           }
+          
           setWsUrl(wsUrlValue);
         } catch (err) {
           console.error("방 입장 실패:", err);
@@ -155,13 +174,9 @@ const AudienceViewPage = () => {
   useEffect(() => {
     if (slides.length === 0) return;
     setCurrentSlide((prev) => {
-      if (prev >= slides.length) {
-        return slides.length - 1;
-      }
-      if (prev < 0) {
-        return 0;
-      }
-      return prev;
+      const newSlide = prev >= slides.length ? slides.length - 1 : prev < 0 ? 0 : prev;
+      prevSlideRef.current = newSlide;
+      return newSlide;
     });
   }, [slides]);
 
@@ -229,6 +244,32 @@ const AudienceViewPage = () => {
                   return next;
                 });
               }
+            }
+          });
+
+          // 발표자의 슬라이드 변경 구독
+          const pageChangeTopic = `/topic/presentation/${roomId}/pageChange`;
+          websocketService.subscribe(pageChangeTopic, (data) => {
+            if (!data || data.changedPage === undefined) {
+              console.warn("[Audience] 잘못된 페이지 변경 데이터:", data);
+              return;
+            }
+            
+            // 발표자 따라가기가 꺼져있으면 무시
+            if (!followPresenterRef.current) {
+              return;
+            }
+            
+            const newSlideIndex = data.changedPage;
+            const beforePage = prevSlideRef.current;
+            
+            // 로컬 상태 업데이트
+            setCurrentSlide(newSlideIndex);
+            prevSlideRef.current = newSlideIndex;
+            
+            // 서버에 자신의 페이지 변경 알림
+            if (audienceId && websocketService.getIsConnected()) {
+              websocketService.sendAudiencePageChange(roomId, audienceId, beforePage, newSlideIndex);
             }
           });
         },
@@ -302,6 +343,14 @@ const AudienceViewPage = () => {
 
   const handleAudienceSelectSlide = (slideIndex) => {
     setFollowPresenter(false);
+    
+    // 백엔드에 청중 페이지 변경 알림
+    if (roomId && audienceId && websocketService.getIsConnected()) {
+      const beforePage = prevSlideRef.current;
+      websocketService.sendAudiencePageChange(roomId, audienceId, beforePage, slideIndex);
+      prevSlideRef.current = slideIndex;
+    }
+    
     setCurrentSlide(slideIndex);
   };
 

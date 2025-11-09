@@ -1,11 +1,12 @@
 // src/pages/Presentation/PresenterViewPage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import Layout from "../../components/Layout/Layout"; // ✅ LayoutContainer 말고 이거
 import SidebarSlides from "../../components/SidebarSlides";
 import SlideViewer from "../../components/SlideViewer";
 import QuestionList from "../../components/QuestionList";
 import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
+import websocketService from "../../services/websocketService";
 
 // SettingsPanel 스타일 재사용
 import {
@@ -25,73 +26,92 @@ import AudienceSVG from "../../assets/images/people.svg";
 
 const PresenterViewPage = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const { roomId: roomIdParam } = useParams();
+    const { roomId } = useParams();
+    const prevSlideRef = useRef(0);
 
-    const storedRoomData = JSON.parse(
-        sessionStorage.getItem("boini_room") ||
-            sessionStorage.getItem("roomData") ||
-            "{}"
-    );
-
-    const roomId = roomIdParam || location.state?.roomId || storedRoomData.roomId;
-    const deckId = location.state?.deckId || storedRoomData.deckId;
-    const totalPages =
-        location.state?.totalPages || storedRoomData.totalPages || 0;
-
+    const [roomData, setRoomData] = useState(null);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [slideUrls, setSlideUrls] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isWebsocketReady, setIsWebsocketReady] = useState(false);
 
-    // 서버에서 presigned URL 하나씩 가져와서 썸네일로 사용
+    // 1. 방 정보 로드 및 웹소켓 연결
     useEffect(() => {
-        if (!roomId || !deckId || !totalPages) {
-            console.warn("⚠️ [PresenterViewPage] 필수 파라미터 누락:", {
-                roomId,
-                deckId,
-                totalPages,
-            });
-            setLoading(false);
+        const storedRoomData = JSON.parse(sessionStorage.getItem("boini_room") || "{}");
+        if (!storedRoomData.roomId || !storedRoomData.presenterToken) {
+            alert("발표자 정보가 올바르지 않습니다. 다시 시도해주세요.");
+            navigate("/");
             return;
         }
+        setRoomData(storedRoomData);
+
+        // wsUrl에 /presenter 엔드포인트 추가
+        let wsUrl = storedRoomData.wsUrl;
+        
+        if (!wsUrl) {
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+            wsUrl = `${apiBaseUrl}/ws/presenter`;
+        } else {
+            // 쉼표로 구분된 경우 첫 번째 URL만 사용
+            if (wsUrl.includes(",")) {
+                wsUrl = wsUrl.split(",")[0].trim();
+            }
+            
+            // /presenter 엔드포인트 추가
+            if (!wsUrl.endsWith("/presenter")) {
+                wsUrl = wsUrl.replace(/\/ws\/?$/, "/ws/presenter");
+            }
+        }
+
+        websocketService.connect(
+            wsUrl,
+            storedRoomData.presenterToken,
+            () => {
+                console.log("✅ [Presenter] 웹소켓 연결 성공");
+                setIsWebsocketReady(true);
+            },
+            (err) => {
+                console.error("🚨 [Presenter] 웹소켓 연결 실패:", err);
+                setIsWebsocketReady(false);
+            }
+        );
+
+        return () => {
+            setIsWebsocketReady(false);
+            websocketService.disconnect();
+        };
+    }, [navigate, roomId]);
+
+    // 2. 슬라이드 URL 가져오기
+    useEffect(() => {
+        if (!roomData) return;
+
+        const { deckId, totalPages } = roomData;
 
         const fetchSlides = async () => {
             try {
-                console.log("🖼️ [PresenterViewPage] 슬라이드 URL 가져오기 시작:", {
-                    roomId,
-                    deckId,
-                    totalPages,
-                });
-
-                const urls = await fetchAllOriginalSlideUrls(
-                    roomId,
-                    deckId,
-                    totalPages
-                );
-
-                urls.forEach((url, index) => {
-                    console.log(
-                        `[PresenterViewPage] 슬라이드 ${index + 1}번 URL:`,
-                        url
-                    );
-                });
-
-                // CreateSessionPage와 동일하게, URL 문자열 배열을 그대로 사용합니다.
+                const urls = await fetchAllOriginalSlideUrls(roomId, deckId, totalPages);
                 setSlideUrls(urls);
-
-                console.log("✅ [PresenterViewPage] 슬라이드 URL 생성 완료:", {
-                    slideCount: urls.length,
-                });
             } catch (err) {
-                console.error("❌ [PresenterViewPage] 슬라이드 생성 실패:", err);
-                setSlideUrls([]);
+                console.error("❌ [Presenter] 슬라이드 생성 실패:", err);
             } finally {
                 setLoading(false);
             }
         };
-
         fetchSlides();
-    }, [roomId, deckId, totalPages]);
+    }, [roomData, roomId]);
+
+    const handleSlideChange = (nextIndex) => {
+        // 웹소켓이 연결된 경우에만 메시지 전송
+        if (isWebsocketReady && websocketService.getIsConnected()) {
+            websocketService.sendPageChange(roomId, currentSlide, nextIndex);
+        } else {
+            console.warn("[Presenter] 웹소켓 미연결: 슬라이드 동기화 불가");
+        }
+        
+        setCurrentSlide(nextIndex);
+        prevSlideRef.current = nextIndex;
+    };
 
     const handleEndSession = () => {
         alert("세션이 종료되었습니다!");
@@ -116,8 +136,7 @@ const PresenterViewPage = () => {
         );
     }
 
-    // 썸네일이 없을 때 표시
-    if (!slideUrls.length) { // 이 부분을 slideUrls로 변경
+    if (!slideUrls.length) {
         return (
             <Layout>
                 <div
@@ -140,14 +159,14 @@ const PresenterViewPage = () => {
             <SidebarSlides
                 slides={slideUrls} // 이 부분을 slideUrls로 변경
                 currentSlide={currentSlide}
-                setCurrentSlide={setCurrentSlide}
+                setCurrentSlide={handleSlideChange}
             />
 
             {/* 🔹 중앙: 현재 슬라이드 */}
             <SlideViewer
                 slides={slideUrls} // 이 부분을 slideUrls로 변경
                 currentSlide={currentSlide}
-                setCurrentSlide={setCurrentSlide}
+                setCurrentSlide={handleSlideChange}
                 mode="present"
             />
 

@@ -1,4 +1,5 @@
 import { Client } from "@stomp/stompjs";
+import { v4 as uuidv4 } from "uuid";
 import SockJS from "sockjs-client";
 
 class WebSocketService {
@@ -15,8 +16,18 @@ class WebSocketService {
       return;
     }
 
+    // SockJS는 http:// 또는 https:// URL만 받을 수 있으므로 변환
+    let httpUrl = wsUrl;
+    if (wsUrl.startsWith("ws://")) {
+      httpUrl = wsUrl.replace("ws://", "http://");
+      console.log("[WebSocket] ws:// -> http:// 변환:", httpUrl);
+    } else if (wsUrl.startsWith("wss://")) {
+      httpUrl = wsUrl.replace("wss://", "https://");
+      console.log("[WebSocket] wss:// -> https:// 변환:", httpUrl);
+    }
+
     // SockJS를 사용하여 연결
-    const socket = new SockJS(wsUrl);
+    const socket = new SockJS(httpUrl);
 
     this.client = new Client({
       webSocketFactory: () => socket,
@@ -52,6 +63,24 @@ class WebSocketService {
     });
 
     this.client.activate();
+  }
+
+  // 발표자: 페이지 변경 이벤트 전송
+  sendPageChange(sessionId, beforePage, changedPage) {
+    this.send(
+      `/app/presentation/${sessionId}/pageChange/presenter`,
+      { beforePage, changedPage },
+      { "Idempotency-Key": uuidv4() }
+    );
+  }
+
+  // 청중: 페이지 변경 이벤트 전송
+  sendAudiencePageChange(sessionId, audienceId, beforePage, changedPage) {
+    this.send(
+      `/app/presentation/${sessionId}/pageChange/audience`,
+      { audienceId, beforePage, changedPage },
+      { "Idempotency-Key": uuidv4() }
+    );
   }
 
   subscribe(destination, callback) {
@@ -93,7 +122,7 @@ class WebSocketService {
     }
   }
 
-  send(destination, body) {
+  send(destination, body, headers = {}) {
     if (!this.isConnected || !this.client) {
       console.warn(
         "[WebSocket] 연결되지 않았습니다. 메시지 전송 실패:",
@@ -105,6 +134,10 @@ class WebSocketService {
     try {
       this.client.publish({
         destination,
+        headers: {
+          "Content-Type": "application/json",
+          ...headers,
+        },
         body: JSON.stringify(body),
       });
       console.log("[WebSocket] 메시지 전송:", destination, body);
