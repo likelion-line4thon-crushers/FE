@@ -18,12 +18,22 @@ class WebSocketService {
 
     // SockJS는 http:// 또는 https:// URL만 받을 수 있으므로 변환
     let httpUrl = wsUrl;
+    
+    // 현재 페이지가 HTTPS인지 확인
+    const isSecurePage = window.location.protocol === "https:";
+    
     if (wsUrl.startsWith("ws://")) {
-      httpUrl = wsUrl.replace("ws://", "http://");
-      console.log("[WebSocket] ws:// -> http:// 변환:", httpUrl);
+      // HTTPS 페이지에서는 반드시 https:// 사용
+      if (isSecurePage) {
+        httpUrl = wsUrl.replace("ws://", "https://");
+      } else {
+        httpUrl = wsUrl.replace("ws://", "http://");
+      }
     } else if (wsUrl.startsWith("wss://")) {
       httpUrl = wsUrl.replace("wss://", "https://");
-      console.log("[WebSocket] wss:// -> https:// 변환:", httpUrl);
+    } else if (wsUrl.startsWith("http://") && isSecurePage) {
+      // HTTP URL인데 HTTPS 페이지라면 HTTPS로 변환
+      httpUrl = wsUrl.replace("http://", "https://");
     }
 
     // SockJS를 사용하여 연결
