@@ -125,7 +125,7 @@ const SlideViewer = ({
           showStamps &&
           stamps.map((stamp, idx) => (
             <img
-              key={`${stamp.xPct}-${stamp.yPct}-${idx}`}
+              key={stamp.id || `${stamp.xPct}-${stamp.yPct}-${idx}`}
               src={stamp.src}
               alt="stamp"
               style={{

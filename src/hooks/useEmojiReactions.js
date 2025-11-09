@@ -1,0 +1,208 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import websocketService, {
+  WebSocketService,
+} from "../services/websocketService";
+import { SELECTED_EMOJI_ICONS } from "../constants/emojiIcons";
+
+const ensureNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const createStamp = ({ id, xPct, yPct, src }) => ({
+  id,
+  xPct,
+  yPct,
+  src,
+});
+
+const getDefaultStampId = () =>
+  `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const buildConnectionKey = (wsUrl, token) => `${wsUrl || ""}::${token || ""}`;
+
+const useEmojiReactions = ({
+  sessionId,
+  token,
+  wsUrl,
+  enabled = true,
+  emojiMap = SELECTED_EMOJI_ICONS,
+  disconnectOnUnmount = true,
+  service,
+} = {}) => {
+  const socketServiceRef = useRef(
+    service instanceof WebSocketService ? service : websocketService
+  );
+  const socketService = socketServiceRef.current;
+
+  const [stampsBySlide, setStampsBySlide] = useState({});
+  const [isReady, setIsReady] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
+
+  const reactionUnsubscribeRef = useRef(null);
+  const connectionKeyRef = useRef(null);
+  const disconnectOnUnmountRef = useRef(disconnectOnUnmount);
+
+  const resetState = useCallback(() => {
+    setStampsBySlide({});
+    setIsReady(false);
+    setConnectionError(null);
+  }, []);
+
+  const addStampToState = useCallback((slideIndex, stamp) => {
+    if (slideIndex < 0 || !stamp || !stamp.src) {
+      return;
+    }
+
+    setStampsBySlide((prev) => {
+      const key = String(slideIndex);
+      const existing = prev[key] ? [...prev[key]] : [];
+
+      if (stamp.id && existing.some((item) => item.id === stamp.id)) {
+        return prev;
+      }
+
+      const next = { ...prev, [key]: [...existing, createStamp(stamp)] };
+      return next;
+    });
+  }, []);
+
+  const addLocalStamp = useCallback(
+    (slideIndex, stamp) => {
+      const normalizedId = stamp?.id || getDefaultStampId();
+      addStampToState(slideIndex, { ...stamp, id: normalizedId });
+    },
+    [addStampToState]
+  );
+
+  const clearStamps = useCallback(() => {
+    setStampsBySlide({});
+  }, []);
+
+  const handleReactionMessage = useCallback(
+    (payload) => {
+      if (!payload || typeof payload.slide === "undefined") {
+        return;
+      }
+
+      const emojiId = ensureNumber(payload.emoji);
+      const slideIndex = ensureNumber(payload.slide) - 1;
+      const xPct = ensureNumber(payload.x ?? payload.xPct);
+      const yPct = ensureNumber(payload.y ?? payload.yPct);
+      const createdAt = payload.created_at || payload.createdAt || payload.id;
+
+      if (
+        !Number.isFinite(slideIndex) ||
+        slideIndex < 0 ||
+        xPct === null ||
+        yPct === null
+      ) {
+        return;
+      }
+
+      const emojiSrc = emojiMap[emojiId];
+      if (!emojiSrc) {
+        return;
+      }
+
+      addStampToState(slideIndex, {
+        id: createdAt || getDefaultStampId(),
+        xPct,
+        yPct,
+        src: emojiSrc,
+      });
+    },
+    [addStampToState, emojiMap]
+  );
+
+  const disconnect = useCallback(() => {
+    reactionUnsubscribeRef.current?.();
+    reactionUnsubscribeRef.current = null;
+    connectionKeyRef.current = null;
+    socketService.disconnect();
+    setIsReady(false);
+  }, [socketService]);
+
+  useEffect(() => {
+    setStampsBySlide({});
+  }, [sessionId]);
+
+  useEffect(() => {
+    disconnectOnUnmountRef.current = disconnectOnUnmount;
+  }, [disconnectOnUnmount]);
+
+  useEffect(() => {
+    if (!enabled || !sessionId || !token || !wsUrl) {
+      resetState();
+      return undefined;
+    }
+
+    let isMounted = true;
+    const desiredConnectionKey = buildConnectionKey(wsUrl, token);
+
+    if (
+      socketService.getIsConnected() &&
+      connectionKeyRef.current &&
+      connectionKeyRef.current !== desiredConnectionKey
+    ) {
+      socketService.disconnect();
+      connectionKeyRef.current = null;
+    }
+
+    const reactionTopic = `/topic/presentation/${sessionId}/reactions`;
+
+    const onConnect = () => {
+      if (!isMounted) return;
+      setIsReady(true);
+      setConnectionError(null);
+
+      reactionUnsubscribeRef.current?.();
+      reactionUnsubscribeRef.current = socketService.subscribe(
+        reactionTopic,
+        handleReactionMessage
+      );
+    };
+
+    const onError = (error) => {
+      if (!isMounted) return;
+      setIsReady(false);
+      setConnectionError(error);
+    };
+
+    setConnectionError(null);
+    socketService.connect(wsUrl, token, onConnect, onError);
+    connectionKeyRef.current = desiredConnectionKey;
+
+    return () => {
+      isMounted = false;
+      setIsReady(false);
+
+      reactionUnsubscribeRef.current?.();
+      reactionUnsubscribeRef.current = null;
+
+      if (disconnectOnUnmountRef.current) {
+        socketService.disconnect();
+        connectionKeyRef.current = null;
+      }
+    };
+  }, [
+    enabled,
+    sessionId,
+    token,
+    wsUrl,
+    handleReactionMessage,
+    resetState,
+    socketService,
+  ]);
+
+  return {
+    stampsBySlide,
+    isReady,
+    connectionError,
+    addLocalStamp,
+    clearStamps,
+    disconnect,
+  };
+};
+
+export default useEmojiReactions;

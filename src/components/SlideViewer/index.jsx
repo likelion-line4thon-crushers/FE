@@ -27,6 +27,8 @@ const SlideViewer = ({
   currentSlide = 0,
   audienceStats = { prev: 0, current: 100, next: 0 },
   mode = "live",
+  stamps = [],
+  showReactions = true,
 }) => {
   const { prev, current, next } = audienceStats;
   const total = Math.max(prev + current + next, 1);
@@ -88,7 +90,8 @@ const SlideViewer = ({
       <SlideContainer
         src={slides[currentSlide]?.thumbnailUrl || slides[currentSlide]}
         alt={`슬라이드 ${currentSlide + 1}`}
-        style={{ objectFit: "contain" }}
+        stamps={stamps}
+        showStamps={showReactions}
       />
     </Main>
   );
