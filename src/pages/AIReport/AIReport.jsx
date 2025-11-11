@@ -1,4 +1,5 @@
-import React, { useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import SideHeader from "../../components/AI/SideHeader/SideHeader";
 import {
   PageContainer,
@@ -12,8 +13,14 @@ import QuestionSlide from "../../components/AI/QuestionSlide/QuestionSlide";
 import ReplaySlide from "../../components/AI/ReplaySlide/ReplaySlide";
 import Review from "../../components/AI/ReviewSlide/ReviewSlide";
 import FooterImage from "../../assets/images/AI/AIFooter.png";
+import { loadStoredRoomData, computeRoomInfo } from "../../utils/aiReportRoom";
+import {
+  fetchStoredAiReport,
+  fetchMostRevisitSlide,
+} from "../../services/aiReportService";
 
 const AiReportPage = () => {
+  const location = useLocation();
   const totalReactionRef = useRef(null);
   const top3Ref = useRef(null);
   const popularSlideRef = useRef(null);
@@ -21,6 +28,97 @@ const AiReportPage = () => {
   const replaySlideRef = useRef(null);
   const reviewRef = useRef(null);
   const contentContainerRef = useRef(null);
+  const [storedReport, setStoredReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState(null);
+  const [revisitReport, setRevisitReport] = useState(null);
+  const [revisitLoading, setRevisitLoading] = useState(false);
+  const [revisitError, setRevisitError] = useState(null);
+
+  const storedRoomData = useMemo(() => loadStoredRoomData(), []);
+
+  const roomInfo = useMemo(
+    () => computeRoomInfo(storedRoomData, location?.state),
+    [storedRoomData, location]
+  );
+
+  const { roomId } = roomInfo;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!roomId) {
+      setStoredReport(null);
+      setReportError(new Error("roomId를 확인할 수 없습니다."));
+      setReportLoading(false);
+      return undefined;
+    }
+
+    const loadReport = async () => {
+      setReportLoading(true);
+      setReportError(null);
+
+      try {
+        const data = await fetchStoredAiReport(roomId);
+        if (!cancelled) {
+          setStoredReport(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStoredReport(null);
+          setReportError(error);
+        }
+      } finally {
+        if (!cancelled) {
+          setReportLoading(false);
+        }
+      }
+    };
+
+    loadReport();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!roomId) {
+      setRevisitReport(null);
+      setRevisitError(new Error("roomId를 확인할 수 없습니다."));
+      setRevisitLoading(false);
+      return undefined;
+    }
+
+    const loadRevisit = async () => {
+      setRevisitLoading(true);
+      setRevisitError(null);
+
+      try {
+        const data = await fetchMostRevisitSlide(roomId);
+        if (!cancelled) {
+          setRevisitReport(data);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRevisitReport(null);
+          setRevisitError(error);
+        }
+      } finally {
+        if (!cancelled) {
+          setRevisitLoading(false);
+        }
+      }
+    };
+
+    loadRevisit();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId]);
 
   const scrollToSection = (sectionName) => {
     const refs = {
@@ -61,7 +159,11 @@ const AiReportPage = () => {
       <SideHeader onIconClick={scrollToSection} />
       <ContentContainer ref={contentContainerRef}>
         <div ref={totalReactionRef}>
-          <TotalReaction />
+          <TotalReaction
+            reportData={storedReport}
+            loading={reportLoading}
+            error={reportError}
+          />
         </div>
         <div ref={top3Ref}>
           <Top3 />
@@ -73,7 +175,11 @@ const AiReportPage = () => {
           <QuestionSlide />
         </div>
         <div ref={replaySlideRef}>
-          <ReplaySlide />
+          <ReplaySlide
+            reportData={revisitReport}
+            loading={revisitLoading}
+            error={revisitError}
+          />
         </div>
         <div ref={reviewRef}>
           <Review />

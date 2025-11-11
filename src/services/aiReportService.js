@@ -1,4 +1,5 @@
 import axios from "axios";
+import api from "./api";
 
 const FALLBACK_BASE_URL = "http://localhost:8000";
 
@@ -62,7 +63,29 @@ export const fetchTopQuestionsReport = async (roomId) => {
   return response?.data?.data ?? null;
 };
 
+export const fetchMostRevisitSlide = async (roomId) => {
+  if (!roomId) {
+    throw new Error("roomId가 필요합니다.");
+  }
+
+  const response = await api.get(`/api/aiReport/${roomId}/mostRevisit`);
+
+  return response?.data?.data ?? null;
+};
+
+export const fetchStoredAiReport = async (roomId) => {
+  if (!roomId) {
+    throw new Error("roomId가 필요합니다.");
+  }
+
+  const response = await api.get(`/api/aiReport/${roomId}`);
+
+  return response?.data?.data ?? null;
+};
+
 export default {
   fetchTopSlideReport,
   fetchTopQuestionsReport,
+  fetchMostRevisitSlide,
+  fetchStoredAiReport,
 };

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   ReplaySlideContainer,
   TotalContainer,
@@ -13,7 +13,77 @@ import ContentBox from "../ContentBox/ContentBox";
 import AITitle from "../AITitle/AITitle";
 import SlideNumber from "../SlideNumber/SlideNumber";
 
-const ReplaySlide = () => {
+const fallbackText = (loading, error, value) => {
+  if (loading) {
+    return "데이터를 불러오는 중입니다...";
+  }
+
+  if (error) {
+    return "데이터를 가져오는 중 오류가 발생했습니다.";
+  }
+
+  return value;
+};
+
+const ReplaySlide = ({ reportData, loading = false, error = null }) => {
+  const slideNumber = useMemo(() => {
+    if (loading || error) {
+      return "-";
+    }
+
+    const raw = reportData?.slide ?? null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : "-";
+  }, [reportData?.slide, loading, error]);
+
+  const totalRevisits = useMemo(() => {
+    if (loading || error) {
+      return "-";
+    }
+
+    const raw = reportData?.totalRevisits ?? 0;
+    if (typeof raw === "number") {
+      return raw.toLocaleString();
+    }
+
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed.toLocaleString() : "-";
+  }, [reportData?.totalRevisits, loading, error]);
+
+  const totalAudience = useMemo(() => {
+    if (loading || error) {
+      return "-";
+    }
+
+    const raw = reportData?.totalAudienceCount ?? 0;
+    if (typeof raw === "number") {
+      return raw.toLocaleString();
+    }
+
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed.toLocaleString() : "-";
+  }, [reportData?.totalAudienceCount, loading, error]);
+
+  const multiRevisitUsers = useMemo(() => {
+    if (loading || error) {
+      return "-";
+    }
+
+    const raw = reportData?.multiRevisitUsers ?? 0;
+    if (typeof raw === "number") {
+      return raw.toLocaleString();
+    }
+
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed.toLocaleString() : "-";
+  }, [reportData?.multiRevisitUsers, loading, error]);
+
+  const description = fallbackText(
+    loading,
+    error,
+    `해당 슬라이드를 ${totalAudience}명 중 ${totalRevisits}명이 재방문했어요.\n특히, ${multiRevisitUsers}명은 2번 이상 다시 봤어요.`
+  );
+
   return (
     <ReplaySlideContainer>
       <AITitle
@@ -26,7 +96,7 @@ const ReplaySlide = () => {
             title="재방문수가 가장 많은 슬라이드"
             variant="image"
             slideImage={rabbitImage}
-            slideNumberComponent={<SlideNumber slideNumber={0} />}
+            slideNumberComponent={<SlideNumber slideNumber={slideNumber} />}
             width="auto"
             height="405px"
             slideImageWidth="80%"
@@ -41,11 +111,20 @@ const ReplaySlide = () => {
             height="auto"
           >
             <NumberCenter>
-              <NumberValue>0번</NumberValue>
+              <NumberValue>
+                {loading
+                  ? "--"
+                  : error
+                  ? "N/A"
+                  : `${totalRevisits}${totalRevisits !== "-" ? "번" : ""}`}
+              </NumberValue>
               <NumberDescription>
-                해당 슬라이드를 0명중 0명이 재방문했어요.
-                <br />
-                특히, 0명은 2번 이상 다시 봤어요.
+                {description.split("\n").map((line, idx) => (
+                  <span key={line + idx}>
+                    {line}
+                    <br />
+                  </span>
+                ))}
               </NumberDescription>
             </NumberCenter>
           </ContentBox>
