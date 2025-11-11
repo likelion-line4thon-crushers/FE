@@ -33,6 +33,7 @@ const SlideViewer = ({
   stamps = [],
   showReactions = true,
   onToggleShowReactions,
+  timer = "00:00",
 }) => {
   const { prev, current, next } = audienceStats;
   const total = Math.max(prev + current + next, 1);
@@ -97,7 +98,7 @@ const SlideViewer = ({
           </TooltipHoverArea>
           <TimerButton>
             <img src={TimerIcon} alt="타이머" width={22} height={22} />
-            <span>00:00</span>
+            <span>{timer}</span>
           </TimerButton>
         </FocusRight>
       </FocusBar>
