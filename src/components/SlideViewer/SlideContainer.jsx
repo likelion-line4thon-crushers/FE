@@ -54,7 +54,6 @@ const SlideBox = styled.div`
   background-color: #ffffff;
   border-radius: 0.6vw;
   border: 0.05vw solid #ddd;
-  max-width: 67.7vw; /* 1300px 기준 */
   width: 100%;
   text-align: center;
   display: flex;
