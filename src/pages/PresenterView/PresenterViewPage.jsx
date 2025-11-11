@@ -92,7 +92,34 @@ const PresenterViewPage = () => {
   const [slideUrls, setSlideUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showReactions, setShowReactions] = useState(true);
+  const [showStampsInViewer, setShowStampsInViewer] = useState(true);
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  const handleToggleShowReactions = (nextValue) => {
+    setShowReactions(nextValue);
+  };
+
+  const handleToggleShowStampsInViewer = (nextValue) => {
+    setShowStampsInViewer(nextValue);
+  };
+
+  // 타이머 (페이지 마운트 시 시작)
+  useEffect(() => {
+    const timerInterval = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
+  }, []);
+
+  // 타이머 포맷팅 (MM:SS)
+  const formatTimer = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
+
   const presenterSocketService = useMemo(() => new WebSocketService(), []);
   const { stampsBySlide: reactionStamps, isReady: reactionsReady } =
     useEmojiReactions({
@@ -319,8 +346,10 @@ const PresenterViewPage = () => {
         currentSlide={currentSlide}
         setCurrentSlide={changeSlide}
         mode="present"
-        stamps={showReactions ? currentReactionStamps : []}
-        showReactions={showReactions && reactionsReady}
+        stamps={showStampsInViewer ? currentReactionStamps : []}
+        showReactions={showStampsInViewer}
+        onToggleShowReactions={handleToggleShowStampsInViewer}
+        timer={formatTimer(elapsedSeconds)}
       />
 
       {/* 🔹 우측: 빠른 설정 + 실시간 질문 */}

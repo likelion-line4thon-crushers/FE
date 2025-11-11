@@ -13,14 +13,17 @@ import {
   LegendItem,
   ColorDot,
   FocusRight,
-  IconButton,
   TimerButton,
+  ReactionButton,
+  TooltipHoverArea,
+  Tooltip,
 } from "./SlideViewer.styles";
 
 import SlideContainer from "./SlideContainer";
 import FocusIcon from "../../assets/images/focus.svg";
-import LogoIcon from "../../assets/images/emoji1_black.svg";
 import TimerIcon from "../../assets/images/timer.svg";
+import openeyes from "../../assets/images/openeyes.png";
+import closeeyes from "../../assets/images/closeeyes.png";
 
 const SlideViewer = ({
   slides,
@@ -29,12 +32,20 @@ const SlideViewer = ({
   mode = "live",
   stamps = [],
   showReactions = true,
+  onToggleShowReactions,
+  timer = "00:00",
 }) => {
   const { prev, current, next } = audienceStats;
   const total = Math.max(prev + current + next, 1);
   const prevPct = (prev / total) * 100;
   const currentPct = (current / total) * 100;
   const nextPct = (next / total) * 100;
+
+  const handleToggleEyesClick = () => {
+    if (typeof onToggleShowReactions === "function") {
+      onToggleShowReactions(!showReactions);
+    }
+  };
 
   return (
     <Main>
@@ -76,12 +87,18 @@ const SlideViewer = ({
 
         {/* 🔹 오른쪽 (로고, 타이머) */}
         <FocusRight>
-          <IconButton>
-            <img src={LogoIcon} alt="로고" width={24} height={24} />
-          </IconButton>
+          <TooltipHoverArea>
+            <Tooltip>리액션 스티커 보이기</Tooltip>
+            <ReactionButton onClick={handleToggleEyesClick}>
+              <img
+                src={showReactions ? openeyes : closeeyes}
+                alt={showReactions ? "openeyes" : "closeeyes"}
+              />
+            </ReactionButton>
+          </TooltipHoverArea>
           <TimerButton>
             <img src={TimerIcon} alt="타이머" width={22} height={22} />
-            <span>00:00</span>
+            <span>{timer}</span>
           </TimerButton>
         </FocusRight>
       </FocusBar>
