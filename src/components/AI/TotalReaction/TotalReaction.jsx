@@ -8,6 +8,7 @@ import ReportTitle from "../../../assets/images/AI/ReportTitle.png";
 import ContentBox from "../ContentBox/ContentBox";
 import RabbitImage from "../../../assets/images/rabbit.jpg";
 import SlideNumber from "../SlideNumber/SlideNumber";
+import useSlideImage from "../../../hooks/useSlideImage";
 
 const formatValue = (value, { loading, error }) => {
   if (loading) {
@@ -29,19 +30,34 @@ const formatValue = (value, { loading, error }) => {
   return "0";
 };
 
-const TotalReaction = ({ reportData, loading = false, error = null }) => {
+const TotalReaction = ({
+  reportData,
+  loading = false,
+  error = null,
+  roomId,
+  deckId,
+}) => {
   const emojiCount = reportData?.emojiCount ?? null;
   const questionCount = reportData?.questionCount ?? null;
-  const attentionSlide = reportData?.attentionSlide ?? null;
 
-  const attentionSlideNumber = useMemo(() => {
+  const attentionSlideIndex = useMemo(() => {
     if (loading || error) {
-      return "-";
+      return null;
     }
 
-    const parsed = Number(attentionSlide);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : "-";
-  }, [attentionSlide, loading, error]);
+    const raw = reportData?.attentionSlide ?? null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }, [reportData?.attentionSlide, loading, error]);
+
+  const attentionSlideNumber = attentionSlideIndex ?? "-";
+
+  const { imageUrl: attentionSlideImage } = useSlideImage({
+    roomId,
+    deckId,
+    slideNumber: attentionSlideIndex,
+    enabled: Boolean(attentionSlideIndex),
+  });
 
   return (
     <TotalReactionContainer>
@@ -65,7 +81,7 @@ const TotalReaction = ({ reportData, loading = false, error = null }) => {
         />
         <ContentBox
           title="주목해야 할 슬라이드"
-          slideImage={RabbitImage}
+          slideImage={attentionSlideImage || RabbitImage}
           height="350px"
           width="570px"
           slideImageWidth="80%"

@@ -14,16 +14,15 @@ import ContentBox from "../ContentBox/ContentBox";
 import AITitle from "../AITitle/AITitle";
 import SlideNumber from "../SlideNumber/SlideNumber";
 import { fetchTopSlideReport } from "../../../services/aiReportService";
-import { getOriginalSlideUrl } from "../../../services/presentationService";
 import {
   loadStoredRoomData,
   computeRoomInfo,
 } from "../../../utils/aiReportRoom";
+import useSlideImage from "../../../hooks/useSlideImage";
 
 const QuestionSlide = () => {
   const location = useLocation();
   const [report, setReport] = useState(null);
-  const [slideImageUrl, setSlideImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -41,7 +40,6 @@ const QuestionSlide = () => {
 
     if (!roomId) {
       setReport(null);
-      setSlideImageUrl(null);
       setError(new Error("방 정보를 찾을 수 없습니다."));
       setLoading(false);
       return undefined;
@@ -62,51 +60,18 @@ const QuestionSlide = () => {
 
         if (
           result &&
-          deckId &&
-          typeof result.slide !== "undefined" &&
-          result.slide !== null
+          totalPages &&
+          Number.isFinite(Number(result.slide)) &&
+          Number(result.slide) > Number(totalPages)
         ) {
-          const rawSlideNumber = Number(result.slide);
-          const slideNumber = Number.isFinite(rawSlideNumber)
-            ? rawSlideNumber
-            : NaN;
-
-          if (Number.isFinite(slideNumber) && slideNumber > 0) {
-            if (totalPages && slideNumber > Number(totalPages)) {
-              console.warn(
-                "[QuestionSlide] 보고된 슬라이드 번호가 총 페이지 수를 초과합니다:",
-                { slideNumber, totalPages }
-              );
-            }
-
-            try {
-              const imageUrl = await getOriginalSlideUrl(
-                roomId,
-                deckId,
-                slideNumber
-              );
-              if (!cancelled) {
-                setSlideImageUrl(imageUrl);
-              }
-            } catch (imageError) {
-              console.warn(
-                "[QuestionSlide] 슬라이드 이미지 로드 실패:",
-                imageError
-              );
-              if (!cancelled) {
-                setSlideImageUrl(null);
-              }
-            }
-          } else if (!cancelled) {
-            setSlideImageUrl(null);
-          }
-        } else if (!cancelled) {
-          setSlideImageUrl(null);
+          console.warn(
+            "[QuestionSlide] 보고된 슬라이드 번호가 총 페이지 수를 초과합니다:",
+            { slideNumber: result.slide, totalPages }
+          );
         }
       } catch (err) {
         if (!cancelled) {
           setReport(null);
-          setSlideImageUrl(null);
           setError(err);
         }
       } finally {
@@ -121,7 +86,7 @@ const QuestionSlide = () => {
     return () => {
       cancelled = true;
     };
-  }, [roomId, deckId, totalPages]);
+  }, [roomId, totalPages]);
 
   const slideNumber =
     report && Number.isFinite(Number(report.slide)) && Number(report.slide) > 0
@@ -166,6 +131,12 @@ const QuestionSlide = () => {
 
   const totalQuestions =
     typeof report?.totalQuestions === "number" ? report.totalQuestions : 0;
+  const { imageUrl: slideImageUrl } = useSlideImage({
+    roomId,
+    deckId,
+    slideNumber,
+    enabled: Boolean(roomId && deckId && slideNumber),
+  });
   const imageSource = slideImageUrl || rabbitImage;
 
   return (

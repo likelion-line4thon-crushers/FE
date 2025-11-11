@@ -42,7 +42,7 @@ const AiReportPage = () => {
     [storedRoomData, location]
   );
 
-  const { roomId } = roomInfo;
+  const { roomId, deckId } = roomInfo;
 
   useEffect(() => {
     let cancelled = false;
@@ -163,6 +163,8 @@ const AiReportPage = () => {
             reportData={storedReport}
             loading={reportLoading}
             error={reportError}
+            roomId={roomId}
+            deckId={deckId}
           />
         </div>
         <div ref={top3Ref}>
@@ -179,6 +181,8 @@ const AiReportPage = () => {
             reportData={revisitReport}
             loading={revisitLoading}
             error={revisitError}
+            roomId={roomId}
+            deckId={deckId}
           />
         </div>
         <div ref={reviewRef}>

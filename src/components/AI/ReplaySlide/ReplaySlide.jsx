@@ -12,6 +12,7 @@ import rabbitImage from "../../../assets/images/rabbit.jpg";
 import ContentBox from "../ContentBox/ContentBox";
 import AITitle from "../AITitle/AITitle";
 import SlideNumber from "../SlideNumber/SlideNumber";
+import useSlideImage from "../../../hooks/useSlideImage";
 
 const fallbackText = (loading, error, value) => {
   if (loading) {
@@ -25,16 +26,31 @@ const fallbackText = (loading, error, value) => {
   return value;
 };
 
-const ReplaySlide = ({ reportData, loading = false, error = null }) => {
-  const slideNumber = useMemo(() => {
+const ReplaySlide = ({
+  reportData,
+  loading = false,
+  error = null,
+  roomId,
+  deckId,
+}) => {
+  const numericSlideNumber = useMemo(() => {
     if (loading || error) {
-      return "-";
+      return null;
     }
 
     const raw = reportData?.slide ?? null;
     const parsed = Number(raw);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : "-";
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [reportData?.slide, loading, error]);
+
+  const slideNumber = numericSlideNumber ?? "-";
+
+  const { imageUrl: slideImageUrl } = useSlideImage({
+    roomId,
+    deckId,
+    slideNumber: numericSlideNumber,
+    enabled: Boolean(numericSlideNumber),
+  });
 
   const totalRevisits = useMemo(() => {
     if (loading || error) {
@@ -95,7 +111,7 @@ const ReplaySlide = ({ reportData, loading = false, error = null }) => {
           <ContentBox
             title="재방문수가 가장 많은 슬라이드"
             variant="image"
-            slideImage={rabbitImage}
+            slideImage={slideImageUrl || rabbitImage}
             slideNumberComponent={<SlideNumber slideNumber={slideNumber} />}
             width="auto"
             height="405px"
