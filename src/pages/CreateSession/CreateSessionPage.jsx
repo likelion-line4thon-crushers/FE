@@ -139,6 +139,25 @@ const PresentationPrepPage = () => {
     });
   }, [slideUrls]);
 
+  // 🔹 방향키로 슬라이드 이동
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        // 이전 슬라이드
+        setCurrentSlide((prev) => Math.max(0, prev - 1));
+      } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        // 다음 슬라이드
+        setCurrentSlide((prev) => Math.min(slideUrls.length - 1, prev + 1));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [slideUrls.length]);
+
   if (!slideUrls || slideUrls.length === 0 || !imagesLoaded)
     return <LandingPage message="세션 자료 준비 중..." />;
 
