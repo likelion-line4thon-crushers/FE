@@ -22,6 +22,7 @@ import websocketService, {
 import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
 import useAudienceQuestions from "../../hooks/useAudienceQuestions";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
+import SELECTED_EMOJI_ICONS from "../../constants/emojiIcons";
 
 const AudienceViewPage = () => {
   const { code } = useParams();
@@ -374,12 +375,15 @@ const AudienceViewPage = () => {
       websocketService.send(destination, message);
       console.log("[WebSocket] 이모지 반응 전송:", message);
 
-      addLocalStamp(currentSlide, {
-        id: now,
-        xPct,
-        yPct,
-        src: selectedEmoji.selectedIcon,
-      });
+      const stickerSrc = SELECTED_EMOJI_ICONS[selectedEmoji.id];
+      if (stickerSrc) {
+        addLocalStamp(currentSlide, {
+          id: now,
+          xPct,
+          yPct,
+          src: stickerSrc,
+        });
+      }
     }
   };
 
@@ -422,7 +426,6 @@ const AudienceViewPage = () => {
         <SlideViewer
           slides={slides}
           currentSlide={currentSlide}
-          cursorImage={selectedEmoji?.selectedIcon}
           stamps={stampsBySlide[String(currentSlide)] || []}
           onPlace={handlePlaceStamp}
           followPresenter={followPresenter}

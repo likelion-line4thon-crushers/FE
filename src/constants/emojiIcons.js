@@ -1,17 +1,17 @@
-import interestSelected from "../assets/icons/Emoji_selected/Interesting_selected.png";
-import surpriseSelected from "../assets/icons/Emoji_selected/surprising_selected.png";
-import curiousSelected from "../assets/icons/Emoji_selected/curious_selected.png";
-import excitingSelected from "../assets/icons/Emoji_selected/Exciting_selected.png";
-import angrySelected from "../assets/icons/Emoji_selected/angry_selected.png";
-import sadSelected from "../assets/icons/Emoji_selected/Sad_selected.png";
+import interestSticker from "../assets/icons/Emoji_sticker/Interesting_sticker.png";
+import surpriseSticker from "../assets/icons/Emoji_sticker/surprising_sticker.png";
+import curiousSticker from "../assets/icons/Emoji_sticker/curious_sticker.png";
+import excitingSticker from "../assets/icons/Emoji_sticker/Exciting_sticker.png";
+import angrySticker from "../assets/icons/Emoji_sticker/angry_sticker.png";
+import sadSticker from "../assets/icons/Emoji_sticker/Sad_sticker.png";
 
 export const SELECTED_EMOJI_ICONS = {
-  1: interestSelected,
-  2: surpriseSelected,
-  3: curiousSelected,
-  4: excitingSelected,
-  5: angrySelected,
-  6: sadSelected,
+  1: interestSticker,
+  2: surpriseSticker,
+  3: curiousSticker,
+  4: excitingSticker,
+  5: angrySticker,
+  6: sadSticker,
 };
 
 export default SELECTED_EMOJI_ICONS;

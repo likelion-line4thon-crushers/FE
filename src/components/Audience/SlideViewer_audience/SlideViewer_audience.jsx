@@ -21,7 +21,6 @@ import TipIcon from "../../../assets/images/tooltip.png";
 const SlideViewer = ({
   slides = [],
   currentSlide = 0,
-  cursorImage,
   stamps = [],
   onPlace,
   followPresenter = true,
@@ -93,12 +92,8 @@ const SlideViewer = ({
         ref={boxRef}
         onClick={handleClick}
         style={{
-          cursor: isWaiting
-            ? "default"
-            : cursorImage
-            ? `url(${cursorImage}) 16 16, auto`
-            : "auto",
-        }} //마우스 포인터 변경
+          cursor: isWaiting ? "default" : "pointer",
+        }}
       >
         {isWaiting ? (
           <WaitingState>

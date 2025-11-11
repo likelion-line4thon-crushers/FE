@@ -91,13 +91,13 @@ export const SlideNumber = styled.div`
 
 export const SlideNumberSlot = styled.div`
   position: absolute;
-  bottom: 5px;
+  bottom: 3px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
 `;
 
 export const ContentText = styled.p`
