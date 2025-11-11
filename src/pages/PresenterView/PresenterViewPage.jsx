@@ -92,7 +92,16 @@ const PresenterViewPage = () => {
   const [slideUrls, setSlideUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showReactions, setShowReactions] = useState(true);
+  const [showStampsInViewer, setShowStampsInViewer] = useState(true);
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
+
+  const handleToggleShowReactions = (nextValue) => {
+    setShowReactions(nextValue);
+  };
+
+  const handleToggleShowStampsInViewer = (nextValue) => {
+    setShowStampsInViewer(nextValue);
+  };
   const presenterSocketService = useMemo(() => new WebSocketService(), []);
   const { stampsBySlide: reactionStamps, isReady: reactionsReady } =
     useEmojiReactions({
@@ -319,8 +328,9 @@ const PresenterViewPage = () => {
         currentSlide={currentSlide}
         setCurrentSlide={changeSlide}
         mode="present"
-        stamps={showReactions ? currentReactionStamps : []}
-        showReactions={showReactions && reactionsReady}
+        stamps={showStampsInViewer ? currentReactionStamps : []}
+        showReactions={showStampsInViewer}
+        onToggleShowReactions={handleToggleShowStampsInViewer}
       />
 
       {/* 🔹 우측: 빠른 설정 + 실시간 질문 */}
