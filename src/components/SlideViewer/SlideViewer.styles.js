@@ -142,6 +142,82 @@ export const TimerButton = styled.div`
   color: #5c5c5c;
 `;
 
+/* 리액션 버튼 */
+export const ReactionButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5vw;
+  height: 2.5vw;
+  border: none;
+  background: #fafafa;
+  border: 0.05vw solid #eaeaea;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  &:hover {
+    background: #f0f0f0;
+  }
+`;
+
+/* 툴팁 */
+export const TooltipWrapper = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const Tooltip = styled.div`
+  position: absolute;
+  right: 45px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: rgb(201, 201, 201);
+
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+
+  color: rgb(0, 0, 0);
+  font-family: Pretendard;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.3px;
+
+  &::before {
+    content: "";
+    position: absolute;
+    right: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-left: 9px solid rgb(201, 201, 201);
+  }
+`;
+
+export const TooltipHoverArea = styled(TooltipWrapper)`
+  &:hover ${Tooltip} {
+    opacity: 1;
+  }
+`;
+
 /* 슬라이드 컨테이너 */
 export const SlideContainer = styled.div`
   position: relative;
