@@ -141,3 +141,18 @@ export const TimerButton = styled.div`
   font-size: clamp(14px, 1vw, 18px);
   color: #5c5c5c;
 `;
+
+/* 슬라이드 컨테이너 */
+export const SlideContainer = styled.div`
+  position: relative;
+  background-color: #ffffff;
+  border-radius: 0.6vw;
+  border: 0.05vw solid #ddd;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+`;

@@ -18,7 +18,7 @@ const ModalBox = styled.div`
   background: #fff;
   border-radius: 0.52vw;
   width: 18vw;
-  height: 50vh;
+  height: 58.5vh;
   padding: 1vw;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   display: flex;
@@ -84,25 +84,39 @@ const CopyButton = styled.button`
 const QrBox = styled.div`
   display: flex;
   justify-content: center;
-  padding-top: 4px;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  width: 100%;
 
   img {
-    width: 8vw;
-    height: 8vw;
+    width: 100%;
+    // max-width: 16vw;
+    height: auto;
+    aspect-ratio: 1;
     border-radius: 8px;
+    border: 1px solid #E0E0E0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding-top: 0.1vw;
+    margin: 0;
+    background: #fff;
   }
 
   .qr-placeholder {
-    width: 8vw;
-    height: 8vw;
+    width: 100%;
+    // max-width: 16vw;
+    aspect-ratio: 1;
     background: #f1f1f1;
-    border: 1px dashed #ccc;
+    border: 1px solid #E0E0E0;
     border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 0.7rem;
     color: #888;
+    padding: 0;
+    margin: 0;
   }
 `;
 
@@ -182,7 +196,7 @@ const ShareModal = ({ roomData, totalPages = 10, onClose }) => {
                         </div>
 
                         <div>
-                            <Label>QR 코드</Label>
+                            <Label>QR 코드 링크</Label>
                             <QrBox>
                                 {qrBase64 ? (
                                     <img src={`data:image/png;base64,${qrBase64}`} alt="QR Code" />

@@ -21,11 +21,11 @@ const LiveButton = styled.button`
   white-space: nowrap;
   color: #5c5c5c;
   text-align: center;
-  font-size: clamp(12px, 0.8vw, 13px);
-  font-weight: 600;
-  line-height: 1.3;
+  font-size: clamp(10px, 0.65vw, 11px);
+  font-weight: 400;
+  line-height: 1;
   display: inline-flex;
-  padding: 1vh 2vw;
+  padding: 1vh 1.2vw;
   justify-content: center;
   align-items: center;
   border-radius: 1.2vw;
@@ -33,4 +33,11 @@ const LiveButton = styled.button`
   background: rgba(247, 247, 251, 0.9);
   box-shadow: 0 0.4vh 0.6vh rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(0.5vh);
+
+  img {
+    display: block;
+    vertical-align: middle;
+    width: 1vw;
+    height: 1vw;
+  }
 `;

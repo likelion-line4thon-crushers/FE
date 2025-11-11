@@ -3,8 +3,8 @@ import styled from "styled-components";
 import playIcon from "../../assets/images/play.svg";
 
 export const Sidebar = styled.div`
-  width: 10vw; /* 193px */
-  height: 94vh; /* 1015px */
+  width: 8vw;
+  height: 94vh;
   flex-shrink: 0;
   border: 0.05vw solid #eaeaea;
   background: #f5f5f5;
@@ -22,7 +22,7 @@ export const Sidebar = styled.div`
 export const SlideList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.6vh;
+  gap: 1vh;
 `;
 
 export const SlideThumb = styled.div`

@@ -113,10 +113,10 @@ const UploadBox = styled.div`
   width: 91%;
   height: 5vh;
   border: 0.1vw solid #5C5C5C;
-  border-radius: 0.8vw;
+  border-radius: 0.7vw;
   background: #fff;
   box-shadow: 0 0.2vh 0.5vh rgba(0, 0, 0, 0.04);
-  padding: 0 1vw;
+  padding: 0 0.1vw 0 0.8vw;
   transition: all 0.2s ease-in-out;
   margin-bottom: 0;
 
@@ -133,6 +133,13 @@ const UploadBox = styled.div`
       box-shadow: 0 0 0.8vh rgba(0, 170, 255, 0.2);
     `}
 
+  ${({ $hasFile }) =>
+    $hasFile &&
+    css`
+      background: #000;
+      border-color: #000;
+    `}
+
   .file-name {
     color: #888;
     font-size: clamp(13px, 0.9vw, 15px);
@@ -142,19 +149,33 @@ const UploadBox = styled.div`
     overflow: hidden;
     text-overflow: ellipsis;
     cursor: pointer;
+    
+    ${({ $hasFile }) =>
+      $hasFile &&
+      css`
+        color: #fff;
+      `}
   }
 
   .arrow {
     font-size: 1.2vw;
-    color: #e8541e;
+    color:rgb(255, 255, 255);
     margin-left: 0.5vw;
+    margin-right: 0.2vw;
     cursor: pointer;
-    transition: transform 0.2s ease, color 0.2s ease;
-  }
-
-  .arrow:hover {
-    transform: translateX(0.3vw);
-    color: #cc3f13;
+    background-color: #EAEAEA;
+    padding: 0.4vw;
+    border-radius: 0.35vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    
+    ${({ $hasFile }) =>
+      $hasFile &&
+      css`
+        background-color: #FF4200;
+      `}
   }
 `;
 
@@ -239,6 +260,7 @@ const MainPage = () => {
 
           <UploadBox
             $dragging={isDragging}
+            $hasFile={!!selectedFile}
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
