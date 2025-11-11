@@ -16,7 +16,7 @@ const BasePillButton = styled.button`
   background: #fff;
   color: #5c5c5c;
   font-family: Pretendard, sans-serif;
-  font-size: clamp(12px, 0.9vw, 16px);
+  font-size: clamp(11px, 0.8vw, 13x);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -72,6 +72,33 @@ const OrangePillButton = styled(BasePillButton)`
   }
 `;
 
+/* === 세션 종료 버튼 (어두운 배경) === */
+const EndSessionButton = styled(BasePillButton)`
+  background: #303030;
+  border: 1px solid #CACACA;
+  color: #fff;
+  font-weight: 400;
+  font-size: clamp(11px, 0.85vw, 15px);
+
+  &:hover {
+    background: #404040;
+  }
+
+  &:active {
+    background: #1a1a1a;
+  }
+`;
+
+/* === 둥근 정사각형 아이콘 === */
+const RoundedSquareIcon = styled.div`
+  width: 0.6vw;
+  height: 0.6vw;
+  background: #e74d07;
+  border-radius: 0.1vw;
+  margin-right: 0.2vw;
+  flex-shrink: 0;
+`;
+
 /* === 버튼 콘텐츠 렌더 공통 함수 === */
 const renderContent = (iconSrc, alt, children) => (
   <>
@@ -108,11 +135,23 @@ export const StartSessionButton = React.forwardRef(
       ...props
     },
     ref
-  ) => (
-    <OrangePillButton ref={ref} {...props}>
-      {renderContent(iconSrc, iconAlt, children)}
-    </OrangePillButton>
-  )
+  ) => {
+    const isEndSession = children === "세션 종료";
+    const ButtonComponent = isEndSession ? EndSessionButton : OrangePillButton;
+
+    return (
+      <ButtonComponent ref={ref} {...props}>
+        {isEndSession ? (
+          <>
+            <RoundedSquareIcon />
+            {children}
+          </>
+        ) : (
+          renderContent(iconSrc, iconAlt, children)
+        )}
+      </ButtonComponent>
+    );
+  }
 );
 
 StartSessionButton.displayName = "StartSessionButton";
