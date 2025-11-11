@@ -153,7 +153,7 @@ const QuestionSlide = () => {
             }`}
             slideImage={imageSource}
             height="350px"
-            width="680px"
+            width="570px"
             slideImageWidth="80%"
             slideImageHeight="80%"
             slideNumberComponent={
@@ -164,7 +164,7 @@ const QuestionSlide = () => {
             title="실시간 질문 요약"
             variant="custom"
             height="350px"
-            width="680px"
+            width="570px"
           >
             <SummaryBoxContainer>
               <img className="face-image" src={faceImage} alt="face" />

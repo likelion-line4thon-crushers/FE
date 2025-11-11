@@ -48,7 +48,8 @@ export const LeftBoxContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  width: 48%;
+  width: auto;
+  max-width: 570px;
 `;
 export const RightBoxContainer = styled.div`
   display: flex;
@@ -57,4 +58,5 @@ export const RightBoxContainer = styled.div`
   flex: 1;
   align-items: stretch;
   padding-right: 50px;
+  margin-left: 62px;
 `;
