@@ -15,50 +15,10 @@ import AITitle from "../AITitle/AITitle";
 import SlideNumber from "../SlideNumber/SlideNumber";
 import { fetchTopSlideReport } from "../../../services/aiReportService";
 import { getOriginalSlideUrl } from "../../../services/presentationService";
-
-const STORAGE_KEYS = [
-  "ai_report_room",
-  "aiReportRoom",
-  "boini_room",
-  "roomData",
-];
-
-const parseStoredJson = (value) => {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(value);
-  } catch (error) {
-    console.warn("[QuestionSlide] 저장된 방 정보 파싱 실패:", error);
-    return null;
-  }
-};
-
-const loadStoredRoomData = () => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  for (const key of STORAGE_KEYS) {
-    try {
-      const raw =
-        window.sessionStorage?.getItem(key) ??
-        window.localStorage?.getItem(key) ??
-        null;
-
-      const parsed = parseStoredJson(raw);
-      if (parsed && typeof parsed === "object") {
-        return parsed;
-      }
-    } catch (error) {
-      console.warn(`[QuestionSlide] ${key} 접근 중 오류 발생:`, error);
-    }
-  }
-
-  return null;
-};
+import {
+  loadStoredRoomData,
+  computeRoomInfo,
+} from "../../../utils/aiReportRoom";
 
 const QuestionSlide = () => {
   const location = useLocation();
@@ -69,38 +29,10 @@ const QuestionSlide = () => {
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
 
-  const locationRoomData = useMemo(() => {
-    const state = location?.state ?? {};
-    if (state?.roomData && typeof state.roomData === "object") {
-      return state.roomData;
-    }
-
-    if (state?.roomId) {
-      return state;
-    }
-
-    return null;
-  }, [location?.state]);
-
-  const roomInfo = useMemo(() => {
-    const merged = {
-      ...(storedRoomData || {}),
-      ...(locationRoomData || {}),
-    };
-
-    const slideCount =
-      merged.totalPages ??
-      merged.slideCount ??
-      merged.totalPage ??
-      merged.pages ??
-      null;
-
-    return {
-      roomId: merged.roomId ?? null,
-      deckId: merged.deckId ?? null,
-      totalPages: slideCount,
-    };
-  }, [storedRoomData, locationRoomData]);
+  const roomInfo = useMemo(
+    () => computeRoomInfo(storedRoomData, location?.state),
+    [storedRoomData, location?.state]
+  );
 
   const { roomId, deckId, totalPages } = roomInfo;
 

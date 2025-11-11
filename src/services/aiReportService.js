@@ -52,6 +52,17 @@ export const fetchTopSlideReport = async (roomId, options = {}) => {
   return response?.data?.data ?? null;
 };
 
+export const fetchTopQuestionsReport = async (roomId) => {
+  if (!roomId) {
+    throw new Error("roomId가 필요합니다.");
+  }
+
+  const response = await aiApi.get(`/report/questions/rooms/${roomId}/top3`);
+
+  return response?.data?.data ?? null;
+};
+
 export default {
   fetchTopSlideReport,
+  fetchTopQuestionsReport,
 };
