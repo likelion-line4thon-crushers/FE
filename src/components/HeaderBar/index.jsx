@@ -9,6 +9,7 @@ import {
   ExitButton,
   StartSessionButton,
 } from "../common/HeaderButtons";
+import { startSession } from "../../services/roomService";
 
 /* ===== 헤더 전체 래퍼 ===== */
 const HeaderWrapper = styled.header`
@@ -128,21 +129,29 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
   }, [location.state]);
 
   /* ✅ 세션 시작 / 종료 버튼 */
-  const handleSessionAction = () => {
+  const handleSessionAction = async () => {
     if (isPrep) {
       if (!roomData?.roomId || !roomData?.deckId) {
         alert("⚠️ 방 정보가 아직 준비되지 않았습니다.");
         return;
       }
 
-      navigate(`/presentation/${roomData.roomId}`, {
-        state: {
-          fileName,
-          roomId: roomData.roomId,
-          deckId: roomData.deckId,
-          totalPages: totalPages || 0,
-        },
-      });
+      try {
+        // 세션 시작 API 호출 (status를 waiting → live로 변경 및 웹소켓 브로드캐스팅)
+        await startSession(roomData.roomId);
+
+        // 발표자 뷰로 이동
+        navigate(`/presentation/${roomData.roomId}`, {
+          state: {
+            fileName,
+            roomId: roomData.roomId,
+            deckId: roomData.deckId,
+            totalPages: totalPages || 0,
+          },
+        });
+      } catch (error) {
+        alert("⚠️ 세션 시작에 실패했습니다. 다시 시도해주세요.");
+      }
     } else if (isPresenter) {
       navigate("/");
     }

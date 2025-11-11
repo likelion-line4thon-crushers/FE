@@ -33,3 +33,14 @@ export const joinRoom = async (code) => {
   const res = await api.get(`/api/rooms/join/${code}`);
   return res.data.data;
 };
+
+export const startSession = async (roomId) => {
+  try {
+    const res = await api.post(`/api/rooms/${roomId}/session/start`);
+    console.log("POST 요청 성공!");
+    return res.data.data;
+  } catch (error) {
+    console.error("POST 요청 실패:", error);
+    throw error;
+  }
+};
