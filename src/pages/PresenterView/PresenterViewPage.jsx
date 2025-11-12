@@ -11,7 +11,10 @@ import Layout from "../../components/Layout/Layout"; // ✅ LayoutContainer 말�
 import SidebarSlides from "../../components/SidebarSlides";
 import SlideViewer from "../../components/SlideViewer";
 import QuestionList from "../../components/QuestionList";
-import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
+import {
+  fetchAllOriginalSlideUrls,
+  fetchAudienceSlideStats,
+} from "../../services/presentationService";
 import websocketService from "../../services/websocketService";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
 import { WebSocketService } from "../../services/websocketService";
@@ -97,7 +100,13 @@ const PresenterViewPage = () => {
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showFocusHighlight, setShowFocusHighlight] = useState(false);
+  const [audienceStats, setAudienceStats] = useState({
+    prev: 0,
+    current: 0,
+    next: 0,
+  });
   const focusHighlightTimeoutRef = useRef(null);
+  const audienceStatsControllerRef = useRef(null);
 
   // 🔹 빠른 설정 토글 상태 관리
   const [quickSettings, setQuickSettings] = useQuickSettingsStorage();
@@ -237,6 +246,65 @@ const PresenterViewPage = () => {
   }, [currentSlide]);
 
   const slideCount = slideUrls.length;
+
+  useEffect(() => {
+    if (!roomId) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+
+    if (audienceStatsControllerRef.current) {
+      audienceStatsControllerRef.current.abort();
+    }
+
+    audienceStatsControllerRef.current = controller;
+
+    const loadAudienceStats = async () => {
+      try {
+        const stats = await fetchAudienceSlideStats({
+          roomId,
+          page: currentSlide,
+          signal: controller.signal,
+        });
+        console.log(
+          "[PresenterViewPage] 청중 분포 데이터 수신:",
+          roomId,
+          currentSlide,
+          stats
+        );
+        setAudienceStats((prevStats) => ({
+          prev: Number.isFinite(stats?.prev) ? stats.prev : prevStats.prev,
+          current: Number.isFinite(stats?.current)
+            ? stats.current
+            : prevStats.current,
+          next: Number.isFinite(stats?.next) ? stats.next : prevStats.next,
+        }));
+      } catch (error) {
+        if (
+          error?.name === "CanceledError" ||
+          error?.name === "AbortError" ||
+          error?.code === "ERR_CANCELED"
+        ) {
+          return;
+        }
+        console.error(
+          "[PresenterViewPage] 청중 분포 데이터 로딩 실패:",
+          error
+        );
+      } finally {
+        if (audienceStatsControllerRef.current === controller) {
+          audienceStatsControllerRef.current = null;
+        }
+      }
+    };
+
+    loadAudienceStats();
+
+    return () => {
+      controller.abort();
+    };
+  }, [roomId, currentSlide]);
 
   const changeSlide = useCallback(
     (nextIndex, { broadcast = true } = {}) => {
@@ -486,6 +554,7 @@ const PresenterViewPage = () => {
         slides={slideUrls} // 이 부분을 slideUrls로 변경
         currentSlide={currentSlide}
         setCurrentSlide={changeSlide}
+        audienceStats={audienceStats}
         mode="present"
         stamps={showStampsInViewer ? currentReactionStamps : []}
         showReactions={showStampsInViewer}

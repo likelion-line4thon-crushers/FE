@@ -42,6 +42,7 @@ const SlideViewer = ({
   const prevPct = (prev / total) * 100;
   const currentPct = (current / total) * 100;
   const nextPct = (next / total) * 100;
+  const showAudienceDistribution = mode === "live" || mode === "present";
 
   const handleToggleEyesClick = () => {
     if (typeof onToggleShowReactions === "function") {
@@ -61,7 +62,7 @@ const SlideViewer = ({
 
           <LegendContainer>
             <AudienceBar>
-              {mode === "live" ? (
+              {showAudienceDistribution ? (
                 <>
                   <SegmentPrev width={prevPct} />
                   <SegmentCurrent width={currentPct} />
