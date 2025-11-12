@@ -308,7 +308,9 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
               </StartSessionButton>
             )}
 
-            {isAudienceView && <ExitButton />}
+            {(isAudienceView || isAiReport) && (
+              <ExitButton onClick={() => navigate("/")} />
+            )}
           </RightActions>
         )}
       </HeaderWrapper>
