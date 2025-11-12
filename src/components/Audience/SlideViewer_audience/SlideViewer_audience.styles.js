@@ -32,6 +32,7 @@ export const FocusBar = styled.div`
   align-self: flex-start;
   justify-content: flex-start;
   gap: 850px;
+  margin-left: 1vw;
 `;
 
 export const SingleToggleInput = styled(ToggleInput)`
