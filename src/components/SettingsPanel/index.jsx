@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     PanelWrapper,
     Section,
@@ -15,17 +15,24 @@ import {
 
 import AudienceSVG from "../../assets/images/people.svg";
 import LiveWaitingBox from "./LiveWaitingBox";
+import websocketService from "../../services/websocketService";
 
 const SettingsPanel = ({ 
   quickSettings,
   onOptionChange,
   onUnlockChange,
+  roomId,
+  audienceCapacity = 50,
+  isWsReady = false,
 }) => (
   <PanelWrapper>
     <QuickSettingsSection 
       quickSettings={quickSettings}
       onOptionChange={onOptionChange}
       onUnlockChange={onUnlockChange}
+      roomId={roomId}
+      audienceCapacity={audienceCapacity}
+      isWsReady={isWsReady}
     />
     <LiveQuestionSection />
   </PanelWrapper>
@@ -35,10 +42,17 @@ const QuickSettingsSection = ({
   quickSettings = { sticker: true, question: true, feedback: true, unlock: true },
   onOptionChange = () => {},
   onUnlockChange = () => {},
+  roomId,
+  audienceCapacity,
+  isWsReady,
 }) => (
     <Section>
         <Title>빠른 설정</Title>
-        <AudienceCount />
+        <AudienceCount 
+          roomId={roomId} 
+          audienceCapacity={audienceCapacity}
+          isWsReady={isWsReady}
+        />
         <QuickTogglesGrid>
             <QuickSettingToggle
                 label="리액션 스티커"
@@ -68,13 +82,115 @@ const QuickSettingsSection = ({
     </Section>
 );
 
-const AudienceCount = () => (
-  <AudienceCountWrapper>
-    <AudienceIcon src={AudienceSVG} alt="청중 아이콘" />
-    <span>청중 수</span>
-    <AudienceNum>00/50</AudienceNum>
-  </AudienceCountWrapper>
-);
+const AudienceCount = ({
+  roomId,
+  audienceCapacity = 50,
+  isWsReady = false,
+  initialAudienceCount = null,
+}) => {
+  const storageKey = useMemo(() => {
+    if (!roomId) {
+      return null;
+    }
+    return `boini_audience_count_${roomId}`;
+  }, [roomId]);
+
+  const [audienceCount, setAudienceCount] = useState(() => {
+    if (typeof initialAudienceCount === "number" && Number.isFinite(initialAudienceCount)) {
+      return initialAudienceCount;
+    }
+
+    if (storageKey && typeof window !== "undefined" && window.sessionStorage) {
+      try {
+        const stored = sessionStorage.getItem(storageKey);
+        const parsed = Number(stored);
+        if (Number.isFinite(parsed)) {
+          return parsed;
+        }
+      } catch (_error) {
+        // ignore storage read error
+      }
+    }
+
+    return 0;
+  });
+
+  useEffect(() => {
+    if (
+      typeof initialAudienceCount === "number" &&
+      Number.isFinite(initialAudienceCount)
+    ) {
+      setAudienceCount((prev) => {
+        if (prev === initialAudienceCount) {
+          return prev;
+        }
+        return initialAudienceCount;
+      });
+    }
+  }, [initialAudienceCount]);
+
+  useEffect(() => {
+    if (!roomId || !isWsReady || !websocketService.getIsConnected()) {
+      return;
+    }
+
+    const destination = `/topic/presentation/${roomId}/audienceCount`;
+
+    const unsubscribe = websocketService.subscribe(destination, (payload) => {
+      if (payload == null) {
+        return;
+      }
+
+      if (typeof payload === "number" && Number.isFinite(payload)) {
+        setAudienceCount(payload);
+        if (storageKey && typeof window !== "undefined" && window.sessionStorage) {
+          try {
+            sessionStorage.setItem(storageKey, String(payload));
+          } catch (_error) {
+            // ignore storage write error
+          }
+        }
+        return;
+      }
+
+      if (
+        typeof payload === "object" &&
+        typeof payload.audienceCount === "number" &&
+        Number.isFinite(payload.audienceCount)
+      ) {
+        setAudienceCount(payload.audienceCount);
+        if (storageKey && typeof window !== "undefined" && window.sessionStorage) {
+          try {
+            sessionStorage.setItem(storageKey, String(payload.audienceCount));
+          } catch (_error) {
+            // ignore storage write error
+          }
+        }
+      }
+    });
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, [roomId, isWsReady, storageKey]);
+
+  const formattedAudienceCount = useMemo(() => {
+    const normalized = Math.max(0, Math.min(audienceCapacity, Number(audienceCount) || 0));
+    return String(normalized).padStart(2, "0");
+  }, [audienceCount, audienceCapacity]);
+
+  return (
+    <AudienceCountWrapper>
+      <AudienceIcon src={AudienceSVG} alt="청중 아이콘" />
+      <span>청중 수</span>
+      <AudienceNum>
+        {formattedAudienceCount}/{audienceCapacity}
+      </AudienceNum>
+    </AudienceCountWrapper>
+  );
+};
 
 const QuickSettingToggle = ({ label, description, checked, onChange, disabled }) => (
   <ToggleBox>
@@ -97,4 +213,4 @@ const LiveQuestionSection = () => (
 );
 
 export default SettingsPanel;
-export { QuickSettingToggle };
+export { QuickSettingToggle, AudienceCount };

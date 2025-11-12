@@ -347,6 +347,9 @@ const PresentationPrepPage = () => {
         quickSettings={quickSettings}
         onOptionChange={handleOptionChange}
         onUnlockChange={handleUnlockChange}
+        roomId={roomId}
+        audienceCapacity={roomData?.count ?? 50}
+        isWsReady={isPresenterWsReady}
       />
     </Layout>
   );

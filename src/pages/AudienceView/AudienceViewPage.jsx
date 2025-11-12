@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import AudiencePanel from "../../components/Audience/AudiencePanel";
 import SidebarSlides from "../../components/SidebarSlides";
 import {
@@ -27,6 +27,7 @@ import emoji1Black from "../../assets/images/emoji1_black.svg";
 
 const AudienceViewPage = () => {
   const { code } = useParams();
+  const navigate = useNavigate();
 
   const [slides, setSlides] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -64,10 +65,12 @@ const AudienceViewPage = () => {
   const optionUnsubscribeRef = useRef(null);
   const unlockUnsubscribeRef = useRef(null);
   const sessionStateUnsubscribeRef = useRef(null);
+  const endUnsubscribeRef = useRef(null);
   const followPresenterRef = useRef(followPresenter);
   const prevSlideRef = useRef(0);
   const lastPresenterPageRef = useRef(0);
   const focusHighlightTimeoutRef = useRef(null);
+  const hasNavigatedToRatingRef = useRef(false);
 
   const {
     questions,
@@ -484,6 +487,48 @@ const AudienceViewPage = () => {
       focusOnUnsubscribeRef.current = null;
     };
   }, [isWebsocketReady, roomId, changeCurrentSlide]);
+
+  useEffect(() => {
+    endUnsubscribeRef.current?.();
+    endUnsubscribeRef.current = null;
+
+    if (
+      !isWebsocketReady ||
+      !roomId ||
+      !websocketService.getIsConnected()
+    ) {
+      return undefined;
+    }
+
+    const topic = `/topic/presentation/${roomId}/end`;
+    const unsubscribe = websocketService.subscribeText(topic, (rawMessage) => {
+      if (rawMessage == null || hasNavigatedToRatingRef.current) {
+        return;
+      }
+
+      const trimmed = String(rawMessage).trim().toLowerCase();
+      if (!trimmed) {
+        return;
+      }
+
+      if (trimmed === "end" || trimmed.includes("end")) {
+        hasNavigatedToRatingRef.current = true;
+        const targetUrl = code
+          ? `/rating/${encodeURIComponent(code)}`
+          : "/rating";
+        navigate(targetUrl, { replace: false });
+      }
+    });
+
+    endUnsubscribeRef.current = unsubscribe;
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+      endUnsubscribeRef.current = null;
+    };
+  }, [isWebsocketReady, roomId, code, navigate]);
 
   useEffect(() => {
     return () => {

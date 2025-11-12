@@ -26,16 +26,13 @@ import {
   PanelWrapper,
   Section,
   Title,
-  AudienceCountWrapper,
-  AudienceIcon,
-  AudienceNum,
   QuickTogglesGrid,
   ToggleBox,
   ToggleLabel,
   ToggleDescription,
   ToggleInput,
 } from "../../components/SettingsPanel/SettingsPanel.styles";
-import AudienceSVG from "../../assets/images/people.svg";
+import { AudienceCount } from "../../components/SettingsPanel";
 
 const PresenterViewPage = () => {
   const location = useLocation();
@@ -106,6 +103,33 @@ const PresenterViewPage = () => {
   // 🔹 빠른 설정 토글 상태 관리
   const [quickSettings, setQuickSettings] = useQuickSettingsStorage();
   const initialSettingsSyncedRef = useRef(false);
+
+  const audienceCapacity =
+    locationState.count ?? storedRoomData.count ?? 50;
+
+  const initialAudienceCount = useMemo(() => {
+    const candidate =
+      locationState.audienceCount ?? storedRoomData.audienceCount ?? null;
+    if (typeof candidate === "number" && Number.isFinite(candidate)) {
+      return candidate;
+    }
+
+    if (!roomId) {
+      return null;
+    }
+
+    try {
+      const stored = sessionStorage.getItem(`boini_audience_count_${roomId}`);
+      const parsed = Number(stored);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    } catch (_error) {
+      // ignore storage read errors
+    }
+
+    return null;
+  }, [locationState.audienceCount, roomId, storedRoomData.audienceCount]);
 
   const handleToggleShowReactions = (nextValue) => {
     setShowReactions(nextValue);
@@ -522,11 +546,12 @@ const PresenterViewPage = () => {
         {/* === 빠른 설정 섹션 === */}
         <Section>
           <Title>빠른 설정</Title>
-          <AudienceCountWrapper>
-            <AudienceIcon src={AudienceSVG} alt="청중 아이콘" />
-            <span>청중 수</span>
-            <AudienceNum>03 / 50</AudienceNum>
-          </AudienceCountWrapper>
+          <AudienceCount
+            roomId={roomId}
+            audienceCapacity={audienceCapacity}
+            isWsReady={isPresenterWsReady}
+            initialAudienceCount={initialAudienceCount}
+          />
 
           <QuickTogglesGrid>
             <QuickSettingToggle

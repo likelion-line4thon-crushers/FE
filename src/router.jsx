@@ -44,6 +44,10 @@ const router = createBrowserRouter([
         path: "rating",
         element: <RatingPage />,
       },
+      {
+        path: "rating/:code",
+        element: <RatingPage />,
+      },
     ],
   },
 ]);

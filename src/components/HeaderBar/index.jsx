@@ -215,6 +215,10 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
         }
 
         await closeSession(resolvedRoomId);
+        console.log(
+          "[HeaderBar] 세션 종료 API(DELETE) 성공:",
+          resolvedRoomId
+        );
 
         if (websocketService.getIsConnected()) {
           websocketService.sendEndSession(resolvedRoomId);
