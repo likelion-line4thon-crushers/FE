@@ -31,6 +31,7 @@ const SlideViewer = ({
   isWaiting = false,
   waitingImage,
   waitingMessage = "현재 라이브 대기중입니다.",
+  focusHighlight = false,
 }) => {
   const boxRef = useRef(null);
   const hasSlides = Array.isArray(slides) && slides.length > 0;
@@ -92,6 +93,7 @@ const SlideViewer = ({
       <SlideBox
         ref={boxRef}
         onClick={handleClick}
+        focusHighlight={focusHighlight}
         style={{
           cursor: isWaiting
             ? "default"

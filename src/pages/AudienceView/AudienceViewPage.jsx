@@ -40,6 +40,7 @@ const AudienceViewPage = () => {
   const [loadingSlides, setLoadingSlides] = useState(false);
   const [slidesError, setSlidesError] = useState(null);
   const [isWebsocketReady, setIsWebsocketReady] = useState(false);
+  const [showFocusHighlight, setShowFocusHighlight] = useState(false);
 
   // 🔹 빠른 설정 옵션 상태 (발표자로부터 받은 설정)
   const [quickSettings, setQuickSettings] = useState({
@@ -62,6 +63,7 @@ const AudienceViewPage = () => {
   const followPresenterRef = useRef(followPresenter);
   const prevSlideRef = useRef(0);
   const lastPresenterPageRef = useRef(0);
+  const focusHighlightTimeoutRef = useRef(null);
 
   const {
     questions,
@@ -460,6 +462,15 @@ const AudienceViewPage = () => {
           followPresenterRef.current = true;
         }
 
+        setShowFocusHighlight(true);
+        if (focusHighlightTimeoutRef.current) {
+          clearTimeout(focusHighlightTimeoutRef.current);
+        }
+        focusHighlightTimeoutRef.current = setTimeout(() => {
+          setShowFocusHighlight(false);
+          focusHighlightTimeoutRef.current = null;
+        }, 1000);
+
         changeCurrentSlide(parsedNumber, {
           source: "focusOn",
           broadcast: true,
@@ -477,6 +488,15 @@ const AudienceViewPage = () => {
       focusOnUnsubscribeRef.current = null;
     };
   }, [isWebsocketReady, roomId, changeCurrentSlide]);
+
+  useEffect(() => {
+    return () => {
+      if (focusHighlightTimeoutRef.current) {
+        clearTimeout(focusHighlightTimeoutRef.current);
+        focusHighlightTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // 🔹 방향키로 슬라이드 이동
   useEffect(() => {
@@ -589,6 +609,7 @@ const AudienceViewPage = () => {
           onToggleShowStamps={handleToggleShowStamps}
           isWaiting={showSlidesPlaceholder}
           waitingMessage={showSlidesPlaceholder ? waitingMessage : undefined}
+          focusHighlight={showFocusHighlight}
         />
         {hasSlidesError && (
           <div
