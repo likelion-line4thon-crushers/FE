@@ -496,7 +496,7 @@ const AudienceViewPage = () => {
       return;
     }
 
-    if (selectedEmoji.id >= 1 && selectedEmoji.id <= 6) {
+    if (selectedEmoji.id >= 1 && selectedEmoji.id <= 8) {
       const now = new Date().toISOString();
 
       const destination = `/app/presentation/${roomId}/reaction`;
