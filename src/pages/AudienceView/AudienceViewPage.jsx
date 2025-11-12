@@ -23,6 +23,7 @@ import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
 import useAudienceQuestions from "../../hooks/useAudienceQuestions";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
 import SELECTED_EMOJI_ICONS from "../../constants/emojiIcons";
+import emoji1Black from "../../assets/images/emoji1_black.svg";
 
 const AudienceViewPage = () => {
   const { code } = useParams();
@@ -43,6 +44,7 @@ const AudienceViewPage = () => {
   const [slidesError, setSlidesError] = useState(null);
   const [isWebsocketReady, setIsWebsocketReady] = useState(false);
   const [showFocusHighlight, setShowFocusHighlight] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState("waiting"); // 기본값은 waiting
 
   // 🔹 빠른 설정 옵션 상태 (발표자로부터 받은 설정)
   const [quickSettings, setQuickSettings] = useState({
@@ -62,6 +64,7 @@ const AudienceViewPage = () => {
   const focusOnUnsubscribeRef = useRef(null);
   const optionUnsubscribeRef = useRef(null);
   const unlockUnsubscribeRef = useRef(null);
+  const sessionStateUnsubscribeRef = useRef(null);
   const endUnsubscribeRef = useRef(null);
   const followPresenterRef = useRef(followPresenter);
   const prevSlideRef = useRef(0);
@@ -209,6 +212,13 @@ const AudienceViewPage = () => {
           setTotalPages(Number(joinData.deck.totalPages));
         } else if (joinData.presentation?.totalPages) {
           setTotalPages(Number(joinData.presentation.totalPages));
+        }
+
+        // 세션 상태 설정 (joinRoom 응답에서 받은 값 또는 기본값 "waiting")
+        if (joinData.sessionStatus) {
+          setSessionStatus(joinData.sessionStatus);
+        } else {
+          setSessionStatus("waiting");
         }
 
         let wsUrlValue = joinData.wsUrl;
@@ -371,6 +381,17 @@ const AudienceViewPage = () => {
       }
     );
 
+    // 🔹 세션 상태 변경 구독
+    const sessionStateTopic = `/topic/p/${roomId}/public`;
+    sessionStateUnsubscribeRef.current = websocketService.subscribe(
+      sessionStateTopic,
+      (data) => {
+        if (data && data.type === "SESSION_STATE" && data.status) {
+          setSessionStatus(data.status);
+        }
+      }
+    );
+
     return () => {
       questionSubscriptionsRef.current.forEach((unsubscribe) => {
         if (typeof unsubscribe === "function") {
@@ -387,6 +408,9 @@ const AudienceViewPage = () => {
 
       unlockUnsubscribeRef.current?.();
       unlockUnsubscribeRef.current = null;
+
+      sessionStateUnsubscribeRef.current?.();
+      sessionStateUnsubscribeRef.current = null;
     };
   }, [
     isWebsocketReady,
@@ -541,7 +565,7 @@ const AudienceViewPage = () => {
       return;
     }
 
-    if (selectedEmoji.id >= 1 && selectedEmoji.id <= 6) {
+    if (selectedEmoji.id >= 1 && selectedEmoji.id <= 8) {
       const now = new Date().toISOString();
 
       const destination = `/app/presentation/${roomId}/reaction`;
@@ -604,6 +628,46 @@ const AudienceViewPage = () => {
     ? "슬라이드를 불러오는 중 오류가 발생했습니다."
     : "슬라이드를 불러오는 중입니다.";
   const isQuestionListWaiting = questionsLoading && questions.length === 0;
+
+  const isSessionWaiting = sessionStatus === "waiting";
+
+  // 대기 화면 렌더링
+  if (isSessionWaiting) {
+    return (
+      <PageContainer>
+        <CenterContainer
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "3vh",
+          }}
+        >
+          <img
+            src={emoji1Black}
+            alt="대기 중"
+            style={{
+              width: "10vw",
+              height: "10vw",
+              maxWidth: "120px",
+              maxHeight: "120px",
+            }}
+          />
+          <div
+            style={{
+              fontSize: "clamp(14px, 1.2vw, 18px)",
+              color: "#5c5c5c",
+              fontFamily: "Pretendard, sans-serif",
+              fontWeight: 500,
+            }}
+          >
+            현재 라이브 대기 중입니다.
+          </div>
+        </CenterContainer>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>

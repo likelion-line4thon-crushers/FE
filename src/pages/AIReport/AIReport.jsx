@@ -171,7 +171,7 @@ const AiReportPage = () => {
           <Top3 />
         </div>
         <div ref={popularSlideRef}>
-          <PopularSlide />
+          <PopularSlide roomId={roomId} deckId={deckId} />
         </div>
         <div ref={questionSlideRef}>
           <QuestionSlide />

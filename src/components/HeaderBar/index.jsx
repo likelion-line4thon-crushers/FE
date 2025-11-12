@@ -110,10 +110,17 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
   const isMain = location.pathname === "/";
   const isRating = location.pathname === "/rating";
   const isAiReport = location.pathname === "/ai-report";
-  const isAudienceView = location.pathname === "/audience";
   const isPrep = location.pathname.startsWith("/create-presentation");
   const isPresenter = location.pathname.startsWith("/presentation");
   const isCodeRoute = Boolean(useMatch(":code"));
+  const isAudienceView =
+    location.pathname.startsWith("/audience") ||
+    (isCodeRoute &&
+      !isMain &&
+      !isRating &&
+      !isAiReport &&
+      !isPrep &&
+      !isPresenter);
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [roomData, setRoomData] = useState(propRoomData || null);
@@ -125,7 +132,9 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
   /* ✅ 새로고침 또는 state 유실 시 sessionStorage 복구 */
   useEffect(() => {
     if (!roomData) {
-      const stored = sessionStorage.getItem("boini_room") || sessionStorage.getItem("roomData");
+      const stored =
+        sessionStorage.getItem("boini_room") ||
+        sessionStorage.getItem("roomData");
       if (stored) {
         setRoomData(JSON.parse(stored));
       }
@@ -167,10 +176,8 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
         alert("⚠️ 세션 시작에 실패했습니다. 다시 시도해주세요.");
       }
     } else if (isPresenter) {
-      const resolvedRoomId =
-        roomData?.roomId ?? location.state?.roomId ?? null;
-      const resolvedDeckId =
-        roomData?.deckId ?? location.state?.deckId ?? null;
+      const resolvedRoomId = roomData?.roomId ?? location.state?.roomId ?? null;
+      const resolvedDeckId = roomData?.deckId ?? location.state?.deckId ?? null;
       const resolvedTotalPages =
         location.state?.totalPages ??
         roomData?.totalPages ??
@@ -201,7 +208,10 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
         );
 
         if (reportErrors.length > 0) {
-          console.warn("[HeaderBar] 레포트 선행 호출 중 일부 실패:", reportErrors);
+          console.warn(
+            "[HeaderBar] 레포트 선행 호출 중 일부 실패:",
+            reportErrors
+          );
         }
 
         await closeSession(resolvedRoomId);
@@ -257,7 +267,6 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
     }
   };
 
-
   const handleShareClick = () => {
     if (!roomData || !roomData.joinUrl) {
       alert("⚠️ 방 정보가 없습니다. 발표 준비 완료 후 다시 시도해주세요.");
@@ -303,7 +312,9 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
               </StartSessionButton>
             )}
 
-            {isAudienceView && <ExitButton />}
+            {(isAudienceView || isAiReport) && (
+              <ExitButton onClick={() => navigate("/")} />
+            )}
           </RightActions>
         )}
       </HeaderWrapper>

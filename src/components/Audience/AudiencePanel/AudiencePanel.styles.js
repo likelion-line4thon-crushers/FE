@@ -8,16 +8,20 @@ export const PanelWrapper = styled.div`
   display: flex;
   flex-direction: column;
   border: 1px solid #eaeaea;
+  overflow: hidden;
+  box-sizing: border-box;
 `;
 
 export const HeaderBox = styled.div`
   display: flex;
-  height: 3.52vh;
-  width: 17.03vw;
+  height: 4.52vh;
+  width: 100%;
   padding: 0.74vh 0 0.74vh 1.25vw;
   align-items: center;
   border: 1px solid #eaeaea;
   background: #f9f9f9;
+  flex-shrink: 0;
+  box-sizing: border-box;
 `;
 
 export const Section = styled.div`
@@ -192,7 +196,8 @@ export const LockBanner = styled.div`
 
 export const QuestionInputContainer = styled.div`
   display: flex;
-  width: 12.14vw;
+  width: 100%;
+  max-width: 100%;
   height: 4.44vh;
   padding: 0 1px;
   justify-content: ${(props) =>

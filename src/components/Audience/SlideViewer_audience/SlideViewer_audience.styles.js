@@ -10,6 +10,7 @@ export const Main = styled.div`
   align-items: center;
   justify-content: flex-start;
   padding: 2vh 2vw;
+  gap: 2vh;
   background: #fff;
 `;
 
@@ -31,6 +32,7 @@ export const FocusBar = styled.div`
   align-self: flex-start;
   justify-content: flex-start;
   gap: 850px;
+  margin-left: 1vw;
 `;
 
 export const SingleToggleInput = styled(ToggleInput)`
