@@ -20,8 +20,10 @@ import websocketService, {
   WebSocketService,
 } from "../../services/websocketService";
 import { fetchAllOriginalSlideUrls } from "../../services/presentationService";
+import { getStickersByAudience } from "../../services/stickerService";
 import useAudienceQuestions from "../../hooks/useAudienceQuestions";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
+import useStickerLoader from "../../hooks/useStickerLoader";
 import SELECTED_EMOJI_ICONS from "../../constants/emojiIcons";
 import emoji1Black from "../../assets/images/emoji1_black.svg";
 
@@ -267,6 +269,14 @@ const AudienceViewPage = () => {
     });
   }, [slides]);
 
+  // 🔹 새로고침 시 스티커 로드 (커스텀 훅 사용)
+  useStickerLoader({
+    roomId,
+    addLocalStamp,
+    reactionsReady,
+    prefix: "Audience loadStickers",
+  });
+
   useEffect(() => {
     if (!roomId || !audienceId || !wsUrl || !audienceToken) {
       return undefined;
@@ -492,11 +502,7 @@ const AudienceViewPage = () => {
     endUnsubscribeRef.current?.();
     endUnsubscribeRef.current = null;
 
-    if (
-      !isWebsocketReady ||
-      !roomId ||
-      !websocketService.getIsConnected()
-    ) {
+    if (!isWebsocketReady || !roomId || !websocketService.getIsConnected()) {
       return undefined;
     }
 
