@@ -10,6 +10,7 @@ export const Main = styled.div`
   align-items: center;
   justify-content: flex-start;
   padding: 2vh 2vw;
+  gap: 2vh;
   background: #fff;
 `;
 
