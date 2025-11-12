@@ -135,8 +135,25 @@ export const Tooltip = styled.div`
   }
 `;
 
+export const TooltipRight = styled(Tooltip)`
+  right: auto;
+  left: 100%;
+  margin-right: 0;
+  margin-left: -15px;
+
+  &::before {
+    right: auto;
+    left: -7px;
+    border-left: none;
+    border-right: 9px solid rgb(201, 201, 201);
+  }
+`;
+
 export const TooltipHoverArea = styled(TooltipWrapper)`
   &:hover ${Tooltip} {
+    opacity: 1;
+  }
+  &:hover ${TooltipRight} {
     opacity: 1;
   }
 `;

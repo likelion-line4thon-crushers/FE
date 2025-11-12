@@ -7,6 +7,7 @@ import {
   ReactionButton,
   TooltipHoverArea,
   Tooltip,
+  TooltipRight,
   SingleToggleInput,
   WaitingState,
   WaitingImage,
@@ -70,10 +71,13 @@ const SlideViewer = ({
             onChange={handleToggleFollowChange}
             disabled={isWaiting}
           />
-          <RightContainer>
-            <ToggleText>발표자와 함께 보기</ToggleText>
-            <img src={TipIcon} alt="tip" style={{ width: 30, height: 50 }} />
-          </RightContainer>
+          <TooltipHoverArea>
+            <TooltipRight>발표자와 함께 보기</TooltipRight>
+            <RightContainer>
+              <ToggleText>발표자와 함께 보기</ToggleText>
+              <img src={TipIcon} alt="tip" style={{ width: 30, height: 50 }} />
+            </RightContainer>
+          </TooltipHoverArea>
         </ToggleContainer>
 
         {!isWaiting && (

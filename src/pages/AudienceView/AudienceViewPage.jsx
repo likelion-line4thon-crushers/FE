@@ -569,6 +569,8 @@ const AudienceViewPage = () => {
         setCurrentSlide={handleAudienceSelectSlide}
         isWaiting={showSlidesPlaceholder}
         placeholderCount={totalPages || 10}
+        maxRevealedPage={unlockSettings.maxRevealedPage}
+        revealAllSlides={unlockSettings.revealAllSlides}
       />
       <CenterContainer>
         <SlideViewer
