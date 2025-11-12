@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   PopularSlideContainer,
   EmojiPanelWrapper,
@@ -13,16 +13,87 @@ import ContentBox from "../ContentBox/ContentBox";
 import RabbitImage from "../../../assets/images/rabbit.jpg";
 import NoSlideImage from "../../../assets/images/AI/NoSlide.png";
 import AITitle from "../AITitle/AITitle";
+import { fetchMostReactionSticker } from "../../../services/aiReportService";
+import useSlideImage from "../../../hooks/useSlideImage";
 
-const PopularSlide = () => {
-  // 임시 데이터 - 나중에 실제 데이터로 교체
-  const [slides] = useState([
-    { id: 1, image: RabbitImage },
-    { id: 2, image: RabbitImage },
-  ]);
+const EMOJI_NAMES = {
+  1: "재미있는",
+  2: "놀라운",
+  3: "궁금한",
+  4: "신나는",
+  5: "화난",
+  6: "슬픈",
+  7: "좋은",
+  8: "나쁜",
+};
 
-  const firstSlide = slides[0];
-  const secondSlide = slides[1];
+const PopularSlide = ({ roomId, deckId }) => {
+  const [reactionData, setReactionData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedEmojiId, setSelectedEmojiId] = useState(1); // 기본값: 재미있는 이모지
+
+  // API 호출
+  useEffect(() => {
+    if (!roomId) return;
+
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchMostReactionSticker(roomId);
+        setReactionData(data || []);
+      } catch (err) {
+        console.error("이모지별 인기 슬라이드 데이터 로드 실패:", err);
+        setError(err);
+        setReactionData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [roomId]);
+
+  // 선택된 이모지의 데이터 찾기
+  const selectedData = useMemo(() => {
+    return reactionData.find((item) => item.emoji === selectedEmojiId) || null;
+  }, [reactionData, selectedEmojiId]);
+
+  // 첫 번째 슬라이드 이미지 URL
+  const { imageUrl: firstSlideUrl } = useSlideImage({
+    roomId,
+    deckId,
+    slideNumber: selectedData?.topSlide,
+    enabled: Boolean(selectedData?.topSlide && selectedData.topSlide > 0),
+  });
+
+  // 두 번째 슬라이드 이미지 URL
+  const secondSlideValue = selectedData?.secondSlide;
+  const hasSecondSlide =
+    secondSlideValue !== undefined &&
+    secondSlideValue !== null &&
+    Number(secondSlideValue) > 0;
+
+  const { imageUrl: secondSlideUrl } = useSlideImage({
+    roomId,
+    deckId,
+    slideNumber: hasSecondSlide ? Number(secondSlideValue) : null,
+    enabled: hasSecondSlide,
+  });
+
+  // 제목 동적 생성
+  const getTitle = () => {
+    const emojiName = EMOJI_NAMES[selectedEmojiId] || "재미있는";
+    return `${emojiName} 반응을 가장 많이 받은 슬라이드`;
+  };
+
+  // 이모지 선택 핸들러
+  const handleEmojiSelect = (emoji) => {
+    setSelectedEmojiId(emoji.id);
+  };
+
+  const hasData = selectedData && selectedData.topSlide > 0;
 
   return (
     <PopularSlideContainer>
@@ -31,17 +102,21 @@ const PopularSlide = () => {
         description="이모지별 반응 상위 슬라이드를 정리해드립니다."
       />
       <EmojiPanelWrapper>
-        <EmojiPanel />
+        <EmojiPanel selectedId={selectedEmojiId} onSelect={handleEmojiSelect} />
       </EmojiPanelWrapper>
       <SectionContainer>
         <ContentBox
-          title="재미있는 반응을 가장 많이 받은 슬라이드"
+          title={getTitle()}
           variant="custom"
           width="auto"
           height="auto"
         >
           <SlideContainer>
-            {slides.length === 0 ? (
+            {loading ? (
+              <NoSlideMessage>
+                <p>데이터를 불러오는 중...</p>
+              </NoSlideMessage>
+            ) : error || !hasData ? (
               <NoSlideMessage>
                 <img src={NoSlideImage} alt="No slides" />
                 <p>해당 이모지 반응을 받은 슬라이드가 없습니다 :(</p>
@@ -50,13 +125,16 @@ const PopularSlide = () => {
               <>
                 <LargeSlide>
                   <img
-                    src={firstSlide?.image || RabbitImage}
+                    src={firstSlideUrl || RabbitImage}
                     alt="Most popular slide"
                   />
                 </LargeSlide>
-                {secondSlide && (
+                {hasSecondSlide && secondSlideUrl && (
                   <SmallSlide>
-                    <img src={secondSlide.image} alt="Second popular slide" />
+                    <img
+                      src={secondSlideUrl || RabbitImage}
+                      alt="Second popular slide"
+                    />
                   </SmallSlide>
                 )}
               </>
