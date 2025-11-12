@@ -1,21 +1,15 @@
 import styled from "styled-components";
 
 export const ContentBoxContainer = styled.div`
-  width: ${(props) =>
-    props.$width === "auto" ? "auto" : props.$width || "390px"};
-  height: ${(props) =>
-    props.$height === "auto" ? "auto" : props.$height || "390px"};
+  width: ${(props) => props.$width || "390px"};
+  height: ${(props) => props.$height || "390px"};
   border-radius: 12px;
   border: 1px solid #eaeaea;
   background: ${(props) => props.$backgroundColor || "#fafafa"};
   padding: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: ${(props) =>
-    props.$justify ||
-    (props.$height && props.$height !== "auto"
-      ? "space-between"
-      : "flex-start")};
+  justify-content: ${(props) => props.$justify || "flex-start"};
   position: relative;
 `;
 
@@ -71,12 +65,17 @@ export const ImageContainer = styled.div`
   justify-content: center;
   margin: 20px 0;
   position: relative;
+  overflow: hidden;
+  min-height: 0;
 `;
 
 export const SlideImage = styled.img`
-  max-width: ${(props) => props.$imgWidth || "100%"};
-  max-height: ${(props) => props.$imgHeight || "100%"};
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
+  object-position: center;
 `;
 
 export const SlideNumber = styled.div`

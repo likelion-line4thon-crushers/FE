@@ -154,8 +154,6 @@ const QuestionSlide = () => {
             slideImage={imageSource}
             height="350px"
             width="570px"
-            slideImageWidth="80%"
-            slideImageHeight="80%"
             slideNumberComponent={
               <SlideNumber slideNumber={slideNumber ?? "-"} />
             }

@@ -25,7 +25,7 @@ import useAudienceQuestions from "../../hooks/useAudienceQuestions";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
 import useStickerLoader from "../../hooks/useStickerLoader";
 import SELECTED_EMOJI_ICONS from "../../constants/emojiIcons";
-import emoji1Black from "../../assets/images/emoji1_black.svg";
+import DelayAudience from "./DelayAudience";
 
 const AudienceViewPage = () => {
   const { code } = useParams();
@@ -639,40 +639,7 @@ const AudienceViewPage = () => {
 
   // 대기 화면 렌더링
   if (isSessionWaiting) {
-    return (
-      <PageContainer>
-        <CenterContainer
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "3vh",
-          }}
-        >
-          <img
-            src={emoji1Black}
-            alt="대기 중"
-            style={{
-              width: "10vw",
-              height: "10vw",
-              maxWidth: "120px",
-              maxHeight: "120px",
-            }}
-          />
-          <div
-            style={{
-              fontSize: "clamp(14px, 1.2vw, 18px)",
-              color: "#5c5c5c",
-              fontFamily: "Pretendard, sans-serif",
-              fontWeight: 500,
-            }}
-          >
-            현재 라이브 대기 중입니다.
-          </div>
-        </CenterContainer>
-      </PageContainer>
-    );
+    return <DelayAudience placeholderCount={totalPages || 10} />;
   }
 
   return (
