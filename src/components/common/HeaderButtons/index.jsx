@@ -132,11 +132,15 @@ export const StartSessionButton = React.forwardRef(
       children = "세션 시작",
       iconSrc = PlayIconDefault,
       iconAlt = typeof children === "string" ? children : "세션 시작",
+      isEndSession: isEndSessionProp,
       ...props
     },
     ref
   ) => {
-    const isEndSession = children === "세션 종료";
+    const isEndSession =
+      typeof isEndSessionProp === "boolean"
+        ? isEndSessionProp
+        : children === "세션 종료";
     const ButtonComponent = isEndSession ? EndSessionButton : OrangePillButton;
 
     return (

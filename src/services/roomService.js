@@ -44,3 +44,17 @@ export const startSession = async (roomId) => {
     throw error;
   }
 };
+
+export const closeSession = async (roomId) => {
+  if (!roomId) {
+    throw new Error("roomId가 필요합니다.");
+  }
+
+  try {
+    const res = await api.delete(`/api/rooms/close/${roomId}`);
+    return res?.data?.data ?? null;
+  } catch (error) {
+    console.error("[closeSession] 세션 종료 실패:", error);
+    throw error;
+  }
+};
