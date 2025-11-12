@@ -35,19 +35,25 @@ export const SlideThumb = styled.div`
   border: ${(p) =>
     p.$waiting
       ? "0.05vw solid #ddd"
+      : p.$locked
+      ? "0.05vw solid #ddd"
       : p.$active
       ? "0.1vw solid #4a90e2"
       : "0.05vw solid #ddd"};
   border-radius: 0.2vw;
-  background: ${(p) => (p.$waiting ? "#fff" : p.$active ? "#303030" : "#fff")};
-  cursor: ${(p) => (p.$waiting ? "default" : "pointer")};
+  background: ${(p) =>
+    p.$waiting ? "#fff" : p.$locked ? "#fff" : p.$active ? "#303030" : "#fff"};
+  cursor: ${(p) => (p.$waiting || p.$locked ? "default" : "pointer")};
   transition: 0.25s ease;
   box-shadow: ${(p) =>
-    p.$active && !p.$waiting ? "0 0.2vh 0.5vh rgba(0,0,0,0.1)" : "none"};
+    p.$active && !p.$waiting && !p.$locked
+      ? "0 0.2vh 0.5vh rgba(0,0,0,0.1)"
+      : "none"};
   position: relative;
+  opacity: ${(p) => (p.$locked ? 0.6 : 1)};
 
   &:hover {
-    transform: ${(p) => (p.$waiting ? "none" : "scale(1.02)")};
+    transform: ${(p) => (p.$waiting || p.$locked ? "none" : "scale(1.02)")};
   }
 
   ${(p) =>
