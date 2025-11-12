@@ -56,10 +56,12 @@ const AudienceViewPage = () => {
 
   const questionSubscriptionsRef = useRef([]);
   const pageChangeUnsubscribeRef = useRef(null);
+  const focusOnUnsubscribeRef = useRef(null);
   const optionUnsubscribeRef = useRef(null);
   const unlockUnsubscribeRef = useRef(null);
   const followPresenterRef = useRef(followPresenter);
   const prevSlideRef = useRef(0);
+  const lastPresenterPageRef = useRef(0);
 
   const {
     questions,
@@ -92,7 +94,14 @@ const AudienceViewPage = () => {
   const slideCount = slides.length;
 
   const changeCurrentSlide = useCallback(
-    (nextIndex, { source = "audience", broadcast = true } = {}) => {
+    (
+      nextIndex,
+      {
+        source = "audience",
+        broadcast = true,
+        preserveFollowState = false,
+      } = {}
+    ) => {
       setCurrentSlide((prev) => {
         if (!Number.isFinite(nextIndex)) {
           return prev;
@@ -126,7 +135,7 @@ const AudienceViewPage = () => {
         return clamped;
       });
 
-      if (source !== "presenter") {
+      if (!preserveFollowState && source !== "presenter") {
         setFollowPresenter(false);
       }
     },
@@ -315,14 +324,19 @@ const AudienceViewPage = () => {
           return;
         }
 
+        const newSlideIndex = Number(data.changedPage);
+        if (Number.isFinite(newSlideIndex)) {
+          lastPresenterPageRef.current = newSlideIndex;
+        }
+
         if (!followPresenterRef.current) {
           return;
         }
 
-        const newSlideIndex = Number(data.changedPage);
         changeCurrentSlide(newSlideIndex, {
           source: "presenter",
           broadcast: false,
+          preserveFollowState: true,
         });
       }
     );
@@ -397,6 +411,73 @@ const AudienceViewPage = () => {
     currentSlide,
   ]);
 
+  useEffect(() => {
+    focusOnUnsubscribeRef.current?.();
+    focusOnUnsubscribeRef.current = null;
+
+    if (
+      !isWebsocketReady ||
+      !roomId ||
+      !websocketService.getIsConnected()
+    ) {
+      return undefined;
+    }
+
+    const topic = `/topic/presentation/${roomId}/focusOn`;
+    const unsubscribe = websocketService.subscribeText(
+      topic,
+      (rawMessage) => {
+        if (rawMessage == null) {
+          console.warn("[Audience] 집중 유도 수신 실패 - 빈 메시지");
+          return;
+        }
+
+        const trimmed = String(rawMessage).trim();
+        if (!trimmed) {
+          console.warn("[Audience] 집중 유도 수신 실패 - 공백 메시지");
+          return;
+        }
+
+        let parsedNumber;
+        try {
+          parsedNumber = Number(JSON.parse(trimmed));
+          if (!Number.isFinite(parsedNumber)) {
+            throw new Error("NaN");
+          }
+        } catch (error) {
+          parsedNumber = Number(trimmed.replace(/^"+|"+$/g, ""));
+        }
+
+        if (!Number.isFinite(parsedNumber) || parsedNumber < 0) {
+          console.warn("[Audience] 집중 유도 수신 실패 - 잘못된 페이지 번호:", rawMessage);
+          return;
+        }
+
+        lastPresenterPageRef.current = parsedNumber;
+
+        if (!followPresenterRef.current) {
+          setFollowPresenter(true);
+          followPresenterRef.current = true;
+        }
+
+        changeCurrentSlide(parsedNumber, {
+          source: "focusOn",
+          broadcast: true,
+          preserveFollowState: true,
+        });
+      }
+    );
+
+    focusOnUnsubscribeRef.current = unsubscribe;
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+      focusOnUnsubscribeRef.current = null;
+    };
+  }, [isWebsocketReady, roomId, changeCurrentSlide]);
+
   // 🔹 방향키로 슬라이드 이동
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -450,6 +531,18 @@ const AudienceViewPage = () => {
 
   const handleToggleFollowPresenter = (checked) => {
     setFollowPresenter(checked);
+
+    if (checked) {
+      const target = Number.isFinite(lastPresenterPageRef.current)
+        ? lastPresenterPageRef.current
+        : prevSlideRef.current;
+
+      changeCurrentSlide(target, {
+        source: "presenter",
+        broadcast: false,
+        preserveFollowState: true,
+      });
+    }
   };
 
   const handleToggleShowStamps = (nextValue) => {

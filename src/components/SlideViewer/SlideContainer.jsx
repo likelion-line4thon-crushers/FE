@@ -1,5 +1,6 @@
 import React from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
+import { HighlightedSlideStyles } from "./SlideViewer.styles";
 
 /**
  * 공용 슬라이드 컨테이너
@@ -11,9 +12,12 @@ const SlideContainer = ({
   alt = "슬라이드 이미지",
   stamps = [],
   showStamps = true,
+  highlight = false,
 }) => {
+  const imageBorderColor = highlight ? "#ffc551" : "#eee";
+
   return (
-    <SlideBox>
+    <SlideBox highlight={highlight}>
       <img
         src={src}
         alt={alt}
@@ -22,7 +26,7 @@ const SlideContainer = ({
           height: "100%",
           objectFit: "contain",
           borderRadius: "0.6vw",
-          border: "0.05vw solid #eee",
+          border: `0.05vw solid ${imageBorderColor}`,
           userSelect: "none",
           pointerEvents: "none",
         }}
@@ -61,6 +65,8 @@ const SlideBox = styled.div`
   align-items: center;
   overflow: hidden;
   aspect-ratio: 16 / 9; /* 16:9 비율 유지 */
+
+  ${({ highlight }) => (highlight ? HighlightedSlideStyles : css``)}
 `;
 
 const StampImage = styled.img`

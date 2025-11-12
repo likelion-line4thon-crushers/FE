@@ -93,6 +93,13 @@ class WebSocketService {
     );
   }
 
+  // 발표자: 집중 유도 전송
+  sendFocusOn(sessionId) {
+    const destination = `/app/presentation/${sessionId}/focusOn`;
+    console.log("[WebSocket] 집중 유도 전송:", destination);
+    this.send(destination, {}, { "Idempotency-Key": uuidv4() });
+  }
+
   // 발표자: 옵션 변경 전송 (리액션 스티커, 질문, 실시간 피드백)
   sendOptionChange(sessionId, options) {
     const body = {
@@ -152,6 +159,30 @@ class WebSocketService {
     console.log("[WebSocket] 구독 시작:", destination);
 
     // 구독 해제 함수 반환
+    return () => this.unsubscribe(destination);
+  }
+
+  subscribeText(destination, callback) {
+    if (!this.isConnected || !this.client) {
+      console.warn("[WebSocket] 연결되지 않았습니다.");
+      return () => {};
+    }
+
+    if (this.subscriptions.has(destination)) {
+      this.unsubscribe(destination);
+    }
+
+    const subscription = this.client.subscribe(destination, (message) => {
+      const rawBody = message?.body ?? "";
+      console.log("[WebSocket] 텍스트 메시지 수신:", destination, rawBody);
+      if (callback) {
+        callback(rawBody);
+      }
+    });
+
+    this.subscriptions.set(destination, subscription);
+    console.log("[WebSocket] 텍스트 구독 시작:", destination);
+
     return () => this.unsubscribe(destination);
   }
 

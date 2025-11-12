@@ -96,6 +96,8 @@ const PresenterViewPage = () => {
   const [showStampsInViewer, setShowStampsInViewer] = useState(true);
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [showFocusHighlight, setShowFocusHighlight] = useState(false);
+  const focusHighlightTimeoutRef = useRef(null);
 
   // 🔹 빠른 설정 토글 상태 관리
   const [quickSettings, setQuickSettings] = useQuickSettingsStorage();
@@ -108,6 +110,29 @@ const PresenterViewPage = () => {
   const handleToggleShowStampsInViewer = (nextValue) => {
     setShowStampsInViewer(nextValue);
   };
+
+  const handleFocusOn = useCallback(() => {
+    if (!roomId) {
+      console.warn("[PresenterViewPage] 집중 유도 실패: roomId 없음");
+      return;
+    }
+
+    if (!isPresenterWsReady || !websocketService.getIsConnected()) {
+      console.warn("[PresenterViewPage] 집중 유도 실패: 웹소켓 미연결");
+      return;
+    }
+
+    websocketService.sendFocusOn(roomId);
+
+    setShowFocusHighlight(true);
+    if (focusHighlightTimeoutRef.current) {
+      clearTimeout(focusHighlightTimeoutRef.current);
+    }
+    focusHighlightTimeoutRef.current = setTimeout(() => {
+      setShowFocusHighlight(false);
+      focusHighlightTimeoutRef.current = null;
+    }, 1000);
+  }, [roomId, isPresenterWsReady]);
 
   // 🔹 옵션 변경 핸들러 (리액션 스티커, 질문, 실시간 피드백)
   const handleOptionChange = useCallback(
@@ -329,6 +354,14 @@ const PresenterViewPage = () => {
     };
   }, [roomId, presenterToken, presenterWsUrl, changeSlide]);
 
+  useEffect(() => {
+    return () => {
+      if (focusHighlightTimeoutRef.current) {
+        clearTimeout(focusHighlightTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // 🔹 방향키로 슬라이드 이동
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -457,6 +490,8 @@ const PresenterViewPage = () => {
         stamps={showStampsInViewer ? currentReactionStamps : []}
         showReactions={showStampsInViewer}
         onToggleShowReactions={handleToggleShowStampsInViewer}
+        onFocusClick={isPresenterWsReady ? handleFocusOn : undefined}
+        focusHighlight={showFocusHighlight}
         timer={formatTimer(elapsedSeconds)}
       />
 

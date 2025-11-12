@@ -1,4 +1,4 @@
-import styled from "styled-components";
+import styled, { css, keyframes } from "styled-components";
 
 /* 전체 컨테이너 */
 export const Main = styled.div`
@@ -44,6 +44,44 @@ export const FocusLeft = styled.div`
   border: 0.05vw solid #eaeaea;
   background: #eaeaea;
   gap: 0.4vw;
+  cursor: ${({ onClick }) => (onClick ? "pointer" : "default")};
+  pointer-events: ${({ onClick }) => (onClick ? "auto" : "none")};
+  opacity: ${({ onClick }) => (onClick ? 1 : 0.6)};
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #ffc551;
+    border-color: #ffc551;
+    color: #303030;
+
+    img {
+      filter: brightness(0) saturate(100%) invert(20%) sepia(4%)
+        saturate(167%) hue-rotate(318deg) brightness(99%) contrast(94%);
+    }
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
+const focusHighlightAnimation = keyframes`
+  0% {
+    border-color: #ffc551;
+    box-shadow: inset 0 0 1.2vw rgba(255, 197, 81, 0.55);
+  }
+  60% {
+    border-color: #ffc551;
+    box-shadow: inset 0 0 0.6vw rgba(255, 197, 81, 0.35);
+  }
+  100% {
+    border-color: #ddd;
+    box-shadow: inset 0 0 0 rgba(255, 197, 81, 0);
+  }
+`;
+
+export const HighlightedSlideStyles = css`
+  animation: ${focusHighlightAnimation} 1s ease-out forwards;
 `;
 
 /* 검정박스 (집중도바+범례) */
