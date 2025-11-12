@@ -113,6 +113,26 @@ class WebSocketService {
     this.send(destination, {}, { "Idempotency-Key": uuidv4() });
   }
 
+  // 발표자: 세션 종료 알림 전송
+  sendEndSession(sessionId) {
+    if (!this.isConnected || !this.client) {
+      return;
+    }
+
+    try {
+      this.client.publish({
+        destination: `/app/presentation/${sessionId}/end`,
+        headers: {
+          "Content-Type": "text/plain",
+          "Idempotency-Key": uuidv4(),
+        },
+        body: "end",
+      });
+    } catch (_error) {
+      // ignore publish error
+    }
+  }
+
   subscribe(destination, callback) {
     if (!this.isConnected || !this.client) {
       return () => {};

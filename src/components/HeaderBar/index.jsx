@@ -9,7 +9,14 @@ import {
   ExitButton,
   StartSessionButton,
 } from "../common/HeaderButtons";
-import { startSession } from "../../services/roomService";
+import { startSession, closeSession } from "../../services/roomService";
+import {
+  fetchTopSlideReport,
+  fetchTopQuestionsReport,
+  fetchTopStoredReport,
+} from "../../services/aiReportService";
+import websocketService from "../../services/websocketService";
+import LandingPage from "../LandingPage";
 
 /* ===== 헤더 전체 래퍼 ===== */
 const HeaderWrapper = styled.header`
@@ -111,6 +118,9 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [roomData, setRoomData] = useState(propRoomData || null);
   const [fileName, setFileName] = useState(location.state?.fileName || "");
+  const [isSessionEnding, setIsSessionEnding] = useState(false);
+  const [showLandingPage, setShowLandingPage] = useState(false);
+  const [landingMessage, setLandingMessage] = useState("AI 리포트 생성 중 ...");
 
   /* ✅ 새로고침 또는 state 유실 시 sessionStorage 복구 */
   useEffect(() => {
@@ -130,6 +140,10 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
 
   /* ✅ 세션 시작 / 종료 버튼 */
   const handleSessionAction = async () => {
+    if (isSessionEnding) {
+      return;
+    }
+
     if (isPrep) {
       if (!roomData?.roomId || !roomData?.deckId) {
         alert("⚠️ 방 정보가 아직 준비되지 않았습니다.");
@@ -153,7 +167,89 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
         alert("⚠️ 세션 시작에 실패했습니다. 다시 시도해주세요.");
       }
     } else if (isPresenter) {
-      navigate("/");
+      const resolvedRoomId =
+        roomData?.roomId ?? location.state?.roomId ?? null;
+      const resolvedDeckId =
+        roomData?.deckId ?? location.state?.deckId ?? null;
+      const resolvedTotalPages =
+        location.state?.totalPages ??
+        roomData?.totalPages ??
+        roomData?.slideCount ??
+        totalPages ??
+        null;
+
+      if (!resolvedRoomId) {
+        alert("⚠️ 방 정보를 찾을 수 없습니다. 다시 시도해주세요.");
+        return;
+      }
+
+      setIsSessionEnding(true);
+      setLandingMessage("AI 리포트 생성 중 ...");
+      setShowLandingPage(true);
+      let didNavigate = false;
+      try {
+        const reportCalls = [
+          fetchTopStoredReport(resolvedRoomId),
+          fetchTopSlideReport(resolvedRoomId, { latestFirst: true }),
+          fetchTopQuestionsReport(resolvedRoomId),
+        ];
+
+        const reportResults = await Promise.allSettled(reportCalls);
+
+        const reportErrors = reportResults.filter(
+          (result) => result.status === "rejected"
+        );
+
+        if (reportErrors.length > 0) {
+          console.warn("[HeaderBar] 레포트 선행 호출 중 일부 실패:", reportErrors);
+        }
+
+        await closeSession(resolvedRoomId);
+
+        if (websocketService.getIsConnected()) {
+          websocketService.sendEndSession(resolvedRoomId);
+        }
+
+        const nextState = {
+          roomId: resolvedRoomId,
+          deckId: resolvedDeckId,
+          totalPages: resolvedTotalPages,
+          fileName,
+          roomData: {
+            ...(roomData || {}),
+            roomId: resolvedRoomId,
+            deckId: resolvedDeckId,
+            totalPages: resolvedTotalPages,
+            fileName,
+          },
+        };
+
+        try {
+          if (typeof window !== "undefined" && window.sessionStorage) {
+            window.sessionStorage.setItem(
+              "ai_report_room",
+              JSON.stringify(nextState.roomData)
+            );
+          }
+        } catch (_error) {
+          // ignore storage write errors
+        }
+
+        navigate("/ai-report", {
+          replace: false,
+          state: nextState,
+        });
+        didNavigate = true;
+      } catch (error) {
+        console.error("[HeaderBar] 세션 종료 처리 실패:", error);
+        alert("⚠️ 세션 종료 처리에 실패했습니다. 다시 시도해주세요.");
+        setShowLandingPage(false);
+      } finally {
+        setIsSessionEnding(false);
+        if (!didNavigate) {
+          setShowLandingPage(false);
+        }
+      }
     }
   };
 
@@ -194,7 +290,11 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
             )}
 
             {(isPrep || isPresenter) && (
-              <StartSessionButton onClick={handleSessionAction}>
+              <StartSessionButton
+                onClick={handleSessionAction}
+                disabled={isSessionEnding}
+                isEndSession={isPresenter}
+              >
                 {isPrep ? "세션 시작" : "세션 종료"}
               </StartSessionButton>
             )}
@@ -210,6 +310,7 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
           onClose={() => setShowShareModal(false)}
         />
       )}
+      {showLandingPage && <LandingPage message={landingMessage} />}
     </>
   );
 }
