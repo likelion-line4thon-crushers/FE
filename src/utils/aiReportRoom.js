@@ -80,6 +80,7 @@ export const computeRoomInfo = (storedRoomData, locationState) => {
     roomId: merged.roomId ?? null,
     deckId: merged.deckId ?? null,
     totalPages: deriveTotalPages(merged),
+    fileName: merged.fileName ?? locationState?.fileName ?? null,
   };
 };
 
@@ -87,4 +88,3 @@ export default {
   loadStoredRoomData,
   computeRoomInfo,
 };
-

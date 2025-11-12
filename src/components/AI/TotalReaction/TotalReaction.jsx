@@ -36,6 +36,7 @@ const TotalReaction = ({
   error = null,
   roomId,
   deckId,
+  fileName = null,
 }) => {
   const emojiCount = reportData?.emojiCount ?? null;
   const questionCount = reportData?.questionCount ?? null;
@@ -64,7 +65,7 @@ const TotalReaction = ({
       <TitleContainer>
         <img src={ReportTitle} alt="AI 보고서" />
         <h1>AI 보고서</h1>
-        <h2>파일명.pdf</h2>
+        <h2>{fileName || "파일명.pdf"}</h2>
       </TitleContainer>
       <ContentContainer>
         <ContentBox
