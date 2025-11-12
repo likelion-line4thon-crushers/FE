@@ -7,7 +7,7 @@ import React, {
   useRef,
 } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import Layout from "../../components/Layout/Layout"; // ✅ LayoutContainer 말고 이거
+import Layout from "../../components/Layout/Layout";
 import SidebarSlides from "../../components/SidebarSlides";
 import SlideViewer from "../../components/SlideViewer";
 import QuestionList from "../../components/QuestionList";
@@ -20,6 +20,7 @@ import useEmojiReactions from "../../hooks/useEmojiReactions";
 import { WebSocketService } from "../../services/websocketService";
 import usePresenterQuestions from "../../hooks/usePresenterQuestions";
 import useQuickSettingsStorage from "../../hooks/useQuickSettingsStorage";
+import useStickerLoader from "../../hooks/useStickerLoader";
 
 // SettingsPanel 스타일 재사용
 import {
@@ -104,8 +105,7 @@ const PresenterViewPage = () => {
   const [quickSettings, setQuickSettings] = useQuickSettingsStorage();
   const initialSettingsSyncedRef = useRef(false);
 
-  const audienceCapacity =
-    locationState.count ?? storedRoomData.count ?? 50;
+  const audienceCapacity = locationState.count ?? storedRoomData.count ?? 50;
 
   const initialAudienceCount = useMemo(() => {
     const candidate =
@@ -216,17 +216,28 @@ const PresenterViewPage = () => {
   };
 
   const presenterSocketService = useMemo(() => new WebSocketService(), []);
-  const { stampsBySlide: reactionStamps, isReady: reactionsReady } =
-    useEmojiReactions({
-      sessionId: roomId,
-      token: presenterToken,
-      wsUrl: presenterWsUrl,
-      enabled: Boolean(roomId && presenterToken && presenterWsUrl),
-      disconnectOnUnmount: true,
-      service: presenterSocketService,
-    });
+  const {
+    stampsBySlide: reactionStamps,
+    isReady: reactionsReady,
+    addLocalStamp,
+  } = useEmojiReactions({
+    sessionId: roomId,
+    token: presenterToken,
+    wsUrl: presenterWsUrl,
+    enabled: Boolean(roomId && presenterToken && presenterWsUrl),
+    disconnectOnUnmount: true,
+    service: presenterSocketService,
+  });
 
   const currentReactionStamps = reactionStamps[String(currentSlide)] || [];
+
+  // 🔹 새로고침 시 스티커 로드 (커스텀 훅 사용)
+  useStickerLoader({
+    roomId,
+    addLocalStamp,
+    reactionsReady,
+    prefix: "Presenter loadStickers",
+  });
 
   const {
     questions: presenterQuestions,
@@ -569,13 +580,17 @@ const PresenterViewPage = () => {
               label="실시간 질문"
               description="청중이 실시간으로 질문을 남길 수 있습니다."
               checked={quickSettings.question}
-              onChange={(event) => handleOptionChange("question", event.target.checked)}
+              onChange={(event) =>
+                handleOptionChange("question", event.target.checked)
+              }
             />
             <QuickSettingToggle
               label="실시간 피드백"
               description="수집된 청중의 반응을 실시간으로 분석합니다."
               checked={quickSettings.feedback}
-              onChange={(event) => handleOptionChange("feedback", event.target.checked)}
+              onChange={(event) =>
+                handleOptionChange("feedback", event.target.checked)
+              }
             />
             <QuickSettingToggle
               label="다음 슬라이드 공개"
