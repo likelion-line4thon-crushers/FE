@@ -33,6 +33,8 @@ const SlideViewer = ({
   stamps = [],
   showReactions = true,
   onToggleShowReactions,
+  onFocusClick,
+  focusHighlight = false,
   timer = "00:00",
 }) => {
   const { prev, current, next } = audienceStats;
@@ -40,6 +42,7 @@ const SlideViewer = ({
   const prevPct = (prev / total) * 100;
   const currentPct = (current / total) * 100;
   const nextPct = (next / total) * 100;
+  const showAudienceDistribution = mode === "live" || mode === "present";
 
   const handleToggleEyesClick = () => {
     if (typeof onToggleShowReactions === "function") {
@@ -52,14 +55,14 @@ const SlideViewer = ({
       <FocusBar>
         {/* 🔹 왼쪽 그룹 (집중유도 + 검정바) */}
         <FocusGroupLeft>
-          <FocusLeft>
+          <FocusLeft onClick={onFocusClick}>
             <img src={FocusIcon} alt="집중 유도" width={20} height={20} />
             <span>집중 유도</span>
           </FocusLeft>
 
           <LegendContainer>
             <AudienceBar>
-              {mode === "live" ? (
+              {showAudienceDistribution ? (
                 <>
                   <SegmentPrev width={prevPct} />
                   <SegmentCurrent width={currentPct} />
@@ -109,6 +112,7 @@ const SlideViewer = ({
         alt={`슬라이드 ${currentSlide + 1}`}
         stamps={stamps}
         showStamps={showReactions}
+        highlight={focusHighlight}
       />
     </Main>
   );

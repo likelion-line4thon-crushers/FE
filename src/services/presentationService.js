@@ -14,7 +14,6 @@ export const getOriginalSlideUrl = async (roomId, deckId, page) => {
     );
     return response.data.data.originalUrl;
   } catch (error) {
-    console.error(`Error fetching original slide for page ${page}:`, error);
     throw error;
   }
 };
@@ -36,7 +35,72 @@ export const fetchAllOriginalSlideUrls = async (roomId, deckId, totalPages) => {
     const urls = await Promise.all(urlPromises);
     return urls;
   } catch (error) {
-    console.error("Error fetching all original slide URLs:", error);
+    throw error;
+  }
+};
+
+/**
+ * 현재 발표자의 슬라이드 기준 청중 분포 데이터를 가져옵니다.
+ * @param {Object} params
+ * @param {string} params.roomId - 방 ID
+ * @param {number} [params.page] - 현재 슬라이드 인덱스(0-based). 제공 시 1을 더해 서버에 전달합니다.
+ * @param {AbortSignal} [params.signal] - 요청 취소 시 사용할 AbortSignal
+ * @returns {Promise<{prev: number, current: number, next: number}>}
+ */
+export const fetchAudienceSlideStats = async ({ roomId, page, signal } = {}) => {
+  if (!roomId) {
+    throw new Error("roomId가 필요합니다.");
+  }
+
+  const params =
+    typeof page === "number" && Number.isFinite(page)
+      ? { page: page + 1 }
+      : undefined;
+
+  try {
+    const response = await api.get(
+      `/api/pages/${roomId}/audience-slide-stats`,
+      {
+        params,
+        signal,
+      }
+    );
+
+    const payload = response?.data?.data ?? response?.data ?? {};
+
+    const normalize = (value) => {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : 0;
+    };
+
+    const front = normalize(
+      payload.frontCount ??
+        payload.front ??
+        payload.prev ??
+        payload.previous ??
+        payload.before
+    );
+    const current = normalize(
+      payload.currentCount ?? payload.current ?? payload.present ?? payload.now
+    );
+    const back = normalize(
+      payload.backCount ??
+        payload.back ??
+        payload.next ??
+        payload.after ??
+        payload.upcoming
+    );
+
+    return {
+      prev: front,
+      current,
+      next: back,
+    };
+  } catch (error) {
+    if (error?.name === "CanceledError" || error?.name === "AbortError") {
+      throw error;
+    }
+
     throw error;
   }
 };

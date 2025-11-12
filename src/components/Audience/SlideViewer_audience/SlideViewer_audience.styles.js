@@ -1,5 +1,6 @@
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { ToggleInput } from "../../SettingsPanel/SettingsPanel.styles";
+import { HighlightedSlideStyles } from "../../SlideViewer/SlideViewer.styles";
 
 /* 전체 컨테이너 */
 export const Main = styled.div`
@@ -50,6 +51,9 @@ export const SlideBox = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.6vw;
+  border: 0.05vw solid #ddd;
+  ${({ focusHighlight }) => (focusHighlight ? HighlightedSlideStyles : css``)}
 `;
 
 export const NavButton = styled.button`

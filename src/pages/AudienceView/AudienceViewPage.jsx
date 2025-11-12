@@ -41,11 +41,30 @@ const AudienceViewPage = () => {
   const [loadingSlides, setLoadingSlides] = useState(false);
   const [slidesError, setSlidesError] = useState(null);
   const [isWebsocketReady, setIsWebsocketReady] = useState(false);
+  const [showFocusHighlight, setShowFocusHighlight] = useState(false);
+
+  // 🔹 빠른 설정 옵션 상태 (발표자로부터 받은 설정)
+  const [quickSettings, setQuickSettings] = useState({
+    sticker: true,
+    question: true,
+    feedback: true,
+  });
+  const [unlockSettings, setUnlockSettings] = useState({
+    maxRevealedPage: null,
+    revealAllSlides: true,
+    totalPages: null,
+    presenterPage: null,
+  });
 
   const questionSubscriptionsRef = useRef([]);
   const pageChangeUnsubscribeRef = useRef(null);
+  const focusOnUnsubscribeRef = useRef(null);
+  const optionUnsubscribeRef = useRef(null);
+  const unlockUnsubscribeRef = useRef(null);
   const followPresenterRef = useRef(followPresenter);
   const prevSlideRef = useRef(0);
+  const lastPresenterPageRef = useRef(0);
+  const focusHighlightTimeoutRef = useRef(null);
 
   const {
     questions,
@@ -78,7 +97,14 @@ const AudienceViewPage = () => {
   const slideCount = slides.length;
 
   const changeCurrentSlide = useCallback(
-    (nextIndex, { source = "audience", broadcast = true } = {}) => {
+    (
+      nextIndex,
+      {
+        source = "audience",
+        broadcast = true,
+        preserveFollowState = false,
+      } = {}
+    ) => {
       setCurrentSlide((prev) => {
         if (!Number.isFinite(nextIndex)) {
           return prev;
@@ -112,7 +138,7 @@ const AudienceViewPage = () => {
         return clamped;
       });
 
-      if (source !== "presenter") {
+      if (!preserveFollowState && source !== "presenter") {
         setFollowPresenter(false);
       }
     },
@@ -138,7 +164,6 @@ const AudienceViewPage = () => {
         setSlides(urls);
       } catch (error) {
         if (signal?.aborted) return;
-        console.error("[AudienceViewPage] 슬라이드 URL 불러오기 실패:", error);
         setSlidesError(error);
       } finally {
         if (signal?.aborted) return;
@@ -173,11 +198,6 @@ const AudienceViewPage = () => {
           setDeckId(joinData.deck.deckId);
         } else if (joinData.presentation?.deckId) {
           setDeckId(joinData.presentation.deckId);
-        } else {
-          console.warn(
-            "[AudienceViewPage] deckId가 응답에 없습니다:",
-            joinData
-          );
         }
 
         if (joinData.totalPages !== undefined && joinData.totalPages !== null) {
@@ -186,11 +206,6 @@ const AudienceViewPage = () => {
           setTotalPages(Number(joinData.deck.totalPages));
         } else if (joinData.presentation?.totalPages) {
           setTotalPages(Number(joinData.presentation.totalPages));
-        } else {
-          console.warn(
-            "[AudienceViewPage] totalPages가 응답에 없습니다:",
-            joinData
-          );
         }
 
         let wsUrlValue = joinData.wsUrl;
@@ -211,7 +226,6 @@ const AudienceViewPage = () => {
 
         setWsUrl(wsUrlValue);
       } catch (err) {
-        console.error("방 입장 실패:", err);
         alert("방 입장에 실패했습니다. 코드를 확인해주세요.");
       }
     };
@@ -248,12 +262,10 @@ const AudienceViewPage = () => {
     setIsWebsocketReady(false);
 
     const onConnect = () => {
-      console.log("[AudienceViewPage] 웹소켓 연결 성공");
       setIsWebsocketReady(true);
     };
 
-    const onError = (error) => {
-      console.error("[AudienceViewPage] 웹소켓 연결 실패:", error);
+    const onError = () => {
       setIsWebsocketReady(false);
     };
 
@@ -297,19 +309,63 @@ const AudienceViewPage = () => {
       pageChangeTopic,
       (data) => {
         if (!data || data.changedPage === undefined) {
-          console.warn("[Audience] 잘못된 페이지 변경 데이터:", data);
           return;
+        }
+
+        const newSlideIndex = Number(data.changedPage);
+        if (Number.isFinite(newSlideIndex)) {
+          lastPresenterPageRef.current = newSlideIndex;
         }
 
         if (!followPresenterRef.current) {
           return;
         }
 
-        const newSlideIndex = Number(data.changedPage);
         changeCurrentSlide(newSlideIndex, {
           source: "presenter",
           broadcast: false,
+          preserveFollowState: true,
         });
+      }
+    );
+
+    // 🔹 옵션 변경 구독 (리액션 스티커, 질문, 실시간 피드백)
+    const optionTopic = `/topic/presentation/${roomId}/option`;
+    optionUnsubscribeRef.current = websocketService.subscribe(
+      optionTopic,
+      (data) => {
+        if (data) {
+          const payload = data?.data ?? data;
+          const normalized = {
+            sticker: String(payload?.sticker) === "true",
+            question: String(payload?.question) === "true",
+            feedback: String(payload?.feedback) === "true",
+          };
+
+          setQuickSettings(normalized);
+        }
+      }
+    );
+
+    // 🔹 다음 슬라이드 공개 옵션 구독
+    const unlockTopic = `/topic/presentation/${roomId}/option/unlock`;
+    unlockUnsubscribeRef.current = websocketService.subscribe(
+      unlockTopic,
+      (data) => {
+        if (data) {
+          const payload = data?.data ?? data;
+          const maxPage = Number(payload?.maxRevealedPage);
+          const revealAll = String(payload?.revealAllSlides) === "true";
+          const presenterPage = Number(payload?.presenterPage);
+
+          setUnlockSettings({
+            maxRevealedPage: maxPage,
+            revealAllSlides: revealAll,
+            totalPages: Number(payload?.totalPages),
+            presenterPage,
+          });
+
+        }
       }
     );
 
@@ -323,6 +379,12 @@ const AudienceViewPage = () => {
 
       pageChangeUnsubscribeRef.current?.();
       pageChangeUnsubscribeRef.current = null;
+
+      optionUnsubscribeRef.current?.();
+      optionUnsubscribeRef.current = null;
+
+      unlockUnsubscribeRef.current?.();
+      unlockUnsubscribeRef.current = null;
     };
   }, [
     isWebsocketReady,
@@ -331,7 +393,90 @@ const AudienceViewPage = () => {
     handleIncomingQuestion,
     questionTopics,
     changeCurrentSlide,
+    currentSlide,
   ]);
+
+  useEffect(() => {
+    focusOnUnsubscribeRef.current?.();
+    focusOnUnsubscribeRef.current = null;
+
+    if (
+      !isWebsocketReady ||
+      !roomId ||
+      !websocketService.getIsConnected()
+    ) {
+      return undefined;
+    }
+
+    const topic = `/topic/presentation/${roomId}/focusOn`;
+    const unsubscribe = websocketService.subscribeText(
+      topic,
+      (rawMessage) => {
+        if (rawMessage == null) {
+          return;
+        }
+
+        const trimmed = String(rawMessage).trim();
+        if (!trimmed) {
+          return;
+        }
+
+        let parsedNumber;
+        try {
+          parsedNumber = Number(JSON.parse(trimmed));
+          if (!Number.isFinite(parsedNumber)) {
+            throw new Error("NaN");
+          }
+        } catch (error) {
+          parsedNumber = Number(trimmed.replace(/^"+|"+$/g, ""));
+        }
+
+        if (!Number.isFinite(parsedNumber) || parsedNumber < 0) {
+          return;
+        }
+
+        lastPresenterPageRef.current = parsedNumber;
+
+        if (!followPresenterRef.current) {
+          setFollowPresenter(true);
+          followPresenterRef.current = true;
+        }
+
+        setShowFocusHighlight(true);
+        if (focusHighlightTimeoutRef.current) {
+          clearTimeout(focusHighlightTimeoutRef.current);
+        }
+        focusHighlightTimeoutRef.current = setTimeout(() => {
+          setShowFocusHighlight(false);
+          focusHighlightTimeoutRef.current = null;
+        }, 1000);
+
+        changeCurrentSlide(parsedNumber, {
+          source: "focusOn",
+          broadcast: true,
+          preserveFollowState: true,
+        });
+      }
+    );
+
+    focusOnUnsubscribeRef.current = unsubscribe;
+
+    return () => {
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+      focusOnUnsubscribeRef.current = null;
+    };
+  }, [isWebsocketReady, roomId, changeCurrentSlide]);
+
+  useEffect(() => {
+    return () => {
+      if (focusHighlightTimeoutRef.current) {
+        clearTimeout(focusHighlightTimeoutRef.current);
+        focusHighlightTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // 🔹 방향키로 슬라이드 이동
   useEffect(() => {
@@ -373,7 +518,6 @@ const AudienceViewPage = () => {
       };
 
       websocketService.send(destination, message);
-      console.log("[WebSocket] 이모지 반응 전송:", message);
 
       const stickerSrc = SELECTED_EMOJI_ICONS[selectedEmoji.id];
       if (stickerSrc) {
@@ -389,6 +533,18 @@ const AudienceViewPage = () => {
 
   const handleToggleFollowPresenter = (checked) => {
     setFollowPresenter(checked);
+
+    if (checked) {
+      const target = Number.isFinite(lastPresenterPageRef.current)
+        ? lastPresenterPageRef.current
+        : prevSlideRef.current;
+
+      changeCurrentSlide(target, {
+        source: "presenter",
+        broadcast: false,
+        preserveFollowState: true,
+      });
+    }
   };
 
   const handleToggleShowStamps = (nextValue) => {
@@ -434,6 +590,7 @@ const AudienceViewPage = () => {
           onToggleShowStamps={handleToggleShowStamps}
           isWaiting={showSlidesPlaceholder}
           waitingMessage={showSlidesPlaceholder ? waitingMessage : undefined}
+          focusHighlight={showFocusHighlight}
         />
         {hasSlidesError && (
           <div
