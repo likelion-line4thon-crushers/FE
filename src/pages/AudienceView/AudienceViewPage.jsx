@@ -633,6 +633,7 @@ const AudienceViewPage = () => {
           }
           onSubmitQuestion={submitQuestion}
           canSubmit={isWebsocketReady && reactionsReady}
+          isLocked={!quickSettings.question}
         />
       </RightPanelContainer>
     </PageContainer>

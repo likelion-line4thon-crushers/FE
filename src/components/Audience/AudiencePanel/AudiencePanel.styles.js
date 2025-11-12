@@ -182,6 +182,7 @@ export const LockBanner = styled.div`
   align-self: center;
   margin-top: auto;
   margin-bottom: 1.48vh;
+  white-space: nowrap;
 
   color: #5c5c5c;
   font-family: Pretendard;
