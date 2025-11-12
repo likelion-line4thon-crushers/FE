@@ -73,12 +73,7 @@ const PresenterViewPage = () => {
             ? "https:"
             : url.protocol;
         return `${protocol}//${url.host}/ws/presenter`;
-      } catch (error) {
-        console.warn(
-          "[PresenterViewPage] presenter WS URL 파싱 실패:",
-          input,
-          error
-        );
+      } catch (_error) {
         return null;
       }
     };
@@ -122,12 +117,10 @@ const PresenterViewPage = () => {
 
   const handleFocusOn = useCallback(() => {
     if (!roomId) {
-      console.warn("[PresenterViewPage] 집중 유도 실패: roomId 없음");
       return;
     }
 
     if (!isPresenterWsReady || !websocketService.getIsConnected()) {
-      console.warn("[PresenterViewPage] 집중 유도 실패: 웹소켓 미연결");
       return;
     }
 
@@ -159,14 +152,6 @@ const PresenterViewPage = () => {
               feedback: newSettings.feedback,
             };
             websocketService.sendOptionChange(roomId, options);
-            console.log(`✅ [발표자] 옵션 변경 전송 완료:`, {
-              sessionId: roomId,
-              optionKey,
-              value,
-              allOptions: options,
-            });
-          } else {
-            console.warn("⚠️ [발표자] 웹소켓 미연결 상태 - 옵션 변경 전송 실패");
           }
         }
 
@@ -185,15 +170,6 @@ const PresenterViewPage = () => {
       if (roomId && websocketService.getIsConnected()) {
         const unlock = value ? "true" : "false";
         websocketService.sendUnlockChange(roomId, unlock);
-        console.log(`✅ [발표자] 다음 슬라이드 공개 옵션 변경 전송 완료:`, {
-          sessionId: roomId,
-          unlock,
-          value,
-        });
-      } else {
-        console.warn(
-          "⚠️ [발표자] 웹소켓 미연결 상태 - 다음 슬라이드 공개 옵션 변경 전송 실패"
-        );
       }
     },
     [roomId]
@@ -267,12 +243,6 @@ const PresenterViewPage = () => {
           page: currentSlide,
           signal: controller.signal,
         });
-        console.log(
-          "[PresenterViewPage] 청중 분포 데이터 수신:",
-          roomId,
-          currentSlide,
-          stats
-        );
         setAudienceStats((prevStats) => ({
           prev: Number.isFinite(stats?.prev) ? stats.prev : prevStats.prev,
           current: Number.isFinite(stats?.current)
@@ -288,10 +258,6 @@ const PresenterViewPage = () => {
         ) {
           return;
         }
-        console.error(
-          "[PresenterViewPage] 청중 분포 데이터 로딩 실패:",
-          error
-        );
       } finally {
         if (audienceStatsControllerRef.current === controller) {
           audienceStatsControllerRef.current = null;
@@ -333,11 +299,6 @@ const PresenterViewPage = () => {
 
   useEffect(() => {
     if (!roomId || !deckId || !totalPages) {
-      console.warn("⚠️ [PresenterViewPage] 필수 파라미터 누락:", {
-        roomId,
-        deckId,
-        totalPages,
-      });
       setLoading(false);
       return;
     }
@@ -352,8 +313,7 @@ const PresenterViewPage = () => {
 
         // CreateSessionPage와 동일하게, URL 문자열 배열을 그대로 사용합니다.
         setSlideUrls(urls);
-      } catch (err) {
-        console.error("❌ [PresenterViewPage] 슬라이드 생성 실패:", err);
+      } catch (_error) {
         setSlideUrls([]);
       } finally {
         setLoading(false);
@@ -369,7 +329,6 @@ const PresenterViewPage = () => {
     }
 
     const onConnect = () => {
-      console.log("✅ [Presenter] 웹소켓 연결 성공");
       setIsPresenterWsReady(true);
       websocketService.sendPageChange(
         roomId,
@@ -378,8 +337,7 @@ const PresenterViewPage = () => {
       );
     };
 
-    const onError = (error) => {
-      console.error("🚨 [Presenter] 웹소켓 연결 실패:", error);
+    const onError = () => {
       setIsPresenterWsReady(false);
     };
 
@@ -463,8 +421,8 @@ const PresenterViewPage = () => {
         QUICK_SETTINGS_STORAGE_KEY,
         JSON.stringify(quickSettings)
       );
-    } catch (error) {
-      console.warn("⚠️ [발표자] 빠른 설정 저장 실패:", error);
+    } catch (_error) {
+      // ignore storage write failures
     }
   }, [quickSettings]);
 
@@ -496,11 +454,6 @@ const PresenterViewPage = () => {
       quickSettings.unlock ? "true" : "false"
     );
     initialSettingsSyncedRef.current = true;
-    console.log("✅ [발표자] 저장된 빠른 설정 동기화 완료:", {
-      sessionId: roomId,
-      options,
-      unlock: quickSettings.unlock,
-    });
   }, [roomId, isPresenterWsReady, quickSettings]);
 
   // ✅ 로딩 중일 때 표시

@@ -38,7 +38,6 @@ export const readQuickSettingsFromStorage = (
           : parsed.unlock === "true",
     };
   } catch (error) {
-    console.warn("[useQuickSettingsStorage] 저장된 빠른 설정 파싱 실패:", error);
     return { ...DEFAULT_QUICK_SETTINGS };
   }
 };
@@ -54,11 +53,7 @@ export default function useQuickSettingsStorage(
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(quickSettings));
     } catch (error) {
-      console.warn(
-        "[useQuickSettingsStorage] 빠른 설정 저장 실패:",
-        storageKey,
-        error
-      );
+      // ignore session storage write errors
     }
   }, [quickSettings, storageKey]);
 

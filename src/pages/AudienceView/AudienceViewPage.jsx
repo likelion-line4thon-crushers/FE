@@ -163,7 +163,6 @@ const AudienceViewPage = () => {
         setSlides(urls);
       } catch (error) {
         if (signal?.aborted) return;
-        console.error("[AudienceViewPage] 슬라이드 URL 불러오기 실패:", error);
         setSlidesError(error);
       } finally {
         if (signal?.aborted) return;
@@ -198,11 +197,6 @@ const AudienceViewPage = () => {
           setDeckId(joinData.deck.deckId);
         } else if (joinData.presentation?.deckId) {
           setDeckId(joinData.presentation.deckId);
-        } else {
-          console.warn(
-            "[AudienceViewPage] deckId가 응답에 없습니다:",
-            joinData
-          );
         }
 
         if (joinData.totalPages !== undefined && joinData.totalPages !== null) {
@@ -211,11 +205,6 @@ const AudienceViewPage = () => {
           setTotalPages(Number(joinData.deck.totalPages));
         } else if (joinData.presentation?.totalPages) {
           setTotalPages(Number(joinData.presentation.totalPages));
-        } else {
-          console.warn(
-            "[AudienceViewPage] totalPages가 응답에 없습니다:",
-            joinData
-          );
         }
 
         let wsUrlValue = joinData.wsUrl;
@@ -236,7 +225,6 @@ const AudienceViewPage = () => {
 
         setWsUrl(wsUrlValue);
       } catch (err) {
-        console.error("방 입장 실패:", err);
         alert("방 입장에 실패했습니다. 코드를 확인해주세요.");
       }
     };
@@ -273,12 +261,10 @@ const AudienceViewPage = () => {
     setIsWebsocketReady(false);
 
     const onConnect = () => {
-      console.log("[AudienceViewPage] 웹소켓 연결 성공");
       setIsWebsocketReady(true);
     };
 
-    const onError = (error) => {
-      console.error("[AudienceViewPage] 웹소켓 연결 실패:", error);
+    const onError = () => {
       setIsWebsocketReady(false);
     };
 
@@ -322,7 +308,6 @@ const AudienceViewPage = () => {
       pageChangeTopic,
       (data) => {
         if (!data || data.changedPage === undefined) {
-          console.warn("[Audience] 잘못된 페이지 변경 데이터:", data);
           return;
         }
 
@@ -348,7 +333,6 @@ const AudienceViewPage = () => {
     optionUnsubscribeRef.current = websocketService.subscribe(
       optionTopic,
       (data) => {
-        console.log("[청중] 옵션 변경 수신:", data);
         if (data) {
           const payload = data?.data ?? data;
           const normalized = {
@@ -358,7 +342,6 @@ const AudienceViewPage = () => {
           };
 
           setQuickSettings(normalized);
-          console.log("✅ [청중] 옵션 UI 업데이트 완료:", normalized);
         }
       }
     );
@@ -368,7 +351,6 @@ const AudienceViewPage = () => {
     unlockUnsubscribeRef.current = websocketService.subscribe(
       unlockTopic,
       (data) => {
-        console.log("[청중] 다음 슬라이드 공개 옵션 변경 수신:", data);
         if (data) {
           const payload = data?.data ?? data;
           const maxPage = Number(payload?.maxRevealedPage);
@@ -430,13 +412,11 @@ const AudienceViewPage = () => {
       topic,
       (rawMessage) => {
         if (rawMessage == null) {
-          console.warn("[Audience] 집중 유도 수신 실패 - 빈 메시지");
           return;
         }
 
         const trimmed = String(rawMessage).trim();
         if (!trimmed) {
-          console.warn("[Audience] 집중 유도 수신 실패 - 공백 메시지");
           return;
         }
 
@@ -451,7 +431,6 @@ const AudienceViewPage = () => {
         }
 
         if (!Number.isFinite(parsedNumber) || parsedNumber < 0) {
-          console.warn("[Audience] 집중 유도 수신 실패 - 잘못된 페이지 번호:", rawMessage);
           return;
         }
 
@@ -538,7 +517,6 @@ const AudienceViewPage = () => {
       };
 
       websocketService.send(destination, message);
-      console.log("[WebSocket] 이모지 반응 전송:", message);
 
       addLocalStamp(currentSlide, {
         id: now,

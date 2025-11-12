@@ -61,7 +61,6 @@ const PresentationPrepPage = () => {
             : url.protocol;
         return `${protocol}//${url.host}/ws/presenter`;
       } catch (error) {
-        console.warn("[CreateSessionPage] presenter WS URL 파싱 실패:", input, error);
         return null;
       }
     };
@@ -102,15 +101,8 @@ const PresentationPrepPage = () => {
               feedback: newSettings.feedback,
             };
             websocketService.sendOptionChange(roomId, options);
-            console.log(`✅ [발표 준비] 옵션 변경 전송 완료:`, {
-              sessionId: roomId,
-              optionKey,
-              value,
-              allOptions: options,
-            });
           pendingQuickSettingsRef.current = null;
           } else {
-            console.warn("⚠️ [발표 준비] 웹소켓 미연결 상태 - 옵션 변경은 저장되었으나 전송되지 않음");
             pendingQuickSettingsRef.current = {
               sticker: newSettings.sticker,
               question: newSettings.question,
@@ -134,16 +126,8 @@ const PresentationPrepPage = () => {
       if (roomId && websocketService.getIsConnected()) {
         const unlock = value ? "true" : "false";
         websocketService.sendUnlockChange(roomId, unlock);
-        console.log(`✅ [발표 준비] 다음 슬라이드 공개 옵션 변경 전송 완료:`, {
-          sessionId: roomId,
-          unlock,
-          value,
-        });
         pendingUnlockRef.current = null;
       } else {
-        console.warn(
-          "⚠️ [발표 준비] 웹소켓 미연결 상태 - 옵션 변경은 저장되었으나 전송되지 않음"
-        );
         pendingUnlockRef.current = value;
       }
     },
@@ -168,7 +152,6 @@ const PresentationPrepPage = () => {
     };
 
     if (websocketService.getIsConnected()) {
-      console.log("ℹ️ [발표 준비] 이미 웹소켓이 연결되어 있습니다.");
       setIsPresenterWsReady(true);
       return () => {
         setIsPresenterWsReady(false);
@@ -178,12 +161,10 @@ const PresentationPrepPage = () => {
     }
 
     const onConnect = () => {
-      console.log("✅ [발표 준비] 웹소켓 연결 성공");
       setIsPresenterWsReady(true);
     };
 
     const onError = (error) => {
-      console.error("🚨 [발표 준비] 웹소켓 연결 실패:", error);
       setIsPresenterWsReady(false);
       syncPendingFromLatest();
     };
@@ -215,10 +196,6 @@ const PresentationPrepPage = () => {
     const pendingOptions = pendingQuickSettingsRef.current;
     if (pendingOptions) {
       websocketService.sendOptionChange(roomId, pendingOptions);
-      console.log("✅ [발표 준비] 대기 중이던 옵션 동기화 완료:", {
-        sessionId: roomId,
-        options: pendingOptions,
-      });
       pendingQuickSettingsRef.current = null;
     }
 
@@ -227,10 +204,6 @@ const PresentationPrepPage = () => {
         ? "true"
         : "false";
       websocketService.sendUnlockChange(roomId, unlockValue);
-      console.log("✅ [발표 준비] 대기 중이던 공개 옵션 동기화 완료:", {
-        sessionId: roomId,
-        unlock: unlockValue,
-      });
       pendingUnlockRef.current = null;
     }
   }, [isPresenterWsReady, roomId]);
@@ -257,11 +230,9 @@ const PresentationPrepPage = () => {
     const initRoomAndUpload = async () => {
       try {
         hasInitializedRef.current = true;
-        console.log("📄 변환된 슬라이드 개수:", slideImageFiles.length);
 
         // 1️⃣ 방 생성
         const room = await createRoom(slideImageFiles.length);
-        console.log("🏠 방 생성 완료:", room);
         const { roomId, deckId: serverDeckId } = room;
         setDeckId(serverDeckId);
 
@@ -277,14 +248,8 @@ const PresentationPrepPage = () => {
           `/api/presentations/${roomId}/${serverDeckId}/pages`,
           formData
         );
-        console.log("📤 슬라이드 업로드 완료:", uploadRes.data);
 
         // 3️⃣ Presigned URL로 원본 슬라이드 불러오기
-        console.log("🔹 fetchAllOriginalSlideUrls 호출 인자:", {
-          roomId,
-          deckId: serverDeckId,
-          totalPages: slideImageFiles.length,
-        });
         const originalUrls = await fetchAllOriginalSlideUrls(
           roomId,
           serverDeckId,
@@ -310,16 +275,8 @@ const PresentationPrepPage = () => {
             state: location.state,
           });
         }
-
-        console.log(" 세션 초기화 완료");
       } catch (err) {
         hasInitializedRef.current = false;
-        console.error("❌ [initRoomAndUpload] 세션 초기화 실패:", {
-          name: err.name,
-          message: err.message,
-          stack: err.stack,
-          response: err.response?.data,
-        });
       }
     };
 
@@ -341,7 +298,6 @@ const PresentationPrepPage = () => {
 
     Promise.all(loadPromises).then(() => {
       setImagesLoaded(true);
-      console.log("🖼️ 모든 슬라이드 이미지 로드 완료");
     });
   }, [slideUrls]);
 

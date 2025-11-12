@@ -14,7 +14,6 @@ export const getOriginalSlideUrl = async (roomId, deckId, page) => {
     );
     return response.data.data.originalUrl;
   } catch (error) {
-    console.error(`Error fetching original slide for page ${page}:`, error);
     throw error;
   }
 };
@@ -36,7 +35,6 @@ export const fetchAllOriginalSlideUrls = async (roomId, deckId, totalPages) => {
     const urls = await Promise.all(urlPromises);
     return urls;
   } catch (error) {
-    console.error("Error fetching all original slide URLs:", error);
     throw error;
   }
 };
@@ -99,12 +97,10 @@ export const fetchAudienceSlideStats = async ({ roomId, page, signal } = {}) => 
       next: back,
     };
   } catch (error) {
-    // AbortError는 조용히 무시
     if (error?.name === "CanceledError" || error?.name === "AbortError") {
       throw error;
     }
 
-    console.error("[presentationService] 청중 분포 데이터 조회 실패:", error);
     throw error;
   }
 };
