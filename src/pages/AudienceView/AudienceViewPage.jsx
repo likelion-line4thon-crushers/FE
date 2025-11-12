@@ -364,7 +364,6 @@ const AudienceViewPage = () => {
             totalPages: Number(payload?.totalPages),
             presenterPage,
           });
-
         }
       }
     );
@@ -400,64 +399,57 @@ const AudienceViewPage = () => {
     focusOnUnsubscribeRef.current?.();
     focusOnUnsubscribeRef.current = null;
 
-    if (
-      !isWebsocketReady ||
-      !roomId ||
-      !websocketService.getIsConnected()
-    ) {
+    if (!isWebsocketReady || !roomId || !websocketService.getIsConnected()) {
       return undefined;
     }
 
     const topic = `/topic/presentation/${roomId}/focusOn`;
-    const unsubscribe = websocketService.subscribeText(
-      topic,
-      (rawMessage) => {
-        if (rawMessage == null) {
-          return;
-        }
-
-        const trimmed = String(rawMessage).trim();
-        if (!trimmed) {
-          return;
-        }
-
-        let parsedNumber;
-        try {
-          parsedNumber = Number(JSON.parse(trimmed));
-          if (!Number.isFinite(parsedNumber)) {
-            throw new Error("NaN");
-          }
-        } catch (error) {
-          parsedNumber = Number(trimmed.replace(/^"+|"+$/g, ""));
-        }
-
-        if (!Number.isFinite(parsedNumber) || parsedNumber < 0) {
-          return;
-        }
-
-        lastPresenterPageRef.current = parsedNumber;
-
-        if (!followPresenterRef.current) {
-          setFollowPresenter(true);
-          followPresenterRef.current = true;
-        }
-
-        setShowFocusHighlight(true);
-        if (focusHighlightTimeoutRef.current) {
-          clearTimeout(focusHighlightTimeoutRef.current);
-        }
-        focusHighlightTimeoutRef.current = setTimeout(() => {
-          setShowFocusHighlight(false);
-          focusHighlightTimeoutRef.current = null;
-        }, 1000);
-
-        changeCurrentSlide(parsedNumber, {
-          source: "focusOn",
-          broadcast: true,
-          preserveFollowState: true,
-        });
+    const unsubscribe = websocketService.subscribeText(topic, (rawMessage) => {
+      if (rawMessage == null) {
+        return;
       }
-    );
+
+      const trimmed = String(rawMessage).trim();
+      if (!trimmed) {
+        return;
+      }
+
+      let parsedNumber;
+      try {
+        parsedNumber = Number(JSON.parse(trimmed));
+        if (!Number.isFinite(parsedNumber)) {
+          throw new Error("NaN");
+        }
+      } catch (error) {
+        parsedNumber = Number(trimmed.replace(/^"+|"+$/g, ""));
+      }
+
+      if (!Number.isFinite(parsedNumber) || parsedNumber < 0) {
+        return;
+      }
+
+      lastPresenterPageRef.current = parsedNumber;
+
+      if (!followPresenterRef.current) {
+        setFollowPresenter(true);
+        followPresenterRef.current = true;
+      }
+
+      setShowFocusHighlight(true);
+      if (focusHighlightTimeoutRef.current) {
+        clearTimeout(focusHighlightTimeoutRef.current);
+      }
+      focusHighlightTimeoutRef.current = setTimeout(() => {
+        setShowFocusHighlight(false);
+        focusHighlightTimeoutRef.current = null;
+      }, 1000);
+
+      changeCurrentSlide(parsedNumber, {
+        source: "focusOn",
+        broadcast: true,
+        preserveFollowState: true,
+      });
+    });
 
     focusOnUnsubscribeRef.current = unsubscribe;
 
@@ -620,10 +612,12 @@ const AudienceViewPage = () => {
             </button>
           </div>
         )}
-        <EmojiPanel
-          selectedId={selectedEmoji?.id}
-          onSelect={handleSelectEmoji}
-        />
+        {quickSettings.sticker && (
+          <EmojiPanel
+            selectedId={selectedEmoji?.id}
+            onSelect={handleSelectEmoji}
+          />
+        )}
       </CenterContainer>
       {/* 오른쪽 AudiencePanel */}
       <RightPanelContainer>
