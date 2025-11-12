@@ -16,6 +16,7 @@ import websocketService from "../../services/websocketService";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
 import { WebSocketService } from "../../services/websocketService";
 import usePresenterQuestions from "../../hooks/usePresenterQuestions";
+import useQuickSettingsStorage from "../../hooks/useQuickSettingsStorage";
 
 // SettingsPanel 스타일 재사용
 import {
@@ -96,6 +97,10 @@ const PresenterViewPage = () => {
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+  // 🔹 빠른 설정 토글 상태 관리
+  const [quickSettings, setQuickSettings] = useQuickSettingsStorage();
+  const initialSettingsSyncedRef = useRef(false);
+
   const handleToggleShowReactions = (nextValue) => {
     setShowReactions(nextValue);
   };
@@ -103,6 +108,62 @@ const PresenterViewPage = () => {
   const handleToggleShowStampsInViewer = (nextValue) => {
     setShowStampsInViewer(nextValue);
   };
+
+  // 🔹 옵션 변경 핸들러 (리액션 스티커, 질문, 실시간 피드백)
+  const handleOptionChange = useCallback(
+    (optionKey, value) => {
+      setQuickSettings((prev) => {
+        const newSettings = { ...prev, [optionKey]: value };
+
+        // unlock 옵션이 아닌 경우만 sendOptionChange 호출
+        if (optionKey !== "unlock") {
+          // 웹소켓으로 전송
+          if (roomId && websocketService.getIsConnected()) {
+            const options = {
+              sticker: newSettings.sticker,
+              question: newSettings.question,
+              feedback: newSettings.feedback,
+            };
+            websocketService.sendOptionChange(roomId, options);
+            console.log(`✅ [발표자] 옵션 변경 전송 완료:`, {
+              sessionId: roomId,
+              optionKey,
+              value,
+              allOptions: options,
+            });
+          } else {
+            console.warn("⚠️ [발표자] 웹소켓 미연결 상태 - 옵션 변경 전송 실패");
+          }
+        }
+
+        return newSettings;
+      });
+    },
+    [roomId]
+  );
+
+  // 🔹 다음 슬라이드 공개 옵션 변경 핸들러
+  const handleUnlockChange = useCallback(
+    (value) => {
+      setQuickSettings((prev) => ({ ...prev, unlock: value }));
+
+      // 웹소켓으로 전송
+      if (roomId && websocketService.getIsConnected()) {
+        const unlock = value ? "true" : "false";
+        websocketService.sendUnlockChange(roomId, unlock);
+        console.log(`✅ [발표자] 다음 슬라이드 공개 옵션 변경 전송 완료:`, {
+          sessionId: roomId,
+          unlock,
+          value,
+        });
+      } else {
+        console.warn(
+          "⚠️ [발표자] 웹소켓 미연결 상태 - 다음 슬라이드 공개 옵션 변경 전송 실패"
+        );
+      }
+    },
+    [roomId]
+  );
 
   // 타이머 (페이지 마운트 시 시작)
   useEffect(() => {
@@ -294,6 +355,53 @@ const PresenterViewPage = () => {
     [changeSlide]
   );
 
+  // 🔹 빠른 설정을 sessionStorage에 저장
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        QUICK_SETTINGS_STORAGE_KEY,
+        JSON.stringify(quickSettings)
+      );
+    } catch (error) {
+      console.warn("⚠️ [발표자] 빠른 설정 저장 실패:", error);
+    }
+  }, [quickSettings]);
+
+  // 🔹 리액션 표시 상태를 빠른 설정과 동기화
+  useEffect(() => {
+    setShowReactions(quickSettings.sticker);
+    setShowStampsInViewer(quickSettings.sticker);
+  }, [quickSettings.sticker]);
+
+  // 🔹 웹소켓 연결 후 저장된 빠른 설정 동기화
+  useEffect(() => {
+    if (
+      initialSettingsSyncedRef.current ||
+      !roomId ||
+      !isPresenterWsReady ||
+      !websocketService.getIsConnected()
+    ) {
+      return;
+    }
+
+    const options = {
+      sticker: quickSettings.sticker,
+      question: quickSettings.question,
+      feedback: quickSettings.feedback,
+    };
+    websocketService.sendOptionChange(roomId, options);
+    websocketService.sendUnlockChange(
+      roomId,
+      quickSettings.unlock ? "true" : "false"
+    );
+    initialSettingsSyncedRef.current = true;
+    console.log("✅ [발표자] 저장된 빠른 설정 동기화 완료:", {
+      sessionId: roomId,
+      options,
+      unlock: quickSettings.unlock,
+    });
+  }, [roomId, isPresenterWsReady, quickSettings]);
+
   // ✅ 로딩 중일 때 표시
   if (loading) {
     return (
@@ -367,24 +475,31 @@ const PresenterViewPage = () => {
             <QuickSettingToggle
               label="리액션 스티커"
               description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
-              checked={showReactions}
-              onChange={(event) => setShowReactions(event.target.checked)}
+              checked={quickSettings.sticker}
+              onChange={(event) => {
+                const newValue = event.target.checked;
+                setShowReactions(newValue);
+                handleOptionChange("sticker", newValue);
+              }}
               disabled={!reactionsReady}
             />
             <QuickSettingToggle
               label="실시간 질문"
               description="청중이 실시간으로 질문을 남길 수 있습니다."
-              defaultChecked
+              checked={quickSettings.question}
+              onChange={(event) => handleOptionChange("question", event.target.checked)}
             />
             <QuickSettingToggle
               label="실시간 피드백"
               description="수집된 청중의 반응을 실시간으로 분석합니다."
-              defaultChecked
+              checked={quickSettings.feedback}
+              onChange={(event) => handleOptionChange("feedback", event.target.checked)}
             />
             <QuickSettingToggle
               label="다음 슬라이드 공개"
               description="청중이 다음 슬라이드 화면들을 미리 볼 수 있습니다."
-              defaultChecked
+              checked={quickSettings.unlock}
+              onChange={(event) => handleUnlockChange(event.target.checked)}
             />
           </QuickTogglesGrid>
         </Section>

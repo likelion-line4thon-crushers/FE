@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import usePdfConverter from "../../hooks/usePdfConverter";
@@ -11,6 +11,8 @@ import SlideViewer from "../../components/SlideViewer";
 import SettingsPanel from "../../components/SettingsPanel";
 import LandingPage from "../../components/LandingPage";
 import ShareModal from "../../components/modal/ShareModal";
+import websocketService from "../../services/websocketService";
+import useQuickSettingsStorage from "../../hooks/useQuickSettingsStorage";
 
 const PresentationPrepPage = () => {
   const location = useLocation();
@@ -25,9 +27,213 @@ const PresentationPrepPage = () => {
   const [slideUrls, setSlideUrls] = useState([]);
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
+  // 🔹 빠른 설정 토글 상태 관리
+  const [quickSettings, setQuickSettings] = useQuickSettingsStorage();
+  const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
+
   const hasInitializedRef = useRef(false);
+  const pendingQuickSettingsRef = useRef({
+    sticker: quickSettings.sticker,
+    question: quickSettings.question,
+    feedback: quickSettings.feedback,
+  });
+  const pendingUnlockRef = useRef(quickSettings.unlock);
+  const latestQuickSettingsRef = useRef(quickSettings);
+
+  // roomData에서 roomId 추출
+  const roomId = useMemo(() => {
+    return roomIdParam || roomData?.roomId;
+  }, [roomIdParam, roomData]);
+
+  const presenterToken = roomData?.presenterToken || null;
+  const presenterWsUrl = useMemo(() => {
+    const raw = roomData?.wsUrl || null;
+
+    const deriveFromUrl = (input) => {
+      if (!input) return null;
+      try {
+        const url = new URL(input, window.location.origin);
+        const protocol =
+          url.protocol === "ws:"
+            ? "http:"
+            : url.protocol === "wss:"
+            ? "https:"
+            : url.protocol;
+        return `${protocol}//${url.host}/ws/presenter`;
+      } catch (error) {
+        console.warn("[CreateSessionPage] presenter WS URL 파싱 실패:", input, error);
+        return null;
+      }
+    };
+
+    const derived = deriveFromUrl(raw);
+    if (derived) return derived;
+
+    const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    const fallback = deriveFromUrl(apiBase);
+    return fallback ?? "http://localhost:8080/ws/presenter";
+  }, [roomData]);
+
+  useEffect(() => {
+    latestQuickSettingsRef.current = quickSettings;
+    pendingQuickSettingsRef.current = {
+      sticker: quickSettings.sticker,
+      question: quickSettings.question,
+      feedback: quickSettings.feedback,
+    };
+    pendingUnlockRef.current = quickSettings.unlock;
+  }, [quickSettings]);
 
   const { convertPdfToImages } = usePdfConverter();
+
+  // 🔹 옵션 변경 핸들러 (리액션 스티커, 질문, 실시간 피드백)
+  const handleOptionChange = useCallback(
+    (optionKey, value) => {
+      setQuickSettings((prev) => {
+        const newSettings = { ...prev, [optionKey]: value };
+
+        // unlock 옵션이 아닌 경우만 sendOptionChange 호출
+        if (optionKey !== "unlock") {
+          // 웹소켓으로 전송 (연결되어 있을 경우에만)
+          if (roomId && websocketService.getIsConnected()) {
+            const options = {
+              sticker: newSettings.sticker,
+              question: newSettings.question,
+              feedback: newSettings.feedback,
+            };
+            websocketService.sendOptionChange(roomId, options);
+            console.log(`✅ [발표 준비] 옵션 변경 전송 완료:`, {
+              sessionId: roomId,
+              optionKey,
+              value,
+              allOptions: options,
+            });
+          pendingQuickSettingsRef.current = null;
+          } else {
+            console.warn("⚠️ [발표 준비] 웹소켓 미연결 상태 - 옵션 변경은 저장되었으나 전송되지 않음");
+            pendingQuickSettingsRef.current = {
+              sticker: newSettings.sticker,
+              question: newSettings.question,
+              feedback: newSettings.feedback,
+            };
+          }
+        }
+
+        return newSettings;
+      });
+    },
+    [roomId]
+  );
+
+  // 🔹 다음 슬라이드 공개 옵션 변경 핸들러
+  const handleUnlockChange = useCallback(
+    (value) => {
+      setQuickSettings((prev) => ({ ...prev, unlock: value }));
+
+      // 웹소켓으로 전송 (연결되어 있을 경우에만)
+      if (roomId && websocketService.getIsConnected()) {
+        const unlock = value ? "true" : "false";
+        websocketService.sendUnlockChange(roomId, unlock);
+        console.log(`✅ [발표 준비] 다음 슬라이드 공개 옵션 변경 전송 완료:`, {
+          sessionId: roomId,
+          unlock,
+          value,
+        });
+        pendingUnlockRef.current = null;
+      } else {
+        console.warn(
+          "⚠️ [발표 준비] 웹소켓 미연결 상태 - 옵션 변경은 저장되었으나 전송되지 않음"
+        );
+        pendingUnlockRef.current = value;
+      }
+    },
+    [roomId]
+  );
+
+  // 🔹 발표자 웹소켓 연결 (발표 준비 단계에서도 연결 유지)
+  useEffect(() => {
+    if (!roomId || !presenterToken || !presenterWsUrl) {
+      return undefined;
+    }
+
+    const syncPendingFromLatest = () => {
+      const latest = latestQuickSettingsRef.current;
+      pendingQuickSettingsRef.current = {
+        sticker: latest.sticker,
+        question: latest.question,
+        feedback: latest.feedback,
+      };
+      pendingUnlockRef.current =
+        typeof latest.unlock === "boolean" ? latest.unlock : true;
+    };
+
+    if (websocketService.getIsConnected()) {
+      console.log("ℹ️ [발표 준비] 이미 웹소켓이 연결되어 있습니다.");
+      setIsPresenterWsReady(true);
+      return () => {
+        setIsPresenterWsReady(false);
+        syncPendingFromLatest();
+        websocketService.disconnect();
+      };
+    }
+
+    const onConnect = () => {
+      console.log("✅ [발표 준비] 웹소켓 연결 성공");
+      setIsPresenterWsReady(true);
+    };
+
+    const onError = (error) => {
+      console.error("🚨 [발표 준비] 웹소켓 연결 실패:", error);
+      setIsPresenterWsReady(false);
+      syncPendingFromLatest();
+    };
+
+    websocketService.connect(
+      presenterWsUrl,
+      presenterToken,
+      onConnect,
+      onError
+    );
+
+    return () => {
+      setIsPresenterWsReady(false);
+      syncPendingFromLatest();
+      websocketService.disconnect();
+    };
+  }, [roomId, presenterToken, presenterWsUrl]);
+
+  // 🔹 웹소켓 연결 이후, 대기 중이던 옵션 변경을 한번에 전송
+  useEffect(() => {
+    if (
+      !roomId ||
+      !isPresenterWsReady ||
+      !websocketService.getIsConnected()
+    ) {
+      return;
+    }
+
+    const pendingOptions = pendingQuickSettingsRef.current;
+    if (pendingOptions) {
+      websocketService.sendOptionChange(roomId, pendingOptions);
+      console.log("✅ [발표 준비] 대기 중이던 옵션 동기화 완료:", {
+        sessionId: roomId,
+        options: pendingOptions,
+      });
+      pendingQuickSettingsRef.current = null;
+    }
+
+    if (pendingUnlockRef.current !== null) {
+      const unlockValue = pendingUnlockRef.current
+        ? "true"
+        : "false";
+      websocketService.sendUnlockChange(roomId, unlockValue);
+      console.log("✅ [발표 준비] 대기 중이던 공개 옵션 동기화 완료:", {
+        sessionId: roomId,
+        unlock: unlockValue,
+      });
+      pendingUnlockRef.current = null;
+    }
+  }, [isPresenterWsReady, roomId]);
 
   // 1. PDF → 이미지 변환
   useEffect(() => {
@@ -181,7 +387,11 @@ const PresentationPrepPage = () => {
         setCurrentSlide={setCurrentSlide}
         mode="prepare"
       />
-      <SettingsPanel />
+      <SettingsPanel 
+        quickSettings={quickSettings}
+        onOptionChange={handleOptionChange}
+        onUnlockChange={handleUnlockChange}
+      />
     </Layout>
   );
 };

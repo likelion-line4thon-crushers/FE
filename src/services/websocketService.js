@@ -93,6 +93,40 @@ class WebSocketService {
     );
   }
 
+  // 발표자: 옵션 변경 전송 (리액션 스티커, 질문, 실시간 피드백)
+  sendOptionChange(sessionId, options) {
+    const body = {
+      sticker: String(options.sticker),
+      question: String(options.question),
+      feedback: String(options.feedback),
+    };
+    
+    console.log(`[WebSocket] 옵션 변경 전송 시작:`, {
+      sessionId,
+      destination: `/app/presentation/${sessionId}/option`,
+      body,
+    });
+
+    this.send(
+      `/app/presentation/${sessionId}/option`,
+      body,
+      { "Idempotency-Key": uuidv4() }
+    );
+  }
+
+  // 발표자: 다음 슬라이드 공개 옵션 변경 전송
+  sendUnlockChange(sessionId, unlock) {
+    const destination = `/app/presentation/${sessionId}/option/unlock/${unlock}`;
+    
+    console.log(`[WebSocket] 다음 슬라이드 공개 옵션 변경 전송:`, {
+      sessionId,
+      unlock,
+      destination,
+    });
+
+    this.send(destination, {}, { "Idempotency-Key": uuidv4() });
+  }
+
   subscribe(destination, callback) {
     if (!this.isConnected || !this.client) {
       console.warn("[WebSocket] 연결되지 않았습니다.");

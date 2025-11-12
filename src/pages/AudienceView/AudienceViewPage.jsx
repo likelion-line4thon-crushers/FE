@@ -41,8 +41,23 @@ const AudienceViewPage = () => {
   const [slidesError, setSlidesError] = useState(null);
   const [isWebsocketReady, setIsWebsocketReady] = useState(false);
 
+  // 🔹 빠른 설정 옵션 상태 (발표자로부터 받은 설정)
+  const [quickSettings, setQuickSettings] = useState({
+    sticker: true,
+    question: true,
+    feedback: true,
+  });
+  const [unlockSettings, setUnlockSettings] = useState({
+    maxRevealedPage: null,
+    revealAllSlides: true,
+    totalPages: null,
+    presenterPage: null,
+  });
+
   const questionSubscriptionsRef = useRef([]);
   const pageChangeUnsubscribeRef = useRef(null);
+  const optionUnsubscribeRef = useRef(null);
+  const unlockUnsubscribeRef = useRef(null);
   const followPresenterRef = useRef(followPresenter);
   const prevSlideRef = useRef(0);
 
@@ -312,6 +327,49 @@ const AudienceViewPage = () => {
       }
     );
 
+    // 🔹 옵션 변경 구독 (리액션 스티커, 질문, 실시간 피드백)
+    const optionTopic = `/topic/presentation/${roomId}/option`;
+    optionUnsubscribeRef.current = websocketService.subscribe(
+      optionTopic,
+      (data) => {
+        console.log("[청중] 옵션 변경 수신:", data);
+        if (data) {
+          const payload = data?.data ?? data;
+          const normalized = {
+            sticker: String(payload?.sticker) === "true",
+            question: String(payload?.question) === "true",
+            feedback: String(payload?.feedback) === "true",
+          };
+
+          setQuickSettings(normalized);
+          console.log("✅ [청중] 옵션 UI 업데이트 완료:", normalized);
+        }
+      }
+    );
+
+    // 🔹 다음 슬라이드 공개 옵션 구독
+    const unlockTopic = `/topic/presentation/${roomId}/option/unlock`;
+    unlockUnsubscribeRef.current = websocketService.subscribe(
+      unlockTopic,
+      (data) => {
+        console.log("[청중] 다음 슬라이드 공개 옵션 변경 수신:", data);
+        if (data) {
+          const payload = data?.data ?? data;
+          const maxPage = Number(payload?.maxRevealedPage);
+          const revealAll = String(payload?.revealAllSlides) === "true";
+          const presenterPage = Number(payload?.presenterPage);
+
+          setUnlockSettings({
+            maxRevealedPage: maxPage,
+            revealAllSlides: revealAll,
+            totalPages: Number(payload?.totalPages),
+            presenterPage,
+          });
+
+        }
+      }
+    );
+
     return () => {
       questionSubscriptionsRef.current.forEach((unsubscribe) => {
         if (typeof unsubscribe === "function") {
@@ -322,6 +380,12 @@ const AudienceViewPage = () => {
 
       pageChangeUnsubscribeRef.current?.();
       pageChangeUnsubscribeRef.current = null;
+
+      optionUnsubscribeRef.current?.();
+      optionUnsubscribeRef.current = null;
+
+      unlockUnsubscribeRef.current?.();
+      unlockUnsubscribeRef.current = null;
     };
   }, [
     isWebsocketReady,
@@ -330,6 +394,7 @@ const AudienceViewPage = () => {
     handleIncomingQuestion,
     questionTopics,
     changeCurrentSlide,
+    currentSlide,
   ]);
 
   // 🔹 방향키로 슬라이드 이동
