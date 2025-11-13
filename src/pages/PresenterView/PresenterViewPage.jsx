@@ -35,7 +35,9 @@ import {
   ToggleDescription,
   ToggleInput,
 } from "../../components/SettingsPanel/SettingsPanel.styles";
+import styled from "styled-components";
 import { AudienceCount } from "../../components/SettingsPanel";
+import LiveLockButton from "../../components/SettingsPanel/LiveLockButton";
 
 const PresenterViewPage = () => {
   const location = useLocation();
@@ -254,6 +256,11 @@ const PresenterViewPage = () => {
     [changeSlide]
   );
 
+  // 🔹 리액션 표시 상태를 빠른 설정과 동기화
+  useEffect(() => {
+    setShowReactions(quickSettings.sticker);
+    setShowStampsInViewer(quickSettings.sticker);
+  }, [quickSettings.sticker]);
 
 
   // ✅ 로딩 중일 때 표시
@@ -337,7 +344,9 @@ const PresenterViewPage = () => {
               description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
               checked={quickSettings.sticker}
               onChange={(event) => {
-                handleOptionChange("sticker", event.target.checked);
+                const newValue = event.target.checked;
+                setShowReactions(newValue);
+                handleOptionChange("sticker", newValue);
               }}
               disabled={!reactionsReady}
             />
@@ -367,7 +376,7 @@ const PresenterViewPage = () => {
         </Section>
 
         {/* === 실시간 질문 섹션 === */}
-        <Section>
+        <QuestionSection>
           <Title>실시간 질문</Title>
           <QuestionList
             questions={presenterQuestions}
@@ -376,13 +385,33 @@ const PresenterViewPage = () => {
             currentSlide={currentSlide}
             onSelectSlide={handleSelectQuestionSlide}
           />
-        </Section>
+          {!quickSettings.question && <LockButtonWrapper><LiveLockButton /></LockButtonWrapper>}
+        </QuestionSection>
       </PanelWrapper>
     </Layout>
   );
 };
 
 export default PresenterViewPage;
+
+// 실시간 질문 섹션 스타일
+const QuestionSection = styled(Section)`
+  position: relative;
+  min-height: 40vh;
+`;
+
+const LockButtonWrapper = styled.div`
+  position: absolute;
+  bottom: 2vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+  
+  > * {
+    pointer-events: auto;
+  }
+`;
 
 // 빠른 설정 토글 UI
 const QuickSettingToggle = ({
