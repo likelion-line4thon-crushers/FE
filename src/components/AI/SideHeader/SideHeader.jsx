@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   HeaderContainer,
   IconButton,
@@ -17,8 +17,14 @@ import ReplaySlideSelectedIcon from "../../../assets/images/AI/ReplaySlide_selec
 import ReviewIcon from "../../../assets/images/AI/Review.png";
 import ReviewSelectedIcon from "../../../assets/images/AI/Review_selected.png";
 
-const SideHeader = ({ onIconClick }) => {
+const SideHeader = ({ onIconClick, activeSection }) => {
   const [selectedIcon, setSelectedIcon] = useState("totalReaction");
+
+  useEffect(() => {
+    if (activeSection) {
+      setSelectedIcon(activeSection);
+    }
+  }, [activeSection]);
 
   const handleIconClick = (iconName) => {
     setSelectedIcon(iconName);
