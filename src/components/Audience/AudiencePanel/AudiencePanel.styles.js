@@ -10,6 +10,7 @@ export const PanelWrapper = styled.div`
   border: 1px solid #eaeaea;
   overflow: hidden;
   box-sizing: border-box;
+  flex-shrink: 0;
 `;
 
 export const HeaderBox = styled.div`

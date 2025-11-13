@@ -27,6 +27,7 @@ export const SummaryBoxContainer = styled.div`
   .rectangle-image {
     width: 90px;
     height: 5px;
+    margin-bottom: 12px;
   }
   h3 {
     color: #5c5c5c;

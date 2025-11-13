@@ -79,6 +79,20 @@ const ReplaySlide = ({
     return Number.isFinite(parsed) ? parsed.toLocaleString() : "-";
   }, [reportData?.totalAudienceCount, loading, error]);
 
+  const uniqueUsers = useMemo(() => {
+    if (loading || error) {
+      return "-";
+    }
+
+    const raw = reportData?.uniqueUsers ?? 0;
+    if (typeof raw === "number") {
+      return raw.toLocaleString();
+    }
+
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed.toLocaleString() : "-";
+  }, [reportData?.uniqueUsers, loading, error]);
+
   const multiRevisitUsers = useMemo(() => {
     if (loading || error) {
       return "-";
@@ -96,7 +110,7 @@ const ReplaySlide = ({
   const description = fallbackText(
     loading,
     error,
-    `해당 슬라이드를 ${totalAudience}명 중 ${totalRevisits}명이 재방문했어요.\n특히, ${multiRevisitUsers}명은 2번 이상 다시 봤어요.`
+    `해당 슬라이드를 ${totalAudience}명 중 ${uniqueUsers}명이 재방문했어요.\n총 ${totalRevisits}번 재방문했고, 특히 ${multiRevisitUsers}명은 두번 이상 다시 봤어요.`
   );
 
   return (
