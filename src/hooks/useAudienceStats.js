@@ -39,26 +39,45 @@ export const useAudienceStats = ({ roomId, currentSlide, isPresenterWsReady }) =
 
     const loadAudienceStats = async () => {
       try {
+        console.log("[useAudienceStats] API 호출 시작 - roomId:", roomId, "currentSlide:", currentSlide);
+        
         const stats = await fetchAudienceSlideStats({
           roomId,
           page: currentSlide,
           signal: controller.signal,
         });
-        setAudienceStats((prevStats) => ({
-          prev: Number.isFinite(stats?.prev) ? stats.prev : prevStats.prev,
-          current: Number.isFinite(stats?.current)
-            ? stats.current
-            : prevStats.current,
-          next: Number.isFinite(stats?.next) ? stats.next : prevStats.next,
-        }));
+        
+        console.log("[useAudienceStats] API 호출 응답 - 원본 stats:", stats);
+        
+        const newStats = {
+          prev: Number.isFinite(stats?.prev) ? stats.prev : 0,
+          current: Number.isFinite(stats?.current) ? stats.current : 0,
+          next: Number.isFinite(stats?.next) ? stats.next : 0,
+        };
+        
+        console.log("[useAudienceStats] API 호출 응답 - 최종 stats:", newStats);
+        
+        setAudienceStats((prevStats) => {
+          const updatedStats = {
+            prev: Number.isFinite(stats?.prev) ? stats.prev : prevStats.prev,
+            current: Number.isFinite(stats?.current)
+              ? stats.current
+              : prevStats.current,
+            next: Number.isFinite(stats?.next) ? stats.next : prevStats.next,
+          };
+          console.log("[useAudienceStats] API 호출 - 상태 업데이트:", updatedStats);
+          return updatedStats;
+        });
       } catch (error) {
         if (
           error?.name === "CanceledError" ||
           error?.name === "AbortError" ||
           error?.code === "ERR_CANCELED"
         ) {
+          console.log("[useAudienceStats] API 호출 취소됨");
           return;
         }
+        console.error("[useAudienceStats] API 호출 에러:", error);
       } finally {
         if (audienceStatsControllerRef.current === controller) {
           audienceStatsControllerRef.current = null;
