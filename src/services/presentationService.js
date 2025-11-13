@@ -66,6 +66,8 @@ export const fetchAudienceSlideStats = async ({ roomId, page, signal } = {}) => 
       }
     );
 
+    // 백엔드에서 SlideAudienceCountResponse 객체를 직접 반환
+    // 필드명: frontCount, currentCount, backCount (Long 타입, 퍼센트 값 0-100)
     const payload = response?.data?.data ?? response?.data ?? {};
 
     const normalize = (value) => {
@@ -73,23 +75,10 @@ export const fetchAudienceSlideStats = async ({ roomId, page, signal } = {}) => 
       return Number.isFinite(numeric) ? numeric : 0;
     };
 
-    const front = normalize(
-      payload.frontCount ??
-        payload.front ??
-        payload.prev ??
-        payload.previous ??
-        payload.before
-    );
-    const current = normalize(
-      payload.currentCount ?? payload.current ?? payload.present ?? payload.now
-    );
-    const back = normalize(
-      payload.backCount ??
-        payload.back ??
-        payload.next ??
-        payload.after ??
-        payload.upcoming
-    );
+    // 백엔드 필드명: frontCount, currentCount, backCount
+    const front = normalize(payload.frontCount ?? 0);
+    const current = normalize(payload.currentCount ?? 0);
+    const back = normalize(payload.backCount ?? 0);
 
     return {
       prev: front,
