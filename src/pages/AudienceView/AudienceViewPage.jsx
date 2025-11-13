@@ -24,6 +24,8 @@ import { getStickersByAudience } from "../../services/stickerService";
 import useAudienceQuestions from "../../hooks/useAudienceQuestions";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
 import useStickerLoader from "../../hooks/useStickerLoader";
+import useAudienceJoinRoom from "../../hooks/useAudienceJoinRoom";
+import usePresenterPageSync from "../../hooks/usePresenterPageSync";
 import SELECTED_EMOJI_ICONS from "../../constants/emojiIcons";
 import DelayAudience from "./DelayAudience";
 
@@ -184,68 +186,20 @@ const AudienceViewPage = () => {
     followPresenterRef.current = followPresenter;
   }, [followPresenter]);
 
-  useEffect(() => {
-    if (!code) return;
-
-    const handleJoinRoom = async () => {
-      try {
-        const joinData = await joinRoom(code);
-
-        window.roomId = joinData.roomId;
-        window.audienceId = joinData.audienceId;
-        window.audienceToken = joinData.audienceToken;
-
-        setRoomId(joinData.roomId);
-        setAudienceId(joinData.audienceId);
-        setAudienceToken(joinData.audienceToken);
-
-        if (joinData.deckId || joinData.deckID) {
-          setDeckId(joinData.deckId || joinData.deckID);
-        } else if (joinData.deck?.deckId) {
-          setDeckId(joinData.deck.deckId);
-        } else if (joinData.presentation?.deckId) {
-          setDeckId(joinData.presentation.deckId);
-        }
-
-        if (joinData.totalPages !== undefined && joinData.totalPages !== null) {
-          setTotalPages(Number(joinData.totalPages));
-        } else if (joinData.deck?.totalPages) {
-          setTotalPages(Number(joinData.deck.totalPages));
-        } else if (joinData.presentation?.totalPages) {
-          setTotalPages(Number(joinData.presentation.totalPages));
-        }
-
-        // 세션 상태 설정 (joinRoom 응답에서 받은 값 또는 기본값 "waiting")
-        if (joinData.sessionStatus) {
-          setSessionStatus(joinData.sessionStatus);
-        } else {
-          setSessionStatus("waiting");
-        }
-
-        let wsUrlValue = joinData.wsUrl;
-
-        if (!wsUrlValue) {
-          const apiBaseUrl =
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
-          wsUrlValue = `${apiBaseUrl}/ws/audience`;
-        } else {
-          if (wsUrlValue.includes(",")) {
-            wsUrlValue = wsUrlValue.split(",")[0].trim();
-          }
-
-          if (!wsUrlValue.endsWith("/audience")) {
-            wsUrlValue = wsUrlValue.replace(/\/ws\/?$/, "/ws/audience");
-          }
-        }
-
-        setWsUrl(wsUrlValue);
-      } catch (err) {
-        alert("방 입장에 실패했습니다. 코드를 확인해주세요.");
-      }
-    };
-
-    handleJoinRoom();
-  }, [code]);
+  // 🔹 방 입장 및 초기 설정 처리
+  useAudienceJoinRoom({
+    code,
+    setRoomId,
+    setAudienceId,
+    setAudienceToken,
+    setWsUrl,
+    setDeckId,
+    setTotalPages,
+    setSessionStatus,
+    setQuickSettings,
+    setUnlockSettings,
+    lastPresenterPageRef,
+  });
 
   useEffect(() => {
     if (!roomId || !deckId || !totalPages) return;
@@ -258,15 +212,17 @@ const AudienceViewPage = () => {
     };
   }, [roomId, deckId, totalPages, loadSlides]);
 
-  useEffect(() => {
-    if (slides.length === 0) return;
-    setCurrentSlide((prev) => {
-      const next =
-        prev >= slides.length ? slides.length - 1 : prev < 0 ? 0 : prev;
-      prevSlideRef.current = next;
-      return next;
-    });
-  }, [slides]);
+  // 🔹 슬라이드 로드 후 발표자 페이지로 동기화
+  usePresenterPageSync({
+    slides,
+    currentSlide,
+    setCurrentSlide,
+    lastPresenterPageRef,
+    prevSlideRef,
+    followPresenter,
+    setFollowPresenter,
+    followPresenterRef,
+  });
 
   // 🔹 새로고침 시 스티커 로드 (커스텀 훅 사용)
   useStickerLoader({
@@ -400,19 +356,21 @@ const AudienceViewPage = () => {
           setSessionStatus(data.status);
           // 세션 종료 상태 확인
           if (data.status === "ended" || data.status === "ENDED") {
-            console.log("[AudienceView] 세션 종료 상태 확인 - rating 페이지로 이동");
+            console.log(
+              "[AudienceView] 세션 종료 상태 확인 - rating 페이지로 이동"
+            );
             if (!hasNavigatedToRatingRef.current) {
               hasNavigatedToRatingRef.current = true;
               const targetUrl = code
                 ? `/rating/${encodeURIComponent(code)}`
                 : "/rating";
-              navigate(targetUrl, { 
+              navigate(targetUrl, {
                 replace: false,
                 state: {
                   roomId: roomId,
                   audienceId: audienceId,
                   deckId: deckId,
-                }
+                },
               });
             }
           }
