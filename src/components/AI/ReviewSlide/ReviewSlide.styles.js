@@ -48,7 +48,7 @@ export const CenterHeader = styled.div`
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 25px;
 
   h2 {
     margin: 0;
@@ -64,17 +64,18 @@ export const SmallDivider = styled.div`
   height: 4px;
   background: #d9d9d9;
   border-radius: 2px;
-  margin-top: 2px;
+  margin-top: 13px;
 `;
 
 export const RatingRow = styled.div`
   display: flex;
   align-items: center;
+  margin-bottom: 20px;
 `;
 
 export const RatingScore = styled.div`
   font-family: Pretendard;
-  font-size: 28px;
+  font-size: 38px;
   font-weight: 600;
   color: #222;
 
@@ -121,6 +122,6 @@ export const SummaryBoxContainer = styled.div`
     box-sizing: border-box;
     word-break: break-word;
     overflow-wrap: anywhere;
-    margin-top: 15px;
+    margin-top: 25px;
   }
 `;

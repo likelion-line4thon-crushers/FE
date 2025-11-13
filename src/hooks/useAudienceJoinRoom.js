@@ -52,7 +52,6 @@ const useAudienceJoinRoom = ({
           setSessionStatus("waiting");
         }
 
-        // 발표자 현재 페이지 설정 (뒤늦게 입장한 청중을 위해)
         if (joinData.currentPage) {
           const presenterPage = Number(joinData.currentPage);
           if (Number.isFinite(presenterPage) && presenterPage > 0) {
@@ -60,7 +59,6 @@ const useAudienceJoinRoom = ({
           }
         }
 
-        // 옵션 설정 (joinRoom 응답에서 받은 값으로 초기화)
         if (joinData.sticker !== undefined && joinData.sticker !== null) {
           setQuickSettings((prev) => ({
             ...prev,
