@@ -27,8 +27,11 @@ export const HeaderBox = styled.div`
 export const Section = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  max-height: calc(96vh - 4.52vh);
   padding: 1.85vh 1.25vw 2.22vh 0.73vw;
+  overflow: hidden;
 `;
 
 export const Title = styled.h2`
@@ -43,8 +46,10 @@ export const Title = styled.h2`
 `;
 
 export const QuestionList = styled.div`
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 0.42vw;
   padding: 10px;
   border: 1px solid #eaeaea;
@@ -204,11 +209,11 @@ export const QuestionInputContainer = styled.div`
     props.$isInputting ? "center" : "space-between"};
   align-items: center;
   gap: 0.42vw;
+  margin-top: 1.48vh;
 
   background: #ffffff;
   border: 1px solid #eaeaea;
   border-radius: 0.42vw;
-  margin-top: auto;
   transition: all 0.3s ease;
   flex-shrink: 0;
   box-sizing: border-box;
