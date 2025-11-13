@@ -52,6 +52,7 @@ class WebSocketService {
       },
       onStompError: (frame) => {
         this.isConnected = false;
+        console.error("[websocketService] STOMP 에러:", frame);
         if (onError) onError(frame);
       },
       onWebSocketClose: (_event) => {
@@ -154,16 +155,23 @@ class WebSocketService {
     const subscription = this.client.subscribe(destination, (message) => {
       try {
         const data = JSON.parse(message.body);
-        if (callback) callback(data);
-      } catch (_error) {
-        // ignore parse error
+        if (callback) {
+          callback(data);
+        }
+      } catch (error) {
+        // 파싱 실패 시 원본 body를 그대로 전달
+        if (callback && typeof message.body === "string") {
+          callback(message.body);
+        }
       }
     });
 
     this.subscriptions.set(destination, subscription);
 
     // 구독 해제 함수 반환
-    return () => this.unsubscribe(destination);
+    return () => {
+      this.unsubscribe(destination);
+    };
   }
 
   subscribeText(destination, callback) {

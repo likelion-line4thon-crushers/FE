@@ -109,7 +109,7 @@ export const fetchAudienceSlideStats = async ({ roomId, page, signal } = {}) => 
  * 특정 슬라이드의 실시간 피드백 메시지를 가져옵니다.
  * @param {Object} params
  * @param {string} params.roomId - 방 ID
- * @param {number} params.page - 페이지 번호 (1-based)
+ * @param {number} params.page - 페이지 번호 (1-based, slideNumber)
  * @param {AbortSignal} [params.signal] - 요청 취소 시 사용할 AbortSignal
  * @returns {Promise<string|null>} 실시간 피드백 메시지 (없으면 null)
  */
@@ -123,18 +123,29 @@ export const fetchLiveFeedback = async ({ roomId, page, signal } = {}) => {
   }
 
   try {
+    // API 명세: GET /{roomId}/slide/{slideNumber}
     const response = await api.get(
-      `/api/pages/${roomId}/live-feedback`,
+      `/${roomId}/slide/${page}`,
       {
-        params: { page },
         signal,
       }
     );
 
-    const payload = response?.data?.data ?? response?.data ?? {};
-    const message = payload?.message ?? payload?.feedback ?? payload?.content ?? null;
+    // 응답이 문자열인 경우 직접 반환
+    // 응답이 객체인 경우 message, feedback, content 필드 확인
+    let message = null;
     
-    return message && typeof message === "string" && message.trim() ? message.trim() : null;
+    if (typeof response?.data === "string") {
+      message = response.data.trim();
+    } else if (response?.data) {
+      const payload = response.data?.data ?? response.data;
+      message = payload?.message ?? payload?.feedback ?? payload?.content ?? null;
+      if (message && typeof message === "string") {
+        message = message.trim();
+      }
+    }
+    
+    return message && message.length > 0 ? message : null;
   } catch (error) {
     if (error?.name === "CanceledError" || error?.name === "AbortError") {
       throw error;
