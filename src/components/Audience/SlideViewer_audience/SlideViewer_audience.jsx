@@ -134,8 +134,8 @@ const SlideViewer = ({
                 top: `${stamp.yPct}%`,
                 left: `${stamp.xPct}%`,
                 transform: "translate(-50%, -50%)",
-                width: 40,
-                height: 40,
+                width: 25,
+                height: 25,
                 pointerEvents: "none",
               }}
             />

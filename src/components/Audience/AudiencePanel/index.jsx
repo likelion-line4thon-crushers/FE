@@ -174,34 +174,11 @@ const AudiencePanel = ({
                 <EmptyMessage>아직 등록된 질문이 없습니다.</EmptyMessage>
               )}
 
-              {isLocked ? (
+              {isLocked && (
                 <LockBanner>
                   <img src={LockIcon} alt="잠금" width={20} height={20} />
                   <span>실시간 질문 기능이 잠겼습니다</span>
                 </LockBanner>
-              ) : (
-                <QuestionInputContainer
-                  $isInputting={isInputting}
-                  $disabled={inputDisabled}
-                >
-                  <QuestionInput
-                    value={questionText}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyPress}
-                    placeholder="질문 내용을 작성해 주세요"
-                    $isInputting={isInputting}
-                    disabled={inputDisabled}
-                  />
-                  {showSubmitButton && (
-                    <SubmitButton
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={inputDisabled}
-                    >
-                      <img src={Arrow} alt="제출" width={28} height={28} />
-                    </SubmitButton>
-                  )}
-                </QuestionInputContainer>
               )}
 
               {submitError && <ErrorMessage>{submitError}</ErrorMessage>}
@@ -211,6 +188,31 @@ const AudiencePanel = ({
             </>
           )}
         </QuestionList>
+
+        {!isWaiting && !isLocked && (
+          <QuestionInputContainer
+            $isInputting={isInputting}
+            $disabled={inputDisabled}
+          >
+            <QuestionInput
+              value={questionText}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyPress}
+              placeholder="질문 내용을 작성해 주세요"
+              $isInputting={isInputting}
+              disabled={inputDisabled}
+            />
+            {showSubmitButton && (
+              <SubmitButton
+                type="button"
+                onClick={handleSubmit}
+                disabled={inputDisabled}
+              >
+                <img src={Arrow} alt="제출" width={28} height={28} />
+              </SubmitButton>
+            )}
+          </QuestionInputContainer>
+        )}
 
         {!isWaiting && <Scrollbar />}
       </Section>

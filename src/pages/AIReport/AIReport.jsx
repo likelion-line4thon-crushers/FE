@@ -34,6 +34,7 @@ const AiReportPage = () => {
   const [revisitReport, setRevisitReport] = useState(null);
   const [revisitLoading, setRevisitLoading] = useState(false);
   const [revisitError, setRevisitError] = useState(null);
+  const [activeSection, setActiveSection] = useState("totalReaction");
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
 
@@ -154,9 +155,60 @@ const AiReportPage = () => {
     }
   };
 
+  useEffect(() => {
+    const container = contentContainerRef.current;
+    if (!container) return;
+
+    const sections = [
+      { name: "totalReaction", ref: totalReactionRef },
+      { name: "top3", ref: top3Ref },
+      { name: "popularSlide", ref: popularSlideRef },
+      { name: "questionSlide", ref: questionSlideRef },
+      { name: "replaySlide", ref: replaySlideRef },
+      { name: "review", ref: reviewRef },
+    ];
+
+    const handleScroll = () => {
+      if (!container) return;
+
+      const containerTop = container.scrollTop;
+      const containerHeight = container.clientHeight;
+      const viewportMiddle = containerTop + containerHeight / 2;
+
+      let activeSectionName = "totalReaction";
+
+      for (const section of sections) {
+        const element = section.ref.current;
+        if (!element) continue;
+
+        const elementTop = element.offsetTop;
+        const elementBottom = elementTop + element.offsetHeight;
+
+        if (viewportMiddle >= elementTop && viewportMiddle <= elementBottom) {
+          activeSectionName = section.name;
+          break;
+        }
+      }
+
+      if (containerTop < 100) {
+        activeSectionName = "totalReaction";
+      }
+
+      setActiveSection(activeSectionName);
+    };
+
+    container.addEventListener("scroll", handleScroll);
+
+    handleScroll();
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [storedReport, revisitReport]);
+
   return (
     <PageContainer>
-      <SideHeader onIconClick={scrollToSection} />
+      <SideHeader onIconClick={scrollToSection} activeSection={activeSection} />
       <ContentContainer ref={contentContainerRef}>
         <div ref={totalReactionRef}>
           <TotalReaction

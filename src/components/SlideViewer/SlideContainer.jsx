@@ -72,9 +72,7 @@ const SlideBox = styled.div`
 const StampImage = styled.img`
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 2.5vw;
-  max-width: 48px;
-  min-width: 32px;
-  height: auto;
+  width: 25px;
+  height: 25px;
   pointer-events: none;
 `;
