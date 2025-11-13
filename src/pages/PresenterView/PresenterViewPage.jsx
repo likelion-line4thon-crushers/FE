@@ -254,11 +254,6 @@ const PresenterViewPage = () => {
     [changeSlide]
   );
 
-  // 🔹 리액션 표시 상태를 빠른 설정과 동기화
-  useEffect(() => {
-    setShowReactions(quickSettings.sticker);
-    setShowStampsInViewer(quickSettings.sticker);
-  }, [quickSettings.sticker]);
 
 
   // ✅ 로딩 중일 때 표시
@@ -342,9 +337,7 @@ const PresenterViewPage = () => {
               description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
               checked={quickSettings.sticker}
               onChange={(event) => {
-                const newValue = event.target.checked;
-                setShowReactions(newValue);
-                handleOptionChange("sticker", newValue);
+                handleOptionChange("sticker", event.target.checked);
               }}
               disabled={!reactionsReady}
             />
