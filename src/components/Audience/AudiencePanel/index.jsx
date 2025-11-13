@@ -5,6 +5,7 @@ import {
   Section,
   Title,
   QuestionList,
+  QuestionScrollArea,
   QuestionItem,
   HeaderRow,
   SlideLabel,
@@ -131,84 +132,88 @@ const AudiencePanel = ({
         <Title>실시간 질문</Title>
       </HeaderBox>
       <Section>
-        <QuestionList $isWaiting={isWaiting}>
-          {isWaiting ? (
-            <WaitingMessage>{waitingMessage}</WaitingMessage>
-          ) : (
-            <>
-              {showLoadingMessage && (
-                <StatusMessage>질문을 불러오는 중입니다.</StatusMessage>
-              )}
+        <QuestionList>
+          <QuestionScrollArea $isWaiting={isWaiting}>
+            {isWaiting ? (
+              <WaitingMessage>{waitingMessage}</WaitingMessage>
+            ) : (
+              <>
+                {showLoadingMessage && (
+                  <StatusMessage>질문을 불러오는 중입니다.</StatusMessage>
+                )}
 
-              {questionsError && !showLoadingMessage && (
-                <ErrorMessage>
-                  {resolveErrorMessage(
-                    questionsError,
-                    "질문을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
-                  )}
-                </ErrorMessage>
-              )}
+                {questionsError && !showLoadingMessage && (
+                  <ErrorMessage>
+                    {resolveErrorMessage(
+                      questionsError,
+                      "질문을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
+                    )}
+                  </ErrorMessage>
+                )}
 
-              {formattedQuestions.map(
-                ({ id, slideIndex, slideNumber, timestampLabel, content }) => (
-                  <QuestionItem key={id} $active={slideIndex === currentSlide}>
-                    <HeaderRow>
-                      <SlideLabel
-                        type="button"
-                        onClick={() => handleSelectSlide(slideIndex)}
-                        $active={slideIndex === currentSlide}
-                      >
-                        슬라이드 {slideNumber}
-                      </SlideLabel>
-                      {timestampLabel && (
-                        <Timestamp>{timestampLabel}</Timestamp>
-                      )}
-                    </HeaderRow>
+                {formattedQuestions.map(
+                  ({ id, slideIndex, slideNumber, timestampLabel, content }) => (
+                    <QuestionItem key={id} $active={slideIndex === currentSlide}>
+                      <HeaderRow>
+                        <SlideLabel
+                          type="button"
+                          onClick={() => handleSelectSlide(slideIndex)}
+                          $active={slideIndex === currentSlide}
+                        >
+                          슬라이드 {slideNumber}
+                        </SlideLabel>
+                        {timestampLabel && (
+                          <Timestamp>{timestampLabel}</Timestamp>
+                        )}
+                      </HeaderRow>
 
-                    <QuestionText>{content}</QuestionText>
-                  </QuestionItem>
-                )
-              )}
+                      <QuestionText>{content}</QuestionText>
+                    </QuestionItem>
+                  )
+                )}
 
-              {showEmptyMessage && (
-                <EmptyMessage>아직 등록된 질문이 없습니다.</EmptyMessage>
-              )}
+                {showEmptyMessage && (
+                  <EmptyMessage>아직 등록된 질문이 없습니다.</EmptyMessage>
+                )}
 
-              {isLocked ? (
-                <LockBanner>
-                  <img src={LockIcon} alt="잠금" width={20} height={20} />
-                  <span>실시간 질문 기능이 잠겼습니다</span>
-                </LockBanner>
-              ) : (
-                <QuestionInputContainer
-                  $isInputting={isInputting}
-                  $disabled={inputDisabled}
+                {submitError && <ErrorMessage>{submitError}</ErrorMessage>}
+                {connectionMessage && (
+                  <StatusMessage>{connectionMessage}</StatusMessage>
+                )}
+              </>
+            )}
+          </QuestionScrollArea>
+
+          {!isWaiting && isLocked && (
+            <LockBanner>
+              <img src={LockIcon} alt="잠금" width={20} height={20} />
+              <span>실시간 질문 기능이 잠겼습니다</span>
+            </LockBanner>
+          )}
+
+          {!isWaiting && !isLocked && (
+            <QuestionInputContainer
+              $isInputting={isInputting}
+              $disabled={inputDisabled}
+            >
+              <QuestionInput
+                value={questionText}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyPress}
+                placeholder="질문 내용을 작성해 주세요"
+                $isInputting={isInputting}
+                disabled={inputDisabled}
+              />
+              {showSubmitButton && (
+                <SubmitButton
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={inputDisabled}
                 >
-                  <QuestionInput
-                    value={questionText}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyPress}
-                    placeholder="질문 내용을 작성해 주세요"
-                    $isInputting={isInputting}
-                    disabled={inputDisabled}
-                  />
-                  {showSubmitButton && (
-                    <SubmitButton
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={inputDisabled}
-                    >
-                      <img src={Arrow} alt="제출" width={28} height={28} />
-                    </SubmitButton>
-                  )}
-                </QuestionInputContainer>
+                  <img src={Arrow} alt="제출" width={26} height={26} />
+                </SubmitButton>
               )}
-
-              {submitError && <ErrorMessage>{submitError}</ErrorMessage>}
-              {connectionMessage && (
-                <StatusMessage>{connectionMessage}</StatusMessage>
-              )}
-            </>
+            </QuestionInputContainer>
           )}
         </QuestionList>
 

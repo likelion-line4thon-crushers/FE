@@ -30,9 +30,9 @@ export const ToggleContainer = styled.div`
 export const FocusBar = styled.div`
   display: flex;
   align-self: flex-start;
-  justify-content: flex-start;
-  gap: 850px;
-  margin-left: 1vw;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 `;
 
 export const SingleToggleInput = styled(ToggleInput)`
@@ -43,9 +43,9 @@ export const SingleToggleInput = styled(ToggleInput)`
 export const SlideBox = styled.div`
   background-color: white;
   padding: 0;
-  width: 65.7vw;
-  max-width: 65.7vw;
-  aspect-ratio: 210 / 297;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16/9;
   height: auto;
   max-height: 70vh;
   overflow: hidden;
@@ -69,7 +69,7 @@ export const NavButton = styled.button`
 export const ToggleText = styled.span`
   color: #5c5c5c;
   font-family: Pretendard;
-  font-size: 16px;
+  font-size: 18px;
   font-style: normal;
   font-weight: 600;
   line-height: 24px;
@@ -80,8 +80,8 @@ export const ReactionButton = styled.button`
   display: inline-flex;
   align-items: flex-end;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 2vw;
+  height: 2vw;
   border: none;
   background: transparent;
   padding: 0;

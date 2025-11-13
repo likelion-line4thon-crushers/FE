@@ -3,8 +3,8 @@ import styled from "styled-components";
 export const PanelWrapper = styled.div`
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  width: 15.78vw;
-  height: 96vh;
+  width: 17vw;
+  height: 95%;
   display: flex;
   flex-direction: column;
   border: 1px solid #eaeaea;
@@ -16,7 +16,7 @@ export const HeaderBox = styled.div`
   display: flex;
   height: 4.52vh;
   width: 100%;
-  padding: 0.74vh 0 0.74vh 1.25vw;
+  padding: 0.74vh 1vw;
   align-items: center;
   border: 1px solid #eaeaea;
   background: #f9f9f9;
@@ -27,8 +27,9 @@ export const HeaderBox = styled.div`
 export const Section = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100%;
-  padding: 1.85vh 1.25vw 2.22vh 0.73vw;
+  flex: 1;
+  min-height: 0;
+  padding: 0.5vw;
 `;
 
 export const Title = styled.h2`
@@ -44,12 +45,21 @@ export const Title = styled.h2`
 
 export const QuestionList = styled.div`
   flex: 1;
-  overflow-y: auto;
-  padding-right: 0.42vw;
-  padding: 10px;
+  min-height: 0;
+  padding: 0.5vw;
   border: 1px solid #eaeaea;
   background: #fafafa;
   border-radius: 1.04vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`;
+
+export const QuestionScrollArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -198,17 +208,18 @@ export const QuestionInputContainer = styled.div`
   display: flex;
   width: 100%;
   max-width: 100%;
-  height: 4.44vh;
-  padding: 0 1px;
+  height: 4vh;
+  min-height: 4vh;
+  padding: 0;
+  margin-top: 0.74vh;
   justify-content: ${(props) =>
     props.$isInputting ? "center" : "space-between"};
   align-items: center;
-  gap: 0.42vw;
+  gap: 0.2vw;
 
   background: #ffffff;
   border: 1px solid #eaeaea;
   border-radius: 0.42vw;
-  margin-top: auto;
   transition: all 0.3s ease;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -217,6 +228,7 @@ export const QuestionInputContainer = styled.div`
 
 export const QuestionInput = styled.textarea`
   flex: 1;
+  margin: 0;
   border: none;
   outline: none;
   background: transparent;
@@ -248,6 +260,8 @@ export const QuestionInput = styled.textarea`
 
   &:placeholder-shown {
     text-align: left;
+    justify-content: center;
+    align-items: center;
     line-height: 20px;
 
     margin-left: 5px;
@@ -261,25 +275,17 @@ export const QuestionInput = styled.textarea`
 `;
 
 export const SubmitButton = styled.button`
-  width: 2.96vh;
-  height: 2.96vh;
-  background: #5c5c5c;
   border: none;
   border-radius: 0.37vh;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  margin-left: 0.42vw;
-  transition: background-color 0.2s ease;
+  margin-left: 0vw;
   align-self: center;
-
-  &:hover {
-    background: #4a4a4a;
-  }
+  background: transparent;
 
   &:disabled {
-    background: #b3b3b3;
     cursor: not-allowed;
   }
 `;
@@ -287,7 +293,7 @@ export const SubmitButton = styled.button`
 export const StatusMessage = styled.div`
   color: #5c5c5c;
   font-family: Pretendard;
-  font-size: 13px;
+  font-size: 15px;
   font-style: normal;
   font-weight: 500;
   line-height: 20px;
