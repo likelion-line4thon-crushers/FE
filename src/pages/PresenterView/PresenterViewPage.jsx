@@ -102,7 +102,6 @@ const PresenterViewPage = () => {
   // 🔹 커스텀 훅 사용
   const { slideUrls, loading } = useSlideLoader({ roomId, deckId, totalPages });
   const { timer } = useTimer();
-  const { audienceStats } = useAudienceStats({ roomId, currentSlide });
 
   const audienceCapacity = locationState.count ?? storedRoomData.count ?? 50;
 
@@ -172,6 +171,12 @@ const PresenterViewPage = () => {
     presenterWsUrl,
     currentSlideRef,
     changeSlide,
+  });
+
+  const { audienceStats } = useAudienceStats({ 
+    roomId, 
+    currentSlide,
+    isPresenterWsReady,
   });
 
   // 🔹 집중 유도 (isPresenterWsReady 업데이트 후 재생성)
