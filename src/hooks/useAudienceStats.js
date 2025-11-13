@@ -112,19 +112,31 @@ export const useAudienceStats = ({ roomId, currentSlide, isPresenterWsReady }) =
       audienceStatsTopic,
       (data) => {
         // 응답 형식: { "frontCount": 0, "currentCount": 75, "backCount": 25 }
-        console.log("[useAudienceStats] WebSocket 브로드캐스트 수신 - 원본 데이터:", data);
+        console.log("=".repeat(50));
+        console.log("[useAudienceStats] WebSocket 브로드캐스트 수신");
+        console.log("토픽:", audienceStatsTopic);
+        console.log("원본 데이터 타입:", typeof data);
+        console.log("원본 데이터:", data);
+        console.log("원본 데이터 (JSON):", JSON.stringify(data, null, 2));
         
+        // 백엔드에서 SlideAudienceCountResponse 객체를 직접 전송
+        // 필드명: frontCount, currentCount, backCount (Long 타입, 퍼센트 값 0-100)
         const payload = data?.data ?? data;
-        console.log("[useAudienceStats] WebSocket 브로드캐스트 수신 - 파싱된 payload:", payload);
+        console.log("파싱된 payload:", payload);
+        console.log("payload 타입:", typeof payload);
+        console.log("payload 키:", payload ? Object.keys(payload) : "null");
         
         const normalize = (value) => {
           const numeric = Number(value);
           return Number.isFinite(numeric) ? numeric : 0;
         };
 
-        const frontCount = normalize(payload?.frontCount ?? payload?.front ?? 0);
-        const currentCount = normalize(payload?.currentCount ?? payload?.current ?? 0);
-        const backCount = normalize(payload?.backCount ?? payload?.back ?? 0);
+        // 백엔드 필드명: frontCount, currentCount, backCount
+        const frontCount = normalize(payload?.frontCount ?? 0);
+        const currentCount = normalize(payload?.currentCount ?? 0);
+        const backCount = normalize(payload?.backCount ?? 0);
+        
+        console.log("파싱된 값 - frontCount:", frontCount, "currentCount:", currentCount, "backCount:", backCount);
 
         const stats = {
           prev: frontCount,

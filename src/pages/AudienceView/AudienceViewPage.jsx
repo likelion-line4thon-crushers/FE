@@ -126,8 +126,8 @@ const AudienceViewPage = () => {
           return prev;
         }
 
+        // 모든 청중 페이지 변경을 백엔드로 전송 (동기화 포함)
         if (
-          broadcast &&
           roomId &&
           audienceId &&
           websocketService.getIsConnected()

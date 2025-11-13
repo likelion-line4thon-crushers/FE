@@ -79,9 +79,10 @@ class WebSocketService {
 
   // 청중: 페이지 변경 이벤트 전송
   sendAudiencePageChange(sessionId, audienceId, beforePage, changedPage) {
+    const body = { audienceId, beforePage, changedPage };
     this.send(
       `/app/presentation/${sessionId}/pageChange/audience`,
-      { audienceId, beforePage, changedPage },
+      body,
       { "Idempotency-Key": uuidv4() }
     );
   }
