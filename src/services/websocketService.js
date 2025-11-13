@@ -116,20 +116,28 @@ class WebSocketService {
   // 발표자: 세션 종료 알림 전송
   sendEndSession(sessionId) {
     if (!this.isConnected || !this.client) {
+      console.warn("[sendEndSession] WebSocket이 연결되지 않아 전송할 수 없습니다.");
       return;
     }
 
     try {
+      const destination = `/app/presentation/${sessionId}/end`;
+      console.log("[sendEndSession] 세션 종료 메시지 전송:", {
+        destination,
+        sessionId,
+        body: "end",
+      });
       this.client.publish({
-        destination: `/app/presentation/${sessionId}/end`,
+        destination,
         headers: {
           "Content-Type": "text/plain",
           "Idempotency-Key": uuidv4(),
         },
         body: "end",
       });
-    } catch (_error) {
-      // ignore publish error
+      console.log("[sendEndSession] 세션 종료 메시지 전송 완료");
+    } catch (error) {
+      console.error("[sendEndSession] 세션 종료 메시지 전송 실패:", error);
     }
   }
 

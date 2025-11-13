@@ -105,3 +105,47 @@ export const fetchAudienceSlideStats = async ({ roomId, page, signal } = {}) => 
   }
 };
 
+/**
+ * 특정 슬라이드의 실시간 피드백 메시지를 가져옵니다.
+ * @param {Object} params
+ * @param {string} params.roomId - 방 ID
+ * @param {number} params.page - 페이지 번호 (1-based)
+ * @param {AbortSignal} [params.signal] - 요청 취소 시 사용할 AbortSignal
+ * @returns {Promise<string|null>} 실시간 피드백 메시지 (없으면 null)
+ */
+export const fetchLiveFeedback = async ({ roomId, page, signal } = {}) => {
+  if (!roomId) {
+    throw new Error("roomId가 필요합니다.");
+  }
+
+  if (typeof page !== "number" || !Number.isFinite(page) || page < 1) {
+    throw new Error("유효한 page 번호가 필요합니다.");
+  }
+
+  try {
+    const response = await api.get(
+      `/api/pages/${roomId}/live-feedback`,
+      {
+        params: { page },
+        signal,
+      }
+    );
+
+    const payload = response?.data?.data ?? response?.data ?? {};
+    const message = payload?.message ?? payload?.feedback ?? payload?.content ?? null;
+    
+    return message && typeof message === "string" && message.trim() ? message.trim() : null;
+  } catch (error) {
+    if (error?.name === "CanceledError" || error?.name === "AbortError") {
+      throw error;
+    }
+
+    // 404 등 에러는 피드백이 없는 것으로 간주
+    if (error?.response?.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
+};
+

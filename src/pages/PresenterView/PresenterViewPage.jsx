@@ -11,16 +11,18 @@ import Layout from "../../components/Layout/Layout";
 import SidebarSlides from "../../components/SidebarSlides";
 import SlideViewer from "../../components/SlideViewer";
 import QuestionList from "../../components/QuestionList";
-import {
-  fetchAllOriginalSlideUrls,
-  fetchAudienceSlideStats,
-} from "../../services/presentationService";
 import websocketService from "../../services/websocketService";
 import useEmojiReactions from "../../hooks/useEmojiReactions";
 import { WebSocketService } from "../../services/websocketService";
 import usePresenterQuestions from "../../hooks/usePresenterQuestions";
-import useQuickSettingsStorage from "../../hooks/useQuickSettingsStorage";
 import useStickerLoader from "../../hooks/useStickerLoader";
+import { useLiveFeedback } from "../../hooks/useLiveFeedback";
+import { useTimer } from "../../hooks/useTimer";
+import { useFocusHighlight } from "../../hooks/useFocusHighlight";
+import { useAudienceStats } from "../../hooks/useAudienceStats";
+import { usePresenterWebSocket } from "../../hooks/usePresenterWebSocket";
+import { useSlideLoader } from "../../hooks/useSlideLoader";
+import { useQuickSettings } from "../../hooks/useQuickSettings";
 
 // SettingsPanel 스타일 재사용
 import {
@@ -86,24 +88,19 @@ const PresenterViewPage = () => {
   }, [locationState.wsUrl, storedRoomData.wsUrl]);
 
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [slideUrls, setSlideUrls] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showReactions, setShowReactions] = useState(true);
   const [showStampsInViewer, setShowStampsInViewer] = useState(true);
-  const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [showFocusHighlight, setShowFocusHighlight] = useState(false);
-  const [audienceStats, setAudienceStats] = useState({
-    prev: 0,
-    current: 0,
-    next: 0,
-  });
-  const focusHighlightTimeoutRef = useRef(null);
-  const audienceStatsControllerRef = useRef(null);
 
-  // 🔹 빠른 설정 토글 상태 관리
-  const [quickSettings, setQuickSettings] = useQuickSettingsStorage();
-  const initialSettingsSyncedRef = useRef(false);
+  // 서버에서 presigned URL 하나씩 가져와서 썸네일로 사용
+  const currentSlideRef = useRef(0);
+  useEffect(() => {
+    currentSlideRef.current = currentSlide;
+  }, [currentSlide]);
+
+  // 🔹 커스텀 훅 사용
+  const { slideUrls, loading } = useSlideLoader({ roomId, deckId, totalPages });
+  const { timer } = useTimer();
+  const { audienceStats } = useAudienceStats({ roomId, currentSlide });
 
   const audienceCapacity = locationState.count ?? storedRoomData.count ?? 50;
 
@@ -139,81 +136,61 @@ const PresenterViewPage = () => {
     setShowStampsInViewer(nextValue);
   };
 
-  const handleFocusOn = useCallback(() => {
-    if (!roomId) {
-      return;
-    }
+  const slideCount = slideUrls.length;
 
-    if (!isPresenterWsReady || !websocketService.getIsConnected()) {
-      return;
-    }
-
-    websocketService.sendFocusOn(roomId);
-
-    setShowFocusHighlight(true);
-    if (focusHighlightTimeoutRef.current) {
-      clearTimeout(focusHighlightTimeoutRef.current);
-    }
-    focusHighlightTimeoutRef.current = setTimeout(() => {
-      setShowFocusHighlight(false);
-      focusHighlightTimeoutRef.current = null;
-    }, 1000);
-  }, [roomId, isPresenterWsReady]);
-
-  // 🔹 옵션 변경 핸들러 (리액션 스티커, 질문, 실시간 피드백)
-  const handleOptionChange = useCallback(
-    (optionKey, value) => {
-      setQuickSettings((prev) => {
-        const newSettings = { ...prev, [optionKey]: value };
-
-        // unlock 옵션이 아닌 경우만 sendOptionChange 호출
-        if (optionKey !== "unlock") {
-          // 웹소켓으로 전송
-          if (roomId && websocketService.getIsConnected()) {
-            const options = {
-              sticker: newSettings.sticker,
-              question: newSettings.question,
-              feedback: newSettings.feedback,
-            };
-            websocketService.sendOptionChange(roomId, options);
-          }
+  const changeSlide = useCallback(
+    (nextIndex, { broadcast = true } = {}) => {
+      setCurrentSlide((prev) => {
+        if (!Number.isFinite(nextIndex)) {
+          return prev;
         }
 
-        return newSettings;
+        const maxIndex = Math.max(slideCount - 1, 0);
+        const clamped = Math.min(Math.max(nextIndex, 0), maxIndex);
+
+        if (clamped === prev) {
+          return prev;
+        }
+
+        if (broadcast && roomId && websocketService.getIsConnected()) {
+          websocketService.sendPageChange(roomId, prev, clamped);
+        }
+
+        currentSlideRef.current = clamped;
+        return clamped;
       });
     },
-    [roomId]
+    [slideCount, roomId]
   );
 
-  // 🔹 다음 슬라이드 공개 옵션 변경 핸들러
-  const handleUnlockChange = useCallback(
-    (value) => {
-      setQuickSettings((prev) => ({ ...prev, unlock: value }));
+  // 🔹 WebSocket 연결 및 구독
+  const { isPresenterWsReady } = usePresenterWebSocket({
+    roomId,
+    presenterToken,
+    presenterWsUrl,
+    currentSlideRef,
+    changeSlide,
+  });
 
-      // 웹소켓으로 전송
-      if (roomId && websocketService.getIsConnected()) {
-        const unlock = value ? "true" : "false";
-        websocketService.sendUnlockChange(roomId, unlock);
-      }
-    },
-    [roomId]
-  );
+  // 🔹 집중 유도 (isPresenterWsReady 업데이트 후 재생성)
+  const { showFocusHighlight, handleFocusOn } = useFocusHighlight({
+    roomId,
+    isPresenterWsReady,
+  });
 
-  // 타이머 (페이지 마운트 시 시작)
-  useEffect(() => {
-    const timerInterval = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
+  // 🔹 빠른 설정 (isPresenterWsReady 업데이트 후 재생성)
+  const { quickSettings, handleOptionChange, handleUnlockChange } = useQuickSettings({
+    roomId,
+    isPresenterWsReady,
+  });
 
-    return () => clearInterval(timerInterval);
-  }, []);
-
-  // 타이머 포맷팅 (MM:SS)
-  const formatTimer = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  };
+  // 🔹 실시간 피드백
+  const { feedbackContent } = useLiveFeedback({
+    roomId,
+    currentSlide,
+    isEnabled: quickSettings.feedback,
+    isPresenterWsReady,
+  });
 
   const presenterSocketService = useMemo(() => new WebSocketService(), []);
   const {
@@ -249,179 +226,7 @@ const PresenterViewPage = () => {
     subscribe: Boolean(roomId && isPresenterWsReady),
   });
 
-  // 서버에서 presigned URL 하나씩 가져와서 썸네일로 사용
-  const currentSlideRef = useRef(0);
 
-  useEffect(() => {
-    currentSlideRef.current = currentSlide;
-  }, [currentSlide]);
-
-  const slideCount = slideUrls.length;
-
-  useEffect(() => {
-    if (!roomId) {
-      return undefined;
-    }
-
-    const controller = new AbortController();
-
-    if (audienceStatsControllerRef.current) {
-      audienceStatsControllerRef.current.abort();
-    }
-
-    audienceStatsControllerRef.current = controller;
-
-    const loadAudienceStats = async () => {
-      try {
-        const stats = await fetchAudienceSlideStats({
-          roomId,
-          page: currentSlide,
-          signal: controller.signal,
-        });
-        setAudienceStats((prevStats) => ({
-          prev: Number.isFinite(stats?.prev) ? stats.prev : prevStats.prev,
-          current: Number.isFinite(stats?.current)
-            ? stats.current
-            : prevStats.current,
-          next: Number.isFinite(stats?.next) ? stats.next : prevStats.next,
-        }));
-      } catch (error) {
-        if (
-          error?.name === "CanceledError" ||
-          error?.name === "AbortError" ||
-          error?.code === "ERR_CANCELED"
-        ) {
-          return;
-        }
-      } finally {
-        if (audienceStatsControllerRef.current === controller) {
-          audienceStatsControllerRef.current = null;
-        }
-      }
-    };
-
-    loadAudienceStats();
-
-    return () => {
-      controller.abort();
-    };
-  }, [roomId, currentSlide]);
-
-  const changeSlide = useCallback(
-    (nextIndex, { broadcast = true } = {}) => {
-      setCurrentSlide((prev) => {
-        if (!Number.isFinite(nextIndex)) {
-          return prev;
-        }
-
-        const maxIndex = Math.max(slideCount - 1, 0);
-        const clamped = Math.min(Math.max(nextIndex, 0), maxIndex);
-
-        if (clamped === prev) {
-          return prev;
-        }
-
-        if (broadcast && roomId && websocketService.getIsConnected()) {
-          websocketService.sendPageChange(roomId, prev, clamped);
-        }
-
-        currentSlideRef.current = clamped;
-        return clamped;
-      });
-    },
-    [slideCount, roomId]
-  );
-
-  useEffect(() => {
-    if (!roomId || !deckId || !totalPages) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchSlides = async () => {
-      try {
-        const urls = await fetchAllOriginalSlideUrls(
-          roomId,
-          deckId,
-          totalPages
-        );
-
-        // CreateSessionPage와 동일하게, URL 문자열 배열을 그대로 사용합니다.
-        setSlideUrls(urls);
-      } catch (_error) {
-        setSlideUrls([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSlides();
-  }, [roomId, deckId, totalPages]);
-
-  useEffect(() => {
-    if (!roomId || !presenterToken || !presenterWsUrl) {
-      return undefined;
-    }
-
-    const onConnect = () => {
-      setIsPresenterWsReady(true);
-      websocketService.sendPageChange(
-        roomId,
-        currentSlideRef.current,
-        currentSlideRef.current
-      );
-    };
-
-    const onError = () => {
-      setIsPresenterWsReady(false);
-    };
-
-    websocketService.connect(
-      presenterWsUrl,
-      presenterToken,
-      onConnect,
-      onError
-    );
-
-    return () => {
-      setIsPresenterWsReady(false);
-      websocketService.disconnect();
-    };
-  }, [roomId, presenterToken, presenterWsUrl]);
-
-  useEffect(() => {
-    if (!roomId || !presenterToken || !presenterWsUrl) {
-      return undefined;
-    }
-
-    if (!websocketService.getIsConnected()) {
-      return undefined;
-    }
-
-    const unsubscribe = websocketService.subscribe(
-      `/topic/presentation/${roomId}/pageChange/audience`,
-      (data) => {
-        const nextSlide = Number(data?.changedPage);
-        if (Number.isFinite(nextSlide)) {
-          changeSlide(nextSlide, { broadcast: false });
-        }
-      }
-    );
-
-    return () => {
-      if (typeof unsubscribe === "function") {
-        unsubscribe();
-      }
-    };
-  }, [roomId, presenterToken, presenterWsUrl, changeSlide]);
-
-  useEffect(() => {
-    return () => {
-      if (focusHighlightTimeoutRef.current) {
-        clearTimeout(focusHighlightTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // 🔹 방향키로 슬라이드 이동
   useEffect(() => {
@@ -449,47 +254,12 @@ const PresenterViewPage = () => {
     [changeSlide]
   );
 
-  // 🔹 빠른 설정을 sessionStorage에 저장
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(
-        QUICK_SETTINGS_STORAGE_KEY,
-        JSON.stringify(quickSettings)
-      );
-    } catch (_error) {
-      // ignore storage write failures
-    }
-  }, [quickSettings]);
-
   // 🔹 리액션 표시 상태를 빠른 설정과 동기화
   useEffect(() => {
     setShowReactions(quickSettings.sticker);
     setShowStampsInViewer(quickSettings.sticker);
   }, [quickSettings.sticker]);
 
-  // 🔹 웹소켓 연결 후 저장된 빠른 설정 동기화
-  useEffect(() => {
-    if (
-      initialSettingsSyncedRef.current ||
-      !roomId ||
-      !isPresenterWsReady ||
-      !websocketService.getIsConnected()
-    ) {
-      return;
-    }
-
-    const options = {
-      sticker: quickSettings.sticker,
-      question: quickSettings.question,
-      feedback: quickSettings.feedback,
-    };
-    websocketService.sendOptionChange(roomId, options);
-    websocketService.sendUnlockChange(
-      roomId,
-      quickSettings.unlock ? "true" : "false"
-    );
-    initialSettingsSyncedRef.current = true;
-  }, [roomId, isPresenterWsReady, quickSettings]);
 
   // ✅ 로딩 중일 때 표시
   if (loading) {
@@ -549,7 +319,9 @@ const PresenterViewPage = () => {
         onToggleShowReactions={handleToggleShowStampsInViewer}
         onFocusClick={isPresenterWsReady ? handleFocusOn : undefined}
         focusHighlight={showFocusHighlight}
-        timer={formatTimer(elapsedSeconds)}
+        timer={timer}
+        showFeedback={quickSettings.feedback}
+        feedbackContent={feedbackContent}
       />
 
       {/* 🔹 우측: 빠른 설정 + 실시간 질문 */}
