@@ -13,14 +13,21 @@ export const useLiveFeedback = ({
   isEnabled,
   isPresenterWsReady,
 }) => {
-  const [feedbackContent, setFeedbackContent] = useState("반응 분석 중 ...");
+  const [feedbackContent, setFeedbackContent] = useState("");
   const liveFeedbackControllerRef = useRef(null);
   const liveFeedbackUnsubscribeRef = useRef(null);
+  const currentSlideRef = useRef(currentSlide);
+  const lastWebSocketUpdateRef = useRef(null); // 웹소켓으로 받은 마지막 피드백 추적
+  
+  // currentSlide 최신 값 유지
+  useEffect(() => {
+    currentSlideRef.current = currentSlide;
+  }, [currentSlide]);
 
   // 🔹 실시간 피드백 로드 (슬라이드 전환 시)
   useEffect(() => {
     if (!roomId || !isEnabled) {
-      setFeedbackContent("반응 분석 중 ...");
+      setFeedbackContent("");
       return;
     }
 
@@ -39,7 +46,14 @@ export const useLiveFeedback = ({
           page,
           signal: controller.signal,
         });
-        setFeedbackContent(message || "반응 분석 중 ...");
+        
+        // 웹소켓으로 최근에 받은 피드백이 있고, 같은 슬라이드라면 웹소켓 값을 우선
+        const lastUpdate = lastWebSocketUpdateRef.current;
+        if (lastUpdate && lastUpdate.page === page && lastUpdate.message) {
+          setFeedbackContent(lastUpdate.message);
+        } else {
+          setFeedbackContent(message || "");
+        }
       } catch (error) {
         if (
           error?.name === "CanceledError" ||
@@ -48,8 +62,8 @@ export const useLiveFeedback = ({
         ) {
           return;
         }
-        // 에러 발생 시 기본 메시지 유지
-        setFeedbackContent("반응 분석 중 ...");
+        // 에러 발생 시 빈 문자열
+        setFeedbackContent("");
       } finally {
         if (liveFeedbackControllerRef.current === controller) {
           liveFeedbackControllerRef.current = null;
@@ -65,6 +79,7 @@ export const useLiveFeedback = ({
   }, [roomId, currentSlide, isEnabled]);
 
   // 🔹 실시간 피드백 WebSocket 구독 (스티커 부착 시 자동 검증)
+  // currentSlide를 dependency에서 제거하여 슬라이드 변경 시 구독이 재생성되지 않도록 함
   useEffect(() => {
     liveFeedbackUnsubscribeRef.current?.();
 
@@ -79,18 +94,41 @@ export const useLiveFeedback = ({
     }
 
     const liveFeedbackTopic = `/topic/presentation/${roomId}/liveFeedback`;
+    
     liveFeedbackUnsubscribeRef.current = websocketService.subscribe(
       liveFeedbackTopic,
       (data) => {
-        const payload = data?.data ?? data;
-        const message = payload?.message ?? payload?.feedback ?? payload?.content ?? null;
-        const page = payload?.page ?? payload?.slide ?? null;
+        const latestCurrentSlide = currentSlideRef.current;
+        
+        // 응답이 문자열인 경우 직접 사용
+        let message = null;
+        let page = null;
+        
+        if (typeof data === "string") {
+          message = data.trim();
+        } else if (data && typeof data === "object") {
+          // 객체인 경우 다양한 필드 확인
+          const payload = data?.data ?? data;
+          message = payload?.message ?? payload?.feedback ?? payload?.content ?? payload?.text ?? null;
+          page = payload?.page ?? payload?.slide ?? payload?.slideNumber ?? payload?.slide_number ?? null;
+        }
 
-        // 현재 슬라이드의 피드백만 업데이트
+        // 메시지가 있으면 현재 슬라이드인지 확인 후 업데이트
         if (message && typeof message === "string" && message.trim()) {
-          const currentPage = currentSlide + 1; // 1-based
-          if (page === null || page === currentPage) {
-            setFeedbackContent(message.trim());
+          const currentPage = latestCurrentSlide + 1; // 1-based
+          const trimmedMessage = message.trim();
+          
+          // page가 없거나 현재 슬라이드의 피드백이면 즉시 업데이트
+          if (page === null || page === undefined || page === currentPage) {
+            // 웹소켓으로 받은 피드백 저장
+            lastWebSocketUpdateRef.current = {
+              page: page || currentPage,
+              message: trimmedMessage,
+              timestamp: Date.now(),
+            };
+            
+            // 즉시 상태 업데이트
+            setFeedbackContent(trimmedMessage);
           }
         }
       }
@@ -100,7 +138,7 @@ export const useLiveFeedback = ({
       liveFeedbackUnsubscribeRef.current?.();
       liveFeedbackUnsubscribeRef.current = null;
     };
-  }, [roomId, isEnabled, isPresenterWsReady, currentSlide]);
+  }, [roomId, isEnabled, isPresenterWsReady]); // currentSlide 제거
 
   // Cleanup
   useEffect(() => {
