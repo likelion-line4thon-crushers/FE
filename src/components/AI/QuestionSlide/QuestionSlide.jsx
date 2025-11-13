@@ -7,7 +7,6 @@ import {
   LeftBoxContainer,
   RightBoxContainer,
 } from "./QuestionSlide.styles";
-import rabbitImage from "../../../assets/images/rabbit.jpg";
 import faceImage from "../../../assets/images/emoji1_black.svg";
 import rectangleImage from "../../../assets/images/AI/Rectangle.png";
 import ContentBox from "../ContentBox/ContentBox";
@@ -137,7 +136,6 @@ const QuestionSlide = () => {
     slideNumber,
     enabled: Boolean(roomId && deckId && slideNumber),
   });
-  const imageSource = slideImageUrl || rabbitImage;
 
   return (
     <QuestionSlideContainer>
@@ -151,7 +149,7 @@ const QuestionSlide = () => {
             title={`질문이 가장 많았던 슬라이드${
               totalQuestions ? ` (${totalQuestions}문)` : ""
             }`}
-            slideImage={imageSource}
+            slideImage={slideImageUrl}
             height="350px"
             width="570px"
             slideNumberComponent={

@@ -13,6 +13,7 @@ import {
   ImageContainer,
   ContentText,
 } from "./ContentBox.styles";
+import SlideSkeleton from "../SlideSkeleton/SlideSkeleton";
 
 const ContentBox = ({
   title = "총 이모지 반응",
@@ -70,15 +71,22 @@ const ContentBox = ({
       </TopSection>
       {determinedVariant === "custom" && children ? (
         children
-      ) : determinedVariant === "image" && slideImage ? (
+      ) : determinedVariant === "image" ? (
         <>
           <ImageContainer>
-            <SlideImage
-              src={slideImage}
-              alt="슬라이드"
-              $imgWidth={slideImageWidth}
-              $imgHeight={slideImageHeight}
-            />
+            {slideImage ? (
+              <SlideImage
+                src={slideImage}
+                alt="슬라이드"
+                $imgWidth={slideImageWidth}
+                $imgHeight={slideImageHeight}
+              />
+            ) : (
+              <SlideSkeleton
+                width={slideImageWidth || "100%"}
+                height={slideImageHeight || "100%"}
+              />
+            )}
           </ImageContainer>
           {slideNumberComponent ? (
             <SlideNumberSlot>{slideNumberComponent}</SlideNumberSlot>
