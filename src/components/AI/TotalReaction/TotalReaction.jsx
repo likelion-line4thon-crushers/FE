@@ -6,9 +6,9 @@ import {
 } from "./TotalReaction.styles";
 import ReportTitle from "../../../assets/images/AI/ReportTitle.png";
 import ContentBox from "../ContentBox/ContentBox";
-import RabbitImage from "../../../assets/images/rabbit.jpg";
 import SlideNumber from "../SlideNumber/SlideNumber";
 import useSlideImage from "../../../hooks/useSlideImage";
+import SlideSkeleton from "../SlideSkeleton/SlideSkeleton";
 
 const formatValue = (value, { loading, error }) => {
   if (loading) {
@@ -82,7 +82,7 @@ const TotalReaction = ({
         />
         <ContentBox
           title="주목해야 할 슬라이드"
-          slideImage={attentionSlideImage || RabbitImage}
+          slideImage={attentionSlideImage}
           height="350px"
           width="570px"
           slideNumberComponent={

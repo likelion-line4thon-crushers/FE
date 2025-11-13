@@ -178,10 +178,12 @@ export const WaitingImage = styled.img`
 
 export const WaitingText = styled.p`
   margin: 0;
+  color: #5c5c5c;
   font-family: Pretendard;
-  font-size: clamp(16px, 1.2vw, 20px);
+  font-size: 20px;
+  font-style: normal;
   font-weight: 600;
-  line-height: 1.5;
-  letter-spacing: -0.4px;
-  color: #303030;
+  line-height: 22px;
+  letter-spacing: -0.375px;
+  white-space: pre-line;
 `;

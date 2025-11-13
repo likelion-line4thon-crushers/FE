@@ -166,9 +166,9 @@ export const WaitingMessage = styled.div`
   font-family: Pretendard;
   font-size: 14px;
   font-style: normal;
-  font-weight: 500;
-  line-height: 21px;
-  letter-spacing: -0.35px;
+  font-weight: 600;
+  line-height: 22px;
+  letter-spacing: -0.375px;
   white-space: pre-line;
 `;
 

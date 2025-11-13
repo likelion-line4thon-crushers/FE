@@ -10,11 +10,11 @@ import {
 } from "./PopularSlide.styles";
 import EmojiPanel from "../../Audience/EmojiPanel";
 import ContentBox from "../ContentBox/ContentBox";
-import RabbitImage from "../../../assets/images/rabbit.jpg";
 import NoSlideImage from "../../../assets/images/AI/NoSlide.png";
 import AITitle from "../AITitle/AITitle";
 import { fetchMostReactionSticker } from "../../../services/aiReportService";
 import useSlideImage from "../../../hooks/useSlideImage";
+import SlideSkeleton from "../SlideSkeleton/SlideSkeleton";
 
 const EMOJI_NAMES = {
   1: "재미있는",
@@ -124,17 +124,19 @@ const PopularSlide = ({ roomId, deckId }) => {
             ) : (
               <>
                 <LargeSlide>
-                  <img
-                    src={firstSlideUrl || RabbitImage}
-                    alt="Most popular slide"
-                  />
+                  {firstSlideUrl ? (
+                    <img src={firstSlideUrl} alt="Most popular slide" />
+                  ) : (
+                    <SlideSkeleton width="100%" height="100%" />
+                  )}
                 </LargeSlide>
-                {hasSecondSlide && secondSlideUrl && (
+                {hasSecondSlide && (
                   <SmallSlide>
-                    <img
-                      src={secondSlideUrl || RabbitImage}
-                      alt="Second popular slide"
-                    />
+                    {secondSlideUrl ? (
+                      <img src={secondSlideUrl} alt="Second popular slide" />
+                    ) : (
+                      <SlideSkeleton width="100%" height="100%" />
+                    )}
                   </SmallSlide>
                 )}
               </>

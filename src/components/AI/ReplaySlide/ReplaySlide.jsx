@@ -8,7 +8,6 @@ import {
   NumberValue,
   NumberDescription,
 } from "./ReplaySlide.styles";
-import rabbitImage from "../../../assets/images/rabbit.jpg";
 import ContentBox from "../ContentBox/ContentBox";
 import AITitle from "../AITitle/AITitle";
 import SlideNumber from "../SlideNumber/SlideNumber";
@@ -111,7 +110,7 @@ const ReplaySlide = ({
           <ContentBox
             title="재방문수가 가장 많은 슬라이드"
             variant="image"
-            slideImage={slideImageUrl || rabbitImage}
+            slideImage={slideImageUrl}
             slideNumberComponent={<SlideNumber slideNumber={slideNumber} />}
             width="auto"
             height="405px"
