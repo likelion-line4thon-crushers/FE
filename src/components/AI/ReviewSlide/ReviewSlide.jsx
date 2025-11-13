@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import {
   ReviewSlideContainer,
@@ -29,6 +29,7 @@ const ReviewSlide = () => {
   const [feedbackData, setFeedbackData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const isFirstLoadRef = useRef(true);
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
 
@@ -41,16 +42,24 @@ const ReviewSlide = () => {
 
   useEffect(() => {
     let cancelled = false;
+    let intervalId = null;
 
     if (!roomId) {
       setFeedbackData(null);
       setError(new Error("roomId를 확인할 수 없습니다."));
       setLoading(false);
+      isFirstLoadRef.current = true;
       return undefined;
     }
 
+    isFirstLoadRef.current = true;
+
     const loadFeedback = async () => {
-      setLoading(true);
+      const isFirstLoad = isFirstLoadRef.current;
+      if (isFirstLoad) {
+        setLoading(true);
+        isFirstLoadRef.current = false;
+      }
       setError(null);
 
       try {
@@ -60,11 +69,18 @@ const ReviewSlide = () => {
         }
       } catch (err) {
         if (!cancelled) {
-          setFeedbackData(null);
-          setError(err);
+          if (isFirstLoad) {
+            setFeedbackData(null);
+            setError(err);
+          } else {
+            console.warn(
+              "[ReviewSlide] 후기 업데이트 실패 (기존 데이터 유지):",
+              err
+            );
+          }
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isFirstLoad) {
           setLoading(false);
         }
       }
@@ -72,8 +88,17 @@ const ReviewSlide = () => {
 
     loadFeedback();
 
+    intervalId = setInterval(() => {
+      if (!cancelled) {
+        loadFeedback();
+      }
+    }, 5000);
+
     return () => {
       cancelled = true;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, [roomId]);
 
