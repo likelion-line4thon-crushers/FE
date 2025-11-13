@@ -20,4 +20,6 @@ export const RightPanelContainer = styled.div`
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
+  flex-shrink: 0;
+  min-width: 0;
 `;

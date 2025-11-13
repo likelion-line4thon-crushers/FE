@@ -3,13 +3,16 @@ import styled from "styled-components";
 export const PanelWrapper = styled.div`
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  width: 15.78vw;
+  width: clamp(280px, 15.78vw, 400px);
+  min-width: 280px;
+  max-width: 400px;
   height: 96vh;
   display: flex;
   flex-direction: column;
   border: 1px solid #eaeaea;
   overflow: hidden;
   box-sizing: border-box;
+  flex-shrink: 0;
 `;
 
 export const HeaderBox = styled.div`
