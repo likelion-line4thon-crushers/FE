@@ -123,6 +123,29 @@ export const fetchMostReactionSticker = async (roomId) => {
   }
 };
 
+export const fetchFeedbackReport = async (roomId) => {
+  if (!roomId) {
+    throw new Error("roomId가 필요합니다.");
+  }
+
+  try {
+    const response = await api.get(`/api/report/${roomId}/feedbacks`);
+    return response?.data?.data ?? null;
+  } catch (error) {
+    console.error("fetchFeedbackReport API 호출 실패:", error);
+    console.error("에러 응답:", error?.response?.data);
+    console.error("에러 상태 코드:", error?.response?.status);
+
+    // 400 에러인 경우 null 반환
+    if (error?.response?.status === 400) {
+      console.warn(`⚠️ 400 Bad Request: 피드백 데이터가 없을 수 있습니다.`);
+      return null;
+    }
+
+    throw error;
+  }
+};
+
 export default {
   fetchTopSlideReport,
   fetchTopQuestionsReport,
@@ -130,4 +153,5 @@ export default {
   fetchStoredAiReport,
   fetchTopStoredReport,
   fetchMostReactionSticker,
+  fetchFeedbackReport,
 };
