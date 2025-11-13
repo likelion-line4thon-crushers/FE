@@ -34,7 +34,7 @@ const SettingsPanel = ({
       audienceCapacity={audienceCapacity}
       isWsReady={isWsReady}
     />
-    <LiveQuestionSection />
+    <LiveQuestionSection quickSettings={quickSettings} />
   </PanelWrapper>
 );
 
@@ -205,10 +205,10 @@ const QuickSettingToggle = ({ label, description, checked, onChange, disabled })
   </ToggleBox>
 );
 
-const LiveQuestionSection = () => (
+const LiveQuestionSection = ({ quickSettings = { question: true } }) => (
   <Section>
     <Title>실시간 질문</Title>
-    <LiveWaitingBox />
+    <LiveWaitingBox isQuestionEnabled={quickSettings.question} />
   </Section>
 );
 

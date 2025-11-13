@@ -35,7 +35,9 @@ import {
   ToggleDescription,
   ToggleInput,
 } from "../../components/SettingsPanel/SettingsPanel.styles";
+import styled from "styled-components";
 import { AudienceCount } from "../../components/SettingsPanel";
+import LiveLockButton from "../../components/SettingsPanel/LiveLockButton";
 
 const PresenterViewPage = () => {
   const location = useLocation();
@@ -374,7 +376,7 @@ const PresenterViewPage = () => {
         </Section>
 
         {/* === 실시간 질문 섹션 === */}
-        <Section>
+        <QuestionSection>
           <Title>실시간 질문</Title>
           <QuestionList
             questions={presenterQuestions}
@@ -383,13 +385,33 @@ const PresenterViewPage = () => {
             currentSlide={currentSlide}
             onSelectSlide={handleSelectQuestionSlide}
           />
-        </Section>
+          {!quickSettings.question && <LockButtonWrapper><LiveLockButton /></LockButtonWrapper>}
+        </QuestionSection>
       </PanelWrapper>
     </Layout>
   );
 };
 
 export default PresenterViewPage;
+
+// 실시간 질문 섹션 스타일
+const QuestionSection = styled(Section)`
+  position: relative;
+  min-height: 40vh;
+`;
+
+const LockButtonWrapper = styled.div`
+  position: absolute;
+  bottom: 2vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+  
+  > * {
+    pointer-events: auto;
+  }
+`;
 
 // 빠른 설정 토글 UI
 const QuickSettingToggle = ({
