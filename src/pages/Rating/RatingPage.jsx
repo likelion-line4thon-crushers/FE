@@ -168,6 +168,24 @@ const RatingPage = () => {
                                 />
                             ))}
                         </Stars>
+                        {rating > 0 && (
+                            <RatingText>
+                                <RatingScore>
+                                    {rating === 1 && "1점"}
+                                    {rating === 2 && "2점"}
+                                    {rating === 3 && "3점"}
+                                    {rating === 4 && "4점"}
+                                    {rating === 5 && "5점"}
+                                </RatingScore>
+                                <RatingDescription>
+                                    {rating === 1 && "(별로에요)"}
+                                    {rating === 2 && "(그저 그래요)"}
+                                    {rating === 3 && "(괜찮아요)"}
+                                    {rating === 4 && "(좋아요)"}
+                                    {rating === 5 && "(최고에요)"}
+                                </RatingDescription>
+                            </RatingText>
+                        )}
                     </RatingBox>
                 </Box>
 
@@ -332,6 +350,24 @@ const Stars = styled.div`
   display: flex;
   justify-content: center;
   gap: 0vw;
+`;
+
+const RatingText = styled.div`
+  margin-top: 1vh;
+  text-align: center;
+  font-family: Pretendard;
+  font-size: 14px;
+  line-height: 26px;
+  letter-spacing: -0.45px;
+  color: #5C5C5C;
+`;
+
+const RatingScore = styled.span`
+  font-weight: 600;
+`;
+
+const RatingDescription = styled.span`
+  font-weight: 400;
 `;
 
 /* 후기 입력 */
