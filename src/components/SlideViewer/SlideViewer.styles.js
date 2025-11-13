@@ -7,7 +7,7 @@ export const Main = styled.div`
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 4vh 1vw;
+  padding: 2vh 1vw;
   background: #fff;
   width: 100%;
 `;
@@ -18,7 +18,7 @@ export const FocusBar = styled.div`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin-bottom: 2.5vh;
+  margin-bottom: 1.5vh;
 `;
 
 /* 왼쪽 그룹 */
@@ -269,4 +269,45 @@ export const SlideContainer = styled.div`
   align-items: center;
   overflow: hidden;
   aspect-ratio: 16 / 9;
+`;
+
+/* 실시간 피드백 창 */
+export const FeedbackContainer = styled.div`
+  width: 97%;
+  height: 2vh;
+  margin-top: 2vh;
+  display: ${({ show }) => (show ? "flex" : "none")};
+  align-items: center;
+  justify-content: flex-start;
+  padding: 1.2vh 1.2vw;
+  background: #FAFAFA;
+  border-radius: 2vw;
+  border: 0.05vw solid #eaeaea;
+  gap: 0.8vw;
+`;
+
+export const FeedbackIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1vw;
+  height: 1vw;
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+`;
+
+export const FeedbackText = styled.div`
+  display: flex;
+  align-items: center;
+  color: #5c5c5c;
+  font-family: Pretendard;
+  font-size: clamp(13px, 0.9vw, 16px);
+  font-weight: 500;
+  white-space: nowrap;
+  gap: 0.4vw;
 `;

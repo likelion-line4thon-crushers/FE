@@ -67,7 +67,6 @@ const AudienceViewPage = () => {
   const optionUnsubscribeRef = useRef(null);
   const unlockUnsubscribeRef = useRef(null);
   const sessionStateUnsubscribeRef = useRef(null);
-  const endUnsubscribeRef = useRef(null);
   const followPresenterRef = useRef(followPresenter);
   const prevSlideRef = useRef(0);
   const lastPresenterPageRef = useRef(0);
@@ -391,13 +390,32 @@ const AudienceViewPage = () => {
       }
     );
 
-    // 🔹 세션 상태 변경 구독
+    // 🔹 세션 상태 변경 구독 (세션 종료 포함)
     const sessionStateTopic = `/topic/p/${roomId}/public`;
     sessionStateUnsubscribeRef.current = websocketService.subscribe(
       sessionStateTopic,
       (data) => {
+        console.log("[AudienceView] 세션 상태 변경 수신:", data);
         if (data && data.type === "SESSION_STATE" && data.status) {
           setSessionStatus(data.status);
+          // 세션 종료 상태 확인
+          if (data.status === "ended" || data.status === "ENDED") {
+            console.log("[AudienceView] 세션 종료 상태 확인 - rating 페이지로 이동");
+            if (!hasNavigatedToRatingRef.current) {
+              hasNavigatedToRatingRef.current = true;
+              const targetUrl = code
+                ? `/rating/${encodeURIComponent(code)}`
+                : "/rating";
+              navigate(targetUrl, { 
+                replace: false,
+                state: {
+                  roomId: roomId,
+                  audienceId: audienceId,
+                  deckId: deckId,
+                }
+              });
+            }
+          }
         }
       }
     );
@@ -498,43 +516,8 @@ const AudienceViewPage = () => {
     };
   }, [isWebsocketReady, roomId, changeCurrentSlide]);
 
-  useEffect(() => {
-    endUnsubscribeRef.current?.();
-    endUnsubscribeRef.current = null;
-
-    if (!isWebsocketReady || !roomId || !websocketService.getIsConnected()) {
-      return undefined;
-    }
-
-    const topic = `/topic/presentation/${roomId}/end`;
-    const unsubscribe = websocketService.subscribeText(topic, (rawMessage) => {
-      if (rawMessage == null || hasNavigatedToRatingRef.current) {
-        return;
-      }
-
-      const trimmed = String(rawMessage).trim().toLowerCase();
-      if (!trimmed) {
-        return;
-      }
-
-      if (trimmed === "end" || trimmed.includes("end")) {
-        hasNavigatedToRatingRef.current = true;
-        const targetUrl = code
-          ? `/rating/${encodeURIComponent(code)}`
-          : "/rating";
-        navigate(targetUrl, { replace: false });
-      }
-    });
-
-    endUnsubscribeRef.current = unsubscribe;
-
-    return () => {
-      if (typeof unsubscribe === "function") {
-        unsubscribe();
-      }
-      endUnsubscribeRef.current = null;
-    };
-  }, [isWebsocketReady, roomId, code, navigate]);
+  // Note: 세션 종료는 /topic/p/{roomId}/public의 SESSION_STATE로 처리됨
+  // 위의 sessionStateTopic 구독에서 status: "ended" 확인하여 rating 페이지로 이동
 
   useEffect(() => {
     return () => {

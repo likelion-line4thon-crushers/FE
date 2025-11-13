@@ -1,13 +1,121 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import Emoji3 from "../../assets/images/emoji3.svg";
 import StarIcon from "../../assets/images/star.svg";
 import StarCheckedIcon from "../../assets/images/star_checked.svg";
+import { submitFeedback } from "../../services/feedbackService";
+import { getOriginalSlideUrl } from "../../services/presentationService";
 
 
 const RatingPage = () => {
+    const { code } = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
     const [rating, setRating] = useState(0);
-    const [feedback, setFeedback] = useState("");
+    const [comment, setComment] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [firstSlideUrl, setFirstSlideUrl] = useState(null);
+    const [loadingSlide, setLoadingSlide] = useState(false);
+
+    // roomId, audienceId, deckId 가져오기 (location state > window 객체 > sessionStorage 순서)
+    const { roomId, audienceId, deckId } = useMemo(() => {
+        try {
+            // 1. location state에서 가져오기 (가장 우선)
+            const locationState = location.state || {};
+            if (locationState.roomId && locationState.audienceId) {
+                return {
+                    roomId: locationState.roomId,
+                    audienceId: locationState.audienceId,
+                    deckId: locationState.deckId || null,
+                };
+            }
+
+            // 2. window 객체에서 가져오기 (AudienceViewPage에서 저장)
+            if (window.roomId && window.audienceId) {
+                return {
+                    roomId: window.roomId,
+                    audienceId: window.audienceId,
+                    deckId: window.deckId || null,
+                };
+            }
+
+            // 3. sessionStorage에서 가져오기
+            const storedRoomData = JSON.parse(
+                sessionStorage.getItem("boini_room") ||
+                sessionStorage.getItem("roomData") ||
+                "{}"
+            );
+            
+            return {
+                roomId: storedRoomData.roomId || window.roomId || null,
+                audienceId: storedRoomData.audienceId || window.audienceId || null,
+                deckId: storedRoomData.deckId || window.deckId || null,
+            };
+        } catch (error) {
+            console.error("[RatingPage] roomId/audienceId/deckId 가져오기 실패:", error);
+            return { 
+                roomId: window.roomId || null, 
+                audienceId: window.audienceId || null,
+                deckId: window.deckId || null,
+            };
+        }
+    }, [location.state]);
+
+    // 첫 번째 슬라이드 로드
+    useEffect(() => {
+        if (!roomId || !deckId) {
+            return;
+        }
+
+        const loadFirstSlide = async () => {
+            setLoadingSlide(true);
+            try {
+                const url = await getOriginalSlideUrl(roomId, deckId, 1);
+                setFirstSlideUrl(url);
+            } catch (error) {
+                console.error("[RatingPage] 첫 번째 슬라이드 로드 실패:", error);
+                setFirstSlideUrl(null);
+            } finally {
+                setLoadingSlide(false);
+            }
+        };
+
+        loadFirstSlide();
+    }, [roomId, deckId]);
+
+    // 제출 핸들러
+    const handleSubmit = async () => {
+        if (!rating || !roomId || !audienceId) {
+            console.warn("[RatingPage] 제출 불가: rating, roomId, audienceId 필요");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const result = await submitFeedback({
+                roomId,
+                audienceId,
+                rating,
+                comment: comment.trim(),
+            });
+            
+            console.log("[RatingPage] 피드백 제출 성공:", result);
+            
+            // 메인페이지로 이동
+            navigate("/", { replace: true });
+        } catch (error) {
+            console.error("[RatingPage] 피드백 제출 실패:", error);
+            alert("피드백 제출에 실패했습니다. 다시 시도해주세요.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // 건너뛰기 핸들러
+    const handleSkip = () => {
+        navigate("/", { replace: true });
+    };
 
     return (
         <MainLayout>
@@ -18,12 +126,21 @@ const RatingPage = () => {
 
             {/* 중앙 영역 */}
             <CenterGrid>
-                {/* 왼쪽 상단 - 예시 이미지 */}
+                {/* 왼쪽 상단 - 발표자료 첫 번째 슬라이드 */}
                 <Box>
-                    <img
-                        src="https://via.placeholder.com/400x200.png?text=발표+썸네일"
-                        alt="썸네일"
-                    />
+                    {loadingSlide ? (
+                        <div style={{ color: "#999", fontSize: "0.9vw" }}>로딩 중...</div>
+                    ) : firstSlideUrl ? (
+                        <img
+                            src={firstSlideUrl}
+                            alt="발표자료 첫 번째 슬라이드"
+                        />
+                    ) : (
+                        <img
+                            src="https://via.placeholder.com/400x200.png?text=발표+썸네일"
+                            alt="썸네일"
+                        />
+                    )}
                 </Box>
 
                 {/* 오른쪽 상단 - 감사 메시지 */}
@@ -60,16 +177,21 @@ const RatingPage = () => {
                         <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
                         <TextArea
                             placeholder="여러분의 한 마디가 세션 진행자에게 큰 도움이 됩니다 :)"
-                            value={feedback}
-                            onChange={(e) => setFeedback(e.target.value)}
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
                         />
                     </FeedbackBox>
                 </Box>
 
                 {/* 하단 버튼 영역 */}
                 <ButtonRow>
-                    <SubmitButton disabled={!rating}>제출</SubmitButton>
-                    <SkipButton>건너뛰기</SkipButton>
+                    <SubmitButton 
+                        disabled={!rating || isSubmitting}
+                        onClick={handleSubmit}
+                    >
+                        {isSubmitting ? "제출 중..." : "제출"}
+                    </SubmitButton>
+                    <SkipButton onClick={handleSkip}>건너뛰기</SkipButton>
                 </ButtonRow>
             </CenterGrid>
 
@@ -92,7 +214,10 @@ const MainLayout = styled.div`
   display: grid;
   grid-template-columns: 15vw 1fr 15vw;
   width: 100vw;
+  min-height: 100vh;
   height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   background: #fff;
   box-sizing: border-box;
 `;
@@ -100,11 +225,12 @@ const MainLayout = styled.div`
 /* 양옆 빗금 영역 */
 const Side = styled.div`
   background-color: #fff;
-  height: 93.5%;
+  height: 100%;
   padding: 2% 6%;
   display: flex;
   justify-content: center;
   align-items: center;
+  box-sizing: border-box;
 `;
 
 const SideInner = styled.div`
@@ -125,14 +251,16 @@ const SideInner = styled.div`
 const CenterGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1.4fr;
-  grid-template-rows: 1fr 1fr 0.7fr;
+  grid-template-rows: 1fr 1fr auto;
   gap: 1vw;
   width: 100%;
   height: 100%;
+  max-height: 100vh;
   padding: 5% 2%;
   box-sizing: border-box;
   border-left: 0.1vw solid #eaeaea;
   border-right: 0.1vw solid #eaeaea;
+  overflow-y: auto;
 `;
 
 /* 각 박스 */
@@ -252,7 +380,7 @@ const ButtonRow = styled.div`
   justify-content: center;
   align-items: center;
   gap: 1vw;
-  margin-top: 2vh;
+  margin-top: 1vh;
 `;
 
 const SubmitButton = styled.button`

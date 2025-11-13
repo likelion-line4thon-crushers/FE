@@ -17,6 +17,9 @@ import {
   ReactionButton,
   TooltipHoverArea,
   Tooltip,
+  FeedbackContainer,
+  FeedbackIcon,
+  FeedbackText,
 } from "./SlideViewer.styles";
 
 import SlideContainer from "./SlideContainer";
@@ -24,6 +27,7 @@ import FocusIcon from "../../assets/images/focus.svg";
 import TimerIcon from "../../assets/images/timer.svg";
 import openeyes from "../../assets/images/openeyes.png";
 import closeeyes from "../../assets/images/closeeyes.png";
+import FeedbackIconImage from "../../assets/images/feedback.svg";
 
 const SlideViewer = ({
   slides,
@@ -36,6 +40,8 @@ const SlideViewer = ({
   onFocusClick,
   focusHighlight = false,
   timer = "00:00",
+  showFeedback = false,
+  feedbackContent = "반응 분석 중 ...",
 }) => {
   const { prev, current, next } = audienceStats;
   const total = Math.max(prev + current + next, 1);
@@ -114,6 +120,20 @@ const SlideViewer = ({
         showStamps={showReactions}
         highlight={focusHighlight}
       />
+
+      {/* 🔹 실시간 피드백 창 */}
+      {showFeedback && (
+        <FeedbackContainer show={showFeedback}>
+          <FeedbackIcon>
+            <img src={FeedbackIconImage} alt="실시간 피드백" />
+          </FeedbackIcon>
+          <FeedbackText>
+            <span>실시간 피드백</span>
+            <span>|</span>
+            <span>{feedbackContent}</span>
+          </FeedbackText>
+        </FeedbackContainer>
+      )}
     </Main>
   );
 };
