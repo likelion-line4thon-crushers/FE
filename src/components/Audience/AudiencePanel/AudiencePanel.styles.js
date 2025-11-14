@@ -238,12 +238,13 @@ export const QuestionInput = styled.textarea`
   resize: none;
   min-height: 1.85vh;
   max-height: 4.7vh;
-  line-height: 20px;
-  padding: 8px 10px;
+  line-height: 4vh;
+  padding: 0 10px;
   height: 100%;
   text-align: left;
   box-sizing: border-box;
   overflow: hidden;
+  vertical-align: middle;
 
   &::placeholder {
     color: #999;
@@ -252,7 +253,7 @@ export const QuestionInput = styled.textarea`
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
-    line-height: 20px;
+    line-height: 4vh;
     letter-spacing: -0.35px;
     text-align: left;
 
@@ -261,9 +262,7 @@ export const QuestionInput = styled.textarea`
 
   &:placeholder-shown {
     text-align: left;
-    justify-content: center;
-    align-items: center;
-    line-height: 20px;
+    line-height: 4vh;
   }
 
   &[disabled] {
