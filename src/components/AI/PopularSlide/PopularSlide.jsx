@@ -87,7 +87,7 @@ const PopularSlide = ({ roomId, deckId }) => {
   // 제목 동적 생성
   const getTitle = () => {
     const emojiName = EMOJI_NAMES[selectedEmojiId] || "재미있는";
-    return `$"{emojiName}" 반응을 가장 많이 받은 슬라이드`;
+    return `"${emojiName}" 반응을 가장 많이 받은 슬라이드`;
   };
 
   // 이모지 선택 핸들러
