@@ -12,7 +12,7 @@ export const CenterContainer = styled.div`
   flex-direction: column;
   flex: 1;
   gap: 1vh;
-  padding: 2vh 1vw;
+  padding: 0vh 1vw;
   position: relative;
   background: #fff;
 `;
