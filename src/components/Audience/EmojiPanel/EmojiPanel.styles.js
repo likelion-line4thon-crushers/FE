@@ -32,8 +32,8 @@ export const EmojiItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.96vh;
-  height: 2.96vh;
+  width: 2.8vh;
+  height: 2.8vh;
   cursor: pointer;
   border-radius: 50%;
   transition: background-color 0.2s ease;
@@ -44,8 +44,8 @@ export const EmojiItem = styled.div`
 `;
 
 export const EmojiIcon = styled.img`
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   filter: grayscale(100%);
 `;
