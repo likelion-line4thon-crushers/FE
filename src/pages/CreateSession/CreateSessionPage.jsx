@@ -27,6 +27,34 @@ const PresentationPrepPage = () => {
   const [slideUrls, setSlideUrls] = useState([]);
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
+  // 🔹 세션 스토리지에서 방 정보 복원
+  useEffect(() => {
+    if (roomData) return; // 이미 roomData가 있으면 스킵
+
+    try {
+      const storedRoomData = JSON.parse(
+        sessionStorage.getItem("boini_room") ||
+        sessionStorage.getItem("roomData") ||
+        "{}"
+      );
+
+      if (storedRoomData && storedRoomData.roomId) {
+        // roomIdParam이 있으면 일치하는지 확인
+        if (roomIdParam && storedRoomData.roomId !== roomIdParam) {
+          return; // roomId가 다르면 스킵
+        }
+
+        // 세션 스토리지에 저장된 방 정보 복원
+        setRoomData(storedRoomData);
+        if (storedRoomData.deckId) {
+          setDeckId(storedRoomData.deckId);
+        }
+      }
+    } catch (error) {
+      console.error("세션 스토리지에서 방 정보 복원 실패:", error);
+    }
+  }, [roomIdParam, roomData]);
+
   // 🔹 빠른 설정 토글 상태 관리
   const [quickSettings, setQuickSettings] = useQuickSettingsStorage();
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
@@ -208,14 +236,51 @@ const PresentationPrepPage = () => {
     }
   }, [isPresenterWsReady, roomId]);
 
+  // 🔹 세션 스토리지에 방 정보가 있으면 슬라이드 URL 복원
+  useEffect(() => {
+    if (!roomData || !roomData.roomId || !roomData.deckId || slideUrls.length > 0) {
+      return;
+    }
+
+    const restoreSlides = async () => {
+      try {
+        // 세션 스토리지에서 totalPages 확인
+        const totalPages = roomData.totalPages || 0;
+        if (totalPages === 0) return;
+
+        // Presigned URL로 원본 슬라이드 불러오기
+        const originalUrls = await fetchAllOriginalSlideUrls(
+          roomData.roomId,
+          roomData.deckId,
+          totalPages
+        );
+
+        setSlideUrls(originalUrls);
+        hasInitializedRef.current = true; // 방 생성 스킵을 위해 플래그 설정
+      } catch (error) {
+        console.error("슬라이드 복원 실패:", error);
+        // 복원 실패 시 기존 로직으로 진행
+        hasInitializedRef.current = false;
+      }
+    };
+
+    restoreSlides();
+  }, [roomData, slideUrls.length]);
+
   // 1. PDF → 이미지 변환
   useEffect(() => {
+    // 세션 스토리지에 방 정보가 있으면 PDF 변환 스킵
+    if (roomData && roomData.roomId) {
+      return;
+    }
+
     if (pdfFile) {
       convertPdfToImages(pdfFile).then(setSlideImageFiles);
-    } else {
+    } else if (!roomData || !roomData.roomId) {
+      // 방 정보도 없고 PDF 파일도 없으면 메인 페이지로 이동
       navigate("/");
     }
-  }, [pdfFile, navigate, convertPdfToImages]);
+  }, [pdfFile, navigate, convertPdfToImages, roomData]);
 
   // 2. 이미지 업로드 + 방 생성
   useEffect(() => {
@@ -224,6 +289,12 @@ const PresentationPrepPage = () => {
     }
 
     if (hasInitializedRef.current) {
+      return;
+    }
+
+    // 세션 스토리지에 방 정보가 있으면 방 생성 스킵
+    if (roomData && roomData.roomId) {
+      hasInitializedRef.current = true;
       return;
     }
 
@@ -262,11 +333,11 @@ const PresentationPrepPage = () => {
         setRoomData(room);
         sessionStorage.setItem(
           "boini_room",
-          JSON.stringify({ ...room, deckId: serverDeckId })
+          JSON.stringify({ ...room, deckId: serverDeckId, totalPages: slideImageFiles.length })
         );
         sessionStorage.setItem(
           "roomData",
-          JSON.stringify({ ...room, deckId: serverDeckId })
+          JSON.stringify({ ...room, deckId: serverDeckId, totalPages: slideImageFiles.length })
         );
 
         if (roomIdParam !== roomId) {
@@ -281,7 +352,7 @@ const PresentationPrepPage = () => {
     };
 
     initRoomAndUpload();
-  }, [slideImageFiles, navigate, roomIdParam, pdfFile]);
+  }, [slideImageFiles, navigate, roomIdParam, pdfFile, roomData]);
 
   // 3. 슬라이드 이미지 로딩 확인
   useEffect(() => {
