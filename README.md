@@ -1,5 +1,5 @@
 # Boini (보이니)
-
+![서비스 화면 1](./src/assets/images/speech/boini_01.jpg)
 ## 📖 서비스 소개
 
 **Boini**는 실시간 프레젠테이션 상호작용 플랫폼입니다. 발표자와 청중이 실시간으로 소통하고, AI 기반 리포트를 통해 프레젠테이션을 분석할 수 있는 서비스입니다.
@@ -28,7 +28,7 @@
   - 발표자 뷰: 프레젠테이션 제어 및 실시간 피드백 확인
   - 청중 뷰: 슬라이드 확인 및 상호작용 참여
 
-![서비스 화면 1](./src/assets/images/speech/boini_01.jpg)
+
 ![서비스 화면 2](./src/assets/images/speech/boini_03.jpg)
 ![서비스 화면 3](./src/assets/images/speech/boini_04.jpg)
 ![서비스 화면 4](./src/assets/images/speech/boini_05.jpg)
@@ -77,12 +77,7 @@
 | `design`   | UI 수정                       |
 | `test`     | 테스트 코드 추가              |
 
-### 브랜치
 
-| 브랜치 | 용도             |
-| ------ | ---------------- |
-| `main` | 배포 브랜치      |
-| `dev`  | 통합 브랜치 역할 |
 
 ### 코드 컨벤션
 
