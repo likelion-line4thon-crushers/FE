@@ -87,7 +87,7 @@ const PopularSlide = ({ roomId, deckId }) => {
   // 제목 동적 생성
   const getTitle = () => {
     const emojiName = EMOJI_NAMES[selectedEmojiId] || "재미있는";
-    return `${emojiName} 반응을 가장 많이 받은 슬라이드`;
+    return `$"{emojiName}" 반응을 가장 많이 받은 슬라이드`;
   };
 
   // 이모지 선택 핸들러
@@ -100,8 +100,8 @@ const PopularSlide = ({ roomId, deckId }) => {
   return (
     <PopularSlideContainer>
       <AITitle
-        title="이모지별 인기슬라이드 "
-        description="이모지별 반응 상위 슬라이드를 정리해드립니다."
+        title="스티커별 인기슬라이드 "
+        description="스티커별 반응 상위 슬라이드를 정리해드립니다."
       />
       <EmojiPanelWrapper>
         <EmojiPanel selectedId={selectedEmojiId} onSelect={handleEmojiSelect} />
@@ -121,7 +121,7 @@ const PopularSlide = ({ roomId, deckId }) => {
             ) : error || !hasData ? (
               <NoSlideMessage>
                 <img src={NoSlideImage} alt="No slides" />
-                <p>해당 이모지 반응을 받은 슬라이드가 없습니다 :(</p>
+                <p>해당 스티커를 받은 슬라이드가 없습니다 :(</p>
               </NoSlideMessage>
             ) : (
               <>
