@@ -264,8 +264,6 @@ export const QuestionInput = styled.textarea`
     justify-content: center;
     align-items: center;
     line-height: 20px;
-
-    margin-left: 5px;
   }
 
   &[disabled] {
