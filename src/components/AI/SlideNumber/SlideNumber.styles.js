@@ -1,7 +1,8 @@
 import styled from "styled-components";
 
 export const SlideNumberButton = styled.button`
-  width: 80px;
+  min-width: 80px;
+  width: auto;
 
   display: flex;
   padding: 6px 10px;
@@ -9,12 +10,21 @@ export const SlideNumberButton = styled.button`
   align-items: center;
   gap: 6px;
   border-radius: 6px;
-  background: #e74d07;
   border: none;
-  color: #fff;
   font-family: Pretendard, sans-serif;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
+
+  ${({ $variant }) =>
+    $variant === "secondary"
+      ? `
+    background: #eaeaea;
+    color: #5C5C5C;;
+  `
+      : `
+    background: #e74d07;
+    color: #fff;
+  `}
 `;

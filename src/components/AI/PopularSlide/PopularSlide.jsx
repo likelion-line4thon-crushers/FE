@@ -137,6 +137,12 @@ const PopularSlide = ({ roomId, deckId }) => {
                     slideNumber={
                       selectedData?.topSlide ? selectedData.topSlide : "-"
                     }
+                    emojiCount={
+                      selectedData?.topCount !== undefined &&
+                      selectedData?.topCount !== null
+                        ? selectedData.topCount
+                        : null
+                    }
                   />
                 </SlideWrapper>
                 {hasSecondSlide && (
@@ -154,6 +160,13 @@ const PopularSlide = ({ roomId, deckId }) => {
                           ? selectedData.secondSlide
                           : "-"
                       }
+                      emojiCount={
+                        selectedData?.secondCount !== undefined &&
+                        selectedData?.secondCount !== null
+                          ? selectedData.secondCount
+                          : null
+                      }
+                      variant="secondary"
                     />
                   </SlideWrapper>
                 )}
