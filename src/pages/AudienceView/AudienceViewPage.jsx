@@ -52,8 +52,30 @@ const AudienceViewPage = () => {
     return "waiting";
   };
 
+  // 세션 스토리지에서 초기 슬라이드 위치 확인 (발표자 현재 페이지)
+  const getInitialSlide = () => {
+    if (!code) return 0;
+    try {
+      const storageKey = `boini_audience_${code}`;
+      const stored = sessionStorage.getItem(storageKey);
+      if (stored) {
+        const storedData = JSON.parse(stored);
+        // currentPage가 있으면 인덱스로 변환 (페이지는 1부터 시작, 인덱스는 0부터)
+        if (storedData.currentPage) {
+          const presenterPage = Number(storedData.currentPage);
+          if (Number.isFinite(presenterPage) && presenterPage > 0) {
+            return presenterPage - 1; // 페이지 번호를 인덱스로 변환
+          }
+        }
+      }
+    } catch (_error) {
+      // 세션 스토리지 읽기 실패 시 기본값 사용
+    }
+    return 0;
+  };
+
   const [slides, setSlides] = useState([]);
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(getInitialSlide);
   const [followPresenter, setFollowPresenter] = useState(true);
   const [selectedEmoji, setSelectedEmoji] = useState(null);
   const [showStamps, setShowStamps] = useState(true);
@@ -89,7 +111,8 @@ const AudienceViewPage = () => {
   const unlockUnsubscribeRef = useRef(null);
   const sessionStateUnsubscribeRef = useRef(null);
   const followPresenterRef = useRef(followPresenter);
-  const prevSlideRef = useRef(0);
+  const initialSlide = getInitialSlide();
+  const prevSlideRef = useRef(initialSlide);
   const lastPresenterPageRef = useRef(0);
   const focusHighlightTimeoutRef = useRef(null);
   const hasNavigatedToRatingRef = useRef(false);
