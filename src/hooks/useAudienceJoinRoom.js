@@ -17,6 +17,91 @@ const useAudienceJoinRoom = ({
   useEffect(() => {
     if (!code) return;
 
+    // 세션 스토리지에서 기존 청중 정보 확인
+    const storageKey = `boini_audience_${code}`;
+    let storedData = null;
+    
+    try {
+      const stored = sessionStorage.getItem(storageKey);
+      if (stored) {
+        storedData = JSON.parse(stored);
+        // audienceId와 audienceToken이 모두 존재하는지 확인
+        if (storedData.audienceId && storedData.audienceToken) {
+          console.log("[useAudienceJoinRoom] 기존 청중 정보 복원 (재호출 방지)");
+          
+          // 세션 스토리지에서 복원
+          window.roomId = storedData.roomId;
+          window.audienceId = storedData.audienceId;
+          window.audienceToken = storedData.audienceToken;
+
+          setRoomId(storedData.roomId);
+          setAudienceId(storedData.audienceId);
+          setAudienceToken(storedData.audienceToken);
+
+          if (storedData.deckId) {
+            setDeckId(storedData.deckId);
+          }
+          if (storedData.totalPages !== undefined && storedData.totalPages !== null) {
+            setTotalPages(Number(storedData.totalPages));
+          }
+          if (storedData.sessionStatus) {
+            setSessionStatus(storedData.sessionStatus);
+          } else {
+            setSessionStatus("waiting");
+          }
+          if (storedData.currentPage) {
+            const presenterPage = Number(storedData.currentPage);
+            if (Number.isFinite(presenterPage) && presenterPage > 0) {
+              lastPresenterPageRef.current = presenterPage;
+            }
+          }
+          if (storedData.sticker !== undefined && storedData.sticker !== null) {
+            setQuickSettings((prev) => ({
+              ...prev,
+              sticker: String(storedData.sticker) === "true",
+            }));
+          }
+          if (storedData.question !== undefined && storedData.question !== null) {
+            setQuickSettings((prev) => ({
+              ...prev,
+              question: String(storedData.question) === "true",
+            }));
+          }
+          if (storedData.feedback !== undefined && storedData.feedback !== null) {
+            setQuickSettings((prev) => ({
+              ...prev,
+              feedback: String(storedData.feedback) === "true",
+            }));
+          }
+          if (storedData.maxPage !== undefined || storedData.slideUnlock !== undefined) {
+            const maxPage = storedData.maxPage ? Number(storedData.maxPage) : null;
+            const slideUnlock = storedData.slideUnlock
+              ? String(storedData.slideUnlock) === "true"
+              : true;
+
+            setUnlockSettings({
+              maxRevealedPage: maxPage,
+              revealAllSlides: slideUnlock,
+              totalPages: storedData.totalPages ? Number(storedData.totalPages) : null,
+              presenterPage: storedData.currentPage
+                ? Number(storedData.currentPage)
+                : null,
+            });
+          }
+          if (storedData.wsUrl) {
+            setWsUrl(storedData.wsUrl);
+          }
+          
+          // 기존 정보가 있으면 API 호출하지 않고 종료
+          return;
+        }
+      }
+    } catch (_error) {
+      // 세션 스토리지 읽기 실패 시 무시하고 API 호출 진행
+      console.warn("[useAudienceJoinRoom] 세션 스토리지 읽기 실패, API 호출 진행");
+    }
+
+    // 세션 스토리지에 정보가 없으면 API 호출
     const handleJoinRoom = async () => {
       try {
         const joinData = await joinRoom(code);
@@ -24,6 +109,44 @@ const useAudienceJoinRoom = ({
         window.roomId = joinData.roomId;
         window.audienceId = joinData.audienceId;
         window.audienceToken = joinData.audienceToken;
+
+        // 세션 스토리지에 청중 정보 저장
+        try {
+          const dataToStore = {
+            roomId: joinData.roomId,
+            audienceId: joinData.audienceId,
+            audienceToken: joinData.audienceToken,
+            deckId: joinData.deckId || joinData.deckID || joinData.deck?.deckId || joinData.presentation?.deckId,
+            totalPages: joinData.totalPages || joinData.deck?.totalPages || joinData.presentation?.totalPages,
+            sessionStatus: joinData.sessionStatus || "waiting",
+            currentPage: joinData.currentPage,
+            sticker: joinData.sticker,
+            question: joinData.question,
+            feedback: joinData.feedback,
+            maxPage: joinData.maxPage,
+            slideUnlock: joinData.slideUnlock,
+            wsUrl: (() => {
+              let wsUrlValue = joinData.wsUrl;
+              if (!wsUrlValue) {
+                const apiBaseUrl =
+                  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+                wsUrlValue = `${apiBaseUrl}/ws/audience`;
+              } else {
+                if (wsUrlValue.includes(",")) {
+                  wsUrlValue = wsUrlValue.split(",")[0].trim();
+                }
+                if (!wsUrlValue.endsWith("/audience")) {
+                  wsUrlValue = wsUrlValue.replace(/\/ws\/?$/, "/ws/audience");
+                }
+              }
+              return wsUrlValue;
+            })(),
+          };
+          sessionStorage.setItem(storageKey, JSON.stringify(dataToStore));
+          console.log("[useAudienceJoinRoom] 청중 정보를 세션 스토리지에 저장");
+        } catch (storageError) {
+          console.warn("[useAudienceJoinRoom] 세션 스토리지 저장 실패:", storageError);
+        }
 
         setRoomId(joinData.roomId);
         setAudienceId(joinData.audienceId);

@@ -58,3 +58,19 @@ export const closeSession = async (roomId) => {
     throw error;
   }
 };
+
+export const leaveRoom = async (roomId, audienceId, audienceJWT) => {
+  if (!roomId || !audienceId || !audienceJWT) {
+    throw new Error("roomId, audienceId, audienceJWT가 필요합니다.");
+  }
+
+  try {
+    const res = await api.post(`/api/rooms/leave/${roomId}`, {
+      audienceId,
+      audienceJWT,
+    });
+    return res?.data?.data ?? null;
+  } catch (error) {
+    throw error;
+  }
+};

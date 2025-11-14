@@ -8,10 +8,11 @@ export const PageContainer = styled.div`
 
 export const CenterContainer = styled.div`
   display: flex;
+  height: 100%;
   flex-direction: column;
   flex: 1;
-  gap: 1.48vh;
-  padding: 0.93vh 0.52vw;
+  gap: 1vh;
+  padding: 2vh 1vw;
   position: relative;
   background: #fff;
 `;
@@ -20,6 +21,5 @@ export const RightPanelContainer = styled.div`
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
-  flex-shrink: 0;
-  min-width: 0;
+  height: 100%;
 `;

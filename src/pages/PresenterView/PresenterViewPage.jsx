@@ -89,7 +89,24 @@ const PresenterViewPage = () => {
     return fallback ?? "http://localhost:8080/ws/presenter";
   }, [locationState.wsUrl, storedRoomData.wsUrl]);
 
-  const [currentSlide, setCurrentSlide] = useState(0);
+  // 🔹 세션 스토리지에서 현재 슬라이드 복원
+  const getInitialSlide = useMemo(() => {
+    if (!roomId) return 0;
+    try {
+      const stored = sessionStorage.getItem(`boini_current_slide_${roomId}`);
+      if (stored !== null) {
+        const parsed = Number(stored);
+        if (Number.isFinite(parsed) && parsed >= 0) {
+          return parsed;
+        }
+      }
+    } catch (_error) {
+      // ignore storage read errors
+    }
+    return 0;
+  }, [roomId]);
+
+  const [currentSlide, setCurrentSlide] = useState(getInitialSlide);
   const [showReactions, setShowReactions] = useState(true);
   const [showStampsInViewer, setShowStampsInViewer] = useState(true);
 
@@ -98,6 +115,17 @@ const PresenterViewPage = () => {
   useEffect(() => {
     currentSlideRef.current = currentSlide;
   }, [currentSlide]);
+
+  // 🔹 현재 슬라이드를 세션 스토리지에 저장
+  useEffect(() => {
+    if (roomId && Number.isFinite(currentSlide) && currentSlide >= 0) {
+      try {
+        sessionStorage.setItem(`boini_current_slide_${roomId}`, String(currentSlide));
+      } catch (_error) {
+        // ignore storage write errors
+      }
+    }
+  }, [currentSlide, roomId]);
 
   // 🔹 커스텀 훅 사용
   const { slideUrls, loading } = useSlideLoader({ roomId, deckId, totalPages });
@@ -138,6 +166,21 @@ const PresenterViewPage = () => {
   };
 
   const slideCount = slideUrls.length;
+
+  // 🔹 슬라이드 로드 후 저장된 슬라이드 번호가 유효한지 확인
+  useEffect(() => {
+    if (slideCount > 0 && currentSlide >= slideCount) {
+      // 저장된 슬라이드 번호가 유효하지 않으면 0으로 리셋
+      setCurrentSlide(0);
+      if (roomId) {
+        try {
+          sessionStorage.setItem(`boini_current_slide_${roomId}`, "0");
+        } catch (_error) {
+          // ignore storage write errors
+        }
+      }
+    }
+  }, [slideCount, currentSlide, roomId]);
 
   const changeSlide = useCallback(
     (nextIndex, { broadcast = true } = {}) => {
