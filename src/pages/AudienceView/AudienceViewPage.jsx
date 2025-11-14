@@ -33,6 +33,25 @@ const AudienceViewPage = () => {
   const { code } = useParams();
   const navigate = useNavigate();
 
+  // 세션 스토리지에서 초기 sessionStatus 확인
+  const getInitialSessionStatus = () => {
+    if (!code) return "waiting";
+    try {
+      const storageKey = `boini_audience_${code}`;
+      const stored = sessionStorage.getItem(storageKey);
+      if (stored) {
+        const storedData = JSON.parse(stored);
+        // audienceId와 audienceToken이 있고 sessionStatus가 있으면 복원
+        if (storedData.audienceId && storedData.audienceToken && storedData.sessionStatus) {
+          return storedData.sessionStatus;
+        }
+      }
+    } catch (_error) {
+      // 세션 스토리지 읽기 실패 시 기본값 사용
+    }
+    return "waiting";
+  };
+
   const [slides, setSlides] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [followPresenter, setFollowPresenter] = useState(true);
@@ -48,7 +67,7 @@ const AudienceViewPage = () => {
   const [slidesError, setSlidesError] = useState(null);
   const [isWebsocketReady, setIsWebsocketReady] = useState(false);
   const [showFocusHighlight, setShowFocusHighlight] = useState(false);
-  const [sessionStatus, setSessionStatus] = useState("waiting"); // 기본값은 waiting
+  const [sessionStatus, setSessionStatus] = useState(getInitialSessionStatus);
 
   // 🔹 빠른 설정 옵션 상태 (발표자로부터 받은 설정)
   const [quickSettings, setQuickSettings] = useState({
@@ -185,6 +204,24 @@ const AudienceViewPage = () => {
   useEffect(() => {
     followPresenterRef.current = followPresenter;
   }, [followPresenter]);
+
+  // 🔹 sessionStatus 변경 시 세션 스토리지에 저장
+  useEffect(() => {
+    if (!code || !roomId) return;
+    
+    try {
+      const storageKey = `boini_audience_${code}`;
+      const stored = sessionStorage.getItem(storageKey);
+      if (stored) {
+        const storedData = JSON.parse(stored);
+        // sessionStatus 업데이트
+        storedData.sessionStatus = sessionStatus;
+        sessionStorage.setItem(storageKey, JSON.stringify(storedData));
+      }
+    } catch (_error) {
+      // 세션 스토리지 업데이트 실패 시 무시
+    }
+  }, [sessionStatus, code, roomId]);
 
   // 🔹 방 입장 및 초기 설정 처리
   useAudienceJoinRoom({
