@@ -23,10 +23,11 @@ export const usePresenterWebSocket = ({
 
     const onConnect = () => {
       setIsPresenterWsReady(true);
+      const initialPageIndex = currentSlideRef.current;
       websocketService.sendPageChange(
         roomId,
-        currentSlideRef.current,
-        currentSlideRef.current
+        initialPageIndex,
+        initialPageIndex
       );
     };
 
@@ -55,8 +56,10 @@ export const usePresenterWebSocket = ({
     const unsubscribe = websocketService.subscribe(
       `/topic/presentation/${roomId}/pageChange/audience`,
       (data) => {
-        const nextSlide = Number(data?.changedPage);
-        if (Number.isFinite(nextSlide)) {
+        // 청중은 페이지 번호(1부터 시작)를 보내므로 인덱스(0부터 시작)로 변환
+        const changedPageNumber = Number(data?.changedPage);
+        const nextSlide = Number.isFinite(changedPageNumber) ? changedPageNumber - 1 : NaN;
+        if (Number.isFinite(nextSlide) && nextSlide >= 0) {
           changeSlide(nextSlide, { broadcast: false });
         }
       }

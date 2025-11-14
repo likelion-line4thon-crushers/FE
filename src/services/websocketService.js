@@ -69,14 +69,14 @@ class WebSocketService {
   }
 
   // 발표자: 페이지 변경 이벤트 전송
-  sendPageChange(sessionId, beforePage, changedPage) {
+  // beforePage, changedPage는 인덱스(0부터 시작)를 받아서 페이지 번호(1부터 시작)로 변환하여 전송
+  sendPageChange(sessionId, beforePageIndex, changedPageIndex) {
     const destination = `/app/presentation/${sessionId}/pageChange/presenter`;
+    // 인덱스를 페이지 번호로 변환 (인덱스 0 = 페이지 1)
+    const beforePage = beforePageIndex + 1;
+    const changedPage = changedPageIndex + 1;
     const body = { beforePage, changedPage };
-    console.log("[sendPageChange] 발표자 슬라이드 이동 전송:", {
-      destination,
-      sessionId,
-      body,
-    });
+    console.log("🔵 [발표자] 페이지 변경 전송 body:", body);
     this.send(
       destination,
       body,
@@ -87,6 +87,7 @@ class WebSocketService {
   // 청중: 페이지 변경 이벤트 전송
   sendAudiencePageChange(sessionId, audienceId, beforePage, changedPage) {
     const body = { audienceId, beforePage, changedPage };
+    console.log("🟢 [청중] 페이지 변경 전송 body:", body);
     this.send(
       `/app/presentation/${sessionId}/pageChange/audience`,
       body,

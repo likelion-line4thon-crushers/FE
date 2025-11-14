@@ -92,9 +92,14 @@ const useAudienceWebSocketSubscriptions = ({
           return;
         }
 
-        const newSlideIndex = Number(data.changedPage);
-        if (Number.isFinite(newSlideIndex)) {
+        // 발표자가 보낸 페이지 번호(1부터 시작)를 인덱스(0부터 시작)로 변환
+        const changedPageNumber = Number(data.changedPage);
+        const newSlideIndex = Number.isFinite(changedPageNumber) ? changedPageNumber - 1 : NaN;
+        
+        if (Number.isFinite(newSlideIndex) && newSlideIndex >= 0) {
           lastPresenterPageRef.current = newSlideIndex;
+        } else {
+          return;
         }
 
         if (!followPresenterRef.current) {
@@ -241,21 +246,23 @@ const useAudienceWebSocketSubscriptions = ({
         return;
       }
 
-      let parsedNumber;
+      let parsedPageNumber;
       try {
-        parsedNumber = Number(JSON.parse(trimmed));
-        if (!Number.isFinite(parsedNumber)) {
+        parsedPageNumber = Number(JSON.parse(trimmed));
+        if (!Number.isFinite(parsedPageNumber)) {
           throw new Error("NaN");
         }
       } catch (error) {
-        parsedNumber = Number(trimmed.replace(/^"+|"+$/g, ""));
+        parsedPageNumber = Number(trimmed.replace(/^"+|"+$/g, ""));
       }
 
-      if (!Number.isFinite(parsedNumber) || parsedNumber < 0) {
+      // focusOn은 페이지 번호(1부터 시작)를 보내므로 인덱스(0부터 시작)로 변환
+      if (!Number.isFinite(parsedPageNumber) || parsedPageNumber < 1) {
         return;
       }
 
-      lastPresenterPageRef.current = parsedNumber;
+      const parsedIndex = parsedPageNumber - 1;
+      lastPresenterPageRef.current = parsedIndex;
 
       // 집중유도 신호 수신 시 '발표자와 함께보기' 강제 활성화
       if (typeof setFollowPresenter === "function") {
@@ -265,7 +272,7 @@ const useAudienceWebSocketSubscriptions = ({
 
       triggerFocusHighlight();
 
-      changeCurrentSlide(parsedNumber, {
+      changeCurrentSlide(parsedIndex, {
         source: "focusOn",
         broadcast: true,
         preserveFollowState: true,
