@@ -95,7 +95,7 @@ export const SummaryBoxContainer = styled.div`
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  gap: 5px;
+  gap: 1px;
 
   padding-right: 2.8vw;
 
@@ -123,5 +123,18 @@ export const SummaryBoxContainer = styled.div`
     word-break: break-word;
     overflow-wrap: anywhere;
     margin-top: 25px;
+  }
+  h2 {
+    color: #5c5c5c;
+
+    font-family: Pretendard;
+    font-size: 28px;
+
+    font-weight: 600;
+    margin-bottom: 0;
+  }
+
+  & > ${SmallDivider} {
+    margin-top: 23px;
   }
 `;

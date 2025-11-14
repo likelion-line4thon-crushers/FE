@@ -17,7 +17,7 @@ import ContentBox from "../ContentBox/ContentBox";
 import SatisfyImage from "../../../assets/images/AI/Satisfy.png";
 import StarImage from "../../../assets/images/AI/Star.png";
 import RectangleImage from "../../../assets/images/AI/Rectangle.png";
-import faceImage from "../../../assets/images/emoji1_black.svg";
+import GrayFaceImage from "../../../assets/images/AI/reviewslide_face.png";
 import { fetchFeedbackReport } from "../../../services/aiReportService";
 import {
   loadStoredRoomData,
@@ -169,7 +169,7 @@ const ReviewSlide = () => {
             width="640px"
           >
             <SummaryBoxContainer>
-              <img className="icon-image" src={faceImage} alt="face" />
+              <img className="icon-image" src={GrayFaceImage} alt="face" />
               <h2>청중 후기 요약</h2>
               <SmallDivider />
               <h3>{summaryText}</h3>

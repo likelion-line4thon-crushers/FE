@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Top3Container, QuestionContainer } from "./Top3.styles";
+import {
+  Top3Container,
+  QuestionContainer,
+  QuestionContentWrapper,
+  QuestionText,
+  QuestionMeta,
+} from "./Top3.styles";
 import ContentBox from "../ContentBox/ContentBox";
 import AITitle from "../AITitle/AITitle";
 import {
@@ -9,9 +15,13 @@ import {
 } from "../../../utils/aiReportRoom";
 import { fetchTopQuestionsReport } from "../../../services/aiReportService";
 
-const formatTopQuestionContent = (item) => {
+const getQuestionData = (item) => {
   if (!item) {
-    return "해당 순위의 질문이 없습니다.";
+    return {
+      question: "해당 순위의 질문이 없습니다.",
+      similarCount: null,
+      relatedSlides: null,
+    };
   }
 
   const mainQuestion =
@@ -20,19 +30,12 @@ const formatTopQuestionContent = (item) => {
       ? item.samples[0]
       : null);
 
-  const detailParts = [];
-
-  if (item.count) {
-    detailParts.push(`총 ${item.count}개의 유사 질문`);
-  }
-
-  if (Array.isArray(item.slides) && item.slides.length > 0) {
-    detailParts.push(`관련 슬라이드: ${item.slides.join(", ")}`);
-  }
-
-  const detailText = detailParts.length ? `\n(${detailParts.join(" / ")})` : "";
-
-  return `${mainQuestion ?? "질문 내용을 불러올 수 없습니다."}${detailText}`;
+  return {
+    question: mainQuestion ?? "질문 내용을 불러올 수 없습니다.",
+    similarCount: item.count || null,
+    relatedSlides:
+      Array.isArray(item.slides) && item.slides.length > 0 ? item.slides : null,
+  };
 };
 
 const Top3 = () => {
@@ -90,19 +93,49 @@ const Top3 = () => {
 
   const topItems = report?.top3 ?? [];
 
-  const contentForIndex = (index) => {
+  const questionDataForIndex = (index) => {
     if (loading) {
-      return "• 질문 데이터를 불러오는 중입니다...";
+      return {
+        question: "• 질문 데이터를 불러오는 중입니다...",
+        similarCount: null,
+        relatedSlides: null,
+      };
     }
 
     if (error) {
-      return "• 질문 데이터를 불러오는 중 문제가 발생했습니다.";
+      return {
+        question: "• 질문 데이터를 불러오는 중 문제가 발생했습니다.",
+        similarCount: null,
+        relatedSlides: null,
+      };
     }
 
-    return formatTopQuestionContent(topItems[index]);
+    return getQuestionData(topItems[index]);
   };
 
   const titleForIndex = (index) => `Top ${index + 1} 질문`;
+
+  const renderQuestionContent = (index) => {
+    const { question, similarCount, relatedSlides } =
+      questionDataForIndex(index);
+    const hasMeta = similarCount !== null || relatedSlides !== null;
+
+    return (
+      <QuestionContentWrapper>
+        <QuestionText>{question}</QuestionText>
+        {hasMeta && (
+          <QuestionMeta>
+            {similarCount !== null && (
+              <div>총 {similarCount}개의 유사 질문</div>
+            )}
+            {relatedSlides !== null && (
+              <div>관련 슬라이드: {relatedSlides.join(", ")}</div>
+            )}
+          </QuestionMeta>
+        )}
+      </QuestionContentWrapper>
+    );
+  };
 
   return (
     <Top3Container>
@@ -113,25 +146,28 @@ const Top3 = () => {
       <QuestionContainer>
         <ContentBox
           title={titleForIndex(0)}
-          content={contentForIndex(0)}
-          variant="text"
+          variant="custom"
           width="auto"
           height="auto"
-        />
+        >
+          {renderQuestionContent(0)}
+        </ContentBox>
         <ContentBox
           title={titleForIndex(1)}
-          content={contentForIndex(1)}
-          variant="text"
+          variant="custom"
           width="auto"
           height="auto"
-        />
+        >
+          {renderQuestionContent(1)}
+        </ContentBox>
         <ContentBox
           title={titleForIndex(2)}
-          content={contentForIndex(2)}
-          variant="text"
+          variant="custom"
           width="auto"
           height="auto"
-        />
+        >
+          {renderQuestionContent(2)}
+        </ContentBox>
       </QuestionContainer>
     </Top3Container>
   );
