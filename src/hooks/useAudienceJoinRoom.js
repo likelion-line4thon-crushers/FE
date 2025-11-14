@@ -52,7 +52,8 @@ const useAudienceJoinRoom = ({
           if (storedData.currentPage) {
             const presenterPage = Number(storedData.currentPage);
             if (Number.isFinite(presenterPage) && presenterPage > 0) {
-              lastPresenterPageRef.current = presenterPage;
+              // 페이지 번호(1부터 시작)를 인덱스(0부터 시작)로 변환
+              lastPresenterPageRef.current = presenterPage - 1;
             }
           }
           if (storedData.sticker !== undefined && storedData.sticker !== null) {
@@ -179,7 +180,8 @@ const useAudienceJoinRoom = ({
         if (joinData.currentPage) {
           const presenterPage = Number(joinData.currentPage);
           if (Number.isFinite(presenterPage) && presenterPage > 0) {
-            lastPresenterPageRef.current = presenterPage;
+            // 페이지 번호(1부터 시작)를 인덱스(0부터 시작)로 변환
+            lastPresenterPageRef.current = presenterPage - 1;
           }
         }
 

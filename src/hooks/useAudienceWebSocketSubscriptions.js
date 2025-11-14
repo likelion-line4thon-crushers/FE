@@ -143,6 +143,12 @@ const useAudienceWebSocketSubscriptions = ({
           const revealAll = String(payload?.revealAllSlides) === "true";
           const presenterPage = Number(payload?.presenterPage);
 
+          // unlock 토픽에서 받은 presenterPage도 lastPresenterPageRef에 업데이트
+          // (페이지 번호를 인덱스로 변환)
+          if (Number.isFinite(presenterPage) && presenterPage > 0) {
+            lastPresenterPageRef.current = presenterPage - 1;
+          }
+
           setUnlockSettings({
             maxRevealedPage: maxPage,
             revealAllSlides: revealAll,
