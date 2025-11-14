@@ -92,34 +92,8 @@ const useAudienceJoinRoom = ({
             setWsUrl(storedData.wsUrl);
           }
           
-          // 기존 정보가 있어도 최신 currentPage를 받아오기 위해 API 호출
-          // (중복 방지는 하지 않지만, 최신 발표자 위치 동기화를 위해 필요)
-          const updateCurrentPage = async () => {
-            try {
-              const joinData = await joinRoom(code);
-              
-              // currentPage만 업데이트
-              if (joinData.currentPage) {
-                const presenterPage = Number(joinData.currentPage);
-                if (Number.isFinite(presenterPage) && presenterPage > 0) {
-                  lastPresenterPageRef.current = presenterPage;
-                  
-                  // 세션 스토리지의 currentPage도 업데이트
-                  try {
-                    storedData.currentPage = presenterPage;
-                    sessionStorage.setItem(storageKey, JSON.stringify(storedData));
-                  } catch (_storageError) {
-                    // 세션 스토리지 업데이트 실패 시 무시
-                  }
-                }
-              }
-            } catch (_apiError) {
-              // API 호출 실패 시 기존 정보 사용
-              console.warn("[useAudienceJoinRoom] 최신 currentPage 조회 실패, 기존 정보 사용");
-            }
-          };
-          
-          updateCurrentPage();
+          // 기존 정보가 있으면 API 호출하지 않고 종료
+          // currentPage는 WebSocket을 통해 실시간으로 업데이트됨
           return;
         }
       }
