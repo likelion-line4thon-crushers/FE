@@ -42,6 +42,18 @@ export const SlideContainer = styled.div`
   margin-top: 20px;
 `;
 
+export const SlideWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+
+  &:last-child {
+    flex: 0 0 400px;
+  }
+`;
+
 export const LargeSlide = styled.div`
   flex: 1;
   background: #ffffff;
