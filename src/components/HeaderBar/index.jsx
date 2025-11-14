@@ -132,6 +132,7 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
   const [isSessionEnding, setIsSessionEnding] = useState(false);
   const [showLandingPage, setShowLandingPage] = useState(false);
   const [landingMessage, setLandingMessage] = useState("AI 리포트 생성 중 ...");
+  const [sessionStatus, setSessionStatus] = useState("waiting");
 
   /* ✅ 새로고침 또는 state 유실 시 sessionStorage 복구 */
   useEffect(() => {
@@ -151,7 +152,41 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
     }
   }, [location.state]);
 
-  /* ✅ 세션 시작 / 종료 버튼 */
+  // 청중 뷰일 때 sessionStatus 확인
+  useEffect(() => {
+    if (!isAudienceView) {
+      return;
+    }
+
+    const getSessionStatus = () => {
+      try {
+        const code = location.pathname.split("/").pop();
+        if (code) {
+          const storageKey = `boini_audience_${code}`;
+          const stored = sessionStorage.getItem(storageKey);
+          if (stored) {
+            const storedData = JSON.parse(stored);
+            return storedData.sessionStatus || "waiting";
+          }
+        }
+      } catch (_error) {
+        // ignore
+      }
+      return "waiting";
+    };
+
+    // 초기 상태 설정
+    setSessionStatus(getSessionStatus());
+
+    const interval = setInterval(() => {
+      setSessionStatus(getSessionStatus());
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isAudienceView, location.pathname]);
+
   const handleSessionAction = async () => {
     if (isSessionEnding) {
       return;
@@ -315,7 +350,7 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
 
         {!isMain && (
           <Body>
-            {isAudienceView && (
+            {isAudienceView && sessionStatus !== "waiting" && (
               <LiveBadge>
                 <img src={LiveIcon} alt="live" />
                 라이브 진행 중
