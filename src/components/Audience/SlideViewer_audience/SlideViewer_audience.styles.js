@@ -44,10 +44,7 @@ export const SlideBox = styled.div`
   background-color: white;
   padding: 0;
   width: 100%;
-  max-width: 100%;
   aspect-ratio: 16/9;
-  height: auto;
-  max-height: 70vh;
   overflow: hidden;
   position: relative;
   display: flex;

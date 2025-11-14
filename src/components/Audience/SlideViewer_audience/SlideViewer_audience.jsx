@@ -114,7 +114,8 @@ const SlideViewer = ({
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
+                objectFit: "contain",
+                borderRadius: "0.6vw",
                 userSelect: "none",
                 pointerEvents: "none",
                 display: "block",
