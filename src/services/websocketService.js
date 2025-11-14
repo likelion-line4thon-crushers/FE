@@ -71,16 +71,11 @@ class WebSocketService {
   // 발표자: 페이지 변경 이벤트 전송
   sendPageChange(sessionId, beforePage, changedPage) {
     const destination = `/app/presentation/${sessionId}/pageChange/presenter`;
-    // 슬라이드는 0부터 시작하지만 서버에는 1부터 시작하도록 전송
-    const body = { 
-      beforePage: beforePage + 1, 
-      changedPage: changedPage + 1 
-    };
+    const body = { beforePage, changedPage };
     console.log("[sendPageChange] 발표자 슬라이드 이동 전송:", {
       destination,
       sessionId,
       body,
-      "원본 인덱스 (0부터)": { beforePage, changedPage },
     });
     this.send(
       destination,
