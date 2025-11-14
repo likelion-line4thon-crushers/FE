@@ -9,7 +9,7 @@ import {
   ExitButton,
   StartSessionButton,
 } from "../common/HeaderButtons";
-import { startSession, closeSession } from "../../services/roomService";
+import { startSession, closeSession, leaveRoom } from "../../services/roomService";
 import {
   fetchTopSlideReport,
   fetchTopQuestionsReport,
@@ -272,6 +272,36 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
     setShowShareModal(true);
   };
 
+  const handleExitClick = async () => {
+    if (isAudienceView) {
+      // 청중 뷰일 때는 방 퇴장 API 호출
+      const roomId = window.roomId || null;
+      const audienceId = window.audienceId || null;
+      const audienceToken = window.audienceToken || null;
+
+      if (roomId && audienceId && audienceToken) {
+        try {
+          await leaveRoom(roomId, audienceId, audienceToken);
+          
+          // 세션 스토리지에서 청중 정보 제거
+          try {
+            const code = location.pathname.split("/").pop();
+            if (code) {
+              const storageKey = `boini_audience_${code}`;
+              sessionStorage.removeItem(storageKey);
+            }
+          } catch (_error) {
+            // 세션 스토리지 제거 실패 시 무시
+          }
+        } catch (error) {
+          // API 호출 실패해도 메인 페이지로 이동
+        }
+      }
+    }
+    
+    navigate("/");
+  };
+
   return (
     <>
       <HeaderWrapper>
@@ -310,7 +340,7 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
             )}
 
             {(isAudienceView || isAiReport) && (
-              <ExitButton onClick={() => navigate("/")} />
+              <ExitButton onClick={handleExitClick} />
             )}
           </RightActions>
         )}
