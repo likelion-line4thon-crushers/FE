@@ -234,6 +234,19 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
       setShowLandingPage(true);
       let didNavigate = false;
       try {
+        // 세션 종료 버튼을 누르자마자 웹소켓 알림을 먼저 전송
+        if (websocketService.getIsConnected()) {
+          try {
+            websocketService.sendEndSession(resolvedRoomId);
+            console.log("[HeaderBar] 세션 종료 웹소켓 알림 전송 완료:", resolvedRoomId);
+          } catch (wsError) {
+            console.warn("[HeaderBar] 웹소켓 알림 전송 실패 (계속 진행):", wsError);
+          }
+        } else {
+          console.warn("[HeaderBar] WebSocket이 연결되지 않아 알림을 전송할 수 없습니다.");
+        }
+
+        //  AI 리포트 데이터 선행 호출
         const reportCalls = [
           fetchTopStoredReport(resolvedRoomId),
           fetchTopSlideReport(resolvedRoomId, { latestFirst: true }),
@@ -253,12 +266,9 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
           );
         }
 
+        // 세션 종료 API 호출
         await closeSession(resolvedRoomId);
         console.log("[HeaderBar] 세션 종료 API(DELETE) 성공:", resolvedRoomId);
-
-        if (websocketService.getIsConnected()) {
-          websocketService.sendEndSession(resolvedRoomId);
-        }
 
         const nextState = {
           roomId: resolvedRoomId,
