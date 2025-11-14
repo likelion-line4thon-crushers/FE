@@ -75,11 +75,11 @@ const Box = styled.div`
     striped &&
     css`
         background-image: repeating-linear-gradient(
-        135deg,              /* ↘️ 오른쪽 위 → 왼쪽 아래 */
+        135deg,              
         #f3f3f3 0,
-        #f3f3f3 0.1vw,       /* 🔹 더 얇게 */
+        #f3f3f3 0.1vw,       
         transparent 0.1vw,
-        transparent 0.3vw    /* 🔹 더 촘촘하게 */
+        transparent 0.3vw    
       );
     `}
 
@@ -158,7 +158,7 @@ const UploadBox = styled.div`
   }
 
   .arrow {
-    font-size: 1.2vw;
+    font-size: 18px;
     color:rgb(255, 255, 255);
     margin-left: 0.5vw;
     margin-right: 0.2vw;
@@ -170,6 +170,8 @@ const UploadBox = styled.div`
     align-items: center;
     justify-content: center;
     line-height: 1;
+    min-width: 18px;
+    min-height: 18px;
     
     ${({ $hasFile }) =>
       $hasFile &&
