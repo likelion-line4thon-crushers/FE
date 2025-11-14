@@ -146,9 +146,7 @@ const QuestionSlide = () => {
       <TotalContainer>
         <LeftBoxContainer>
           <ContentBox
-            title={`질문이 가장 많았던 슬라이드${
-              totalQuestions ? ` (${totalQuestions}문)` : ""
-            }`}
+            title="질문이 가장 많았던 슬라이드"
             slideImage={slideImageUrl}
             height="350px"
             width="570px"

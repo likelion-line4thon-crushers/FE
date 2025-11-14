@@ -2,7 +2,8 @@ import styled from "styled-components";
 
 export const PageContainer = styled.div`
   display: flex;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: #fff;
 `;
 
@@ -12,13 +13,20 @@ export const CenterContainer = styled.div`
   flex: 1;
   align-items: center;
   justify-content: center;
-  padding: 2vh 2vw;
   gap: 2vh;
   background: #fff;
 `;
 
-export const RightPanelContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
+export const WaitingImage = styled.img`
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+`;
+
+export const WaitingMessage = styled.p`
+  font-family: Pretendard;
+  font-size: 18px;
+  font-weight: 400;
+  color: #666;
+  margin: 0;
 `;

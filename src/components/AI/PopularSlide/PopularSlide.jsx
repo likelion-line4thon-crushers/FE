@@ -7,11 +7,13 @@ import {
   SmallSlide,
   NoSlideMessage,
   SectionContainer,
+  SlideWrapper,
 } from "./PopularSlide.styles";
 import EmojiPanel from "../../Audience/EmojiPanel";
 import ContentBox from "../ContentBox/ContentBox";
 import NoSlideImage from "../../../assets/images/AI/NoSlide.png";
 import AITitle from "../AITitle/AITitle";
+import SlideNumber from "../SlideNumber/SlideNumber";
 import { fetchMostReactionSticker } from "../../../services/aiReportService";
 import useSlideImage from "../../../hooks/useSlideImage";
 import SlideSkeleton from "../SlideSkeleton/SlideSkeleton";
@@ -123,21 +125,37 @@ const PopularSlide = ({ roomId, deckId }) => {
               </NoSlideMessage>
             ) : (
               <>
-                <LargeSlide>
-                  {firstSlideUrl ? (
-                    <img src={firstSlideUrl} alt="Most popular slide" />
-                  ) : (
-                    <SlideSkeleton width="100%" height="100%" />
-                  )}
-                </LargeSlide>
-                {hasSecondSlide && (
-                  <SmallSlide>
-                    {secondSlideUrl ? (
-                      <img src={secondSlideUrl} alt="Second popular slide" />
+                <SlideWrapper>
+                  <LargeSlide>
+                    {firstSlideUrl ? (
+                      <img src={firstSlideUrl} alt="Most popular slide" />
                     ) : (
                       <SlideSkeleton width="100%" height="100%" />
                     )}
-                  </SmallSlide>
+                  </LargeSlide>
+                  <SlideNumber
+                    slideNumber={
+                      selectedData?.topSlide ? selectedData.topSlide : "-"
+                    }
+                  />
+                </SlideWrapper>
+                {hasSecondSlide && (
+                  <SlideWrapper>
+                    <SmallSlide>
+                      {secondSlideUrl ? (
+                        <img src={secondSlideUrl} alt="Second popular slide" />
+                      ) : (
+                        <SlideSkeleton width="100%" height="100%" />
+                      )}
+                    </SmallSlide>
+                    <SlideNumber
+                      slideNumber={
+                        selectedData?.secondSlide
+                          ? selectedData.secondSlide
+                          : "-"
+                      }
+                    />
+                  </SlideWrapper>
                 )}
               </>
             )}
