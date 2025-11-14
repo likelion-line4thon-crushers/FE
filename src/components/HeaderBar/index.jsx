@@ -9,7 +9,11 @@ import {
   ExitButton,
   StartSessionButton,
 } from "../common/HeaderButtons";
-import { startSession, closeSession, leaveRoom } from "../../services/roomService";
+import {
+  startSession,
+  closeSession,
+  leaveRoom,
+} from "../../services/roomService";
 import {
   fetchTopSlideReport,
   fetchTopQuestionsReport,
@@ -282,7 +286,7 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
       if (roomId && audienceId && audienceToken) {
         try {
           await leaveRoom(roomId, audienceId, audienceToken);
-          
+
           // 세션 스토리지에서 청중 정보 제거
           try {
             const code = location.pathname.split("/").pop();
@@ -298,7 +302,7 @@ function HeaderBar({ roomData: propRoomData, totalPages }) {
         }
       }
     }
-    
+
     navigate("/");
   };
 
