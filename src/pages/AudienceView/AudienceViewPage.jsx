@@ -166,6 +166,7 @@ const AudienceViewPage = () => {
     changeCurrentSlide,
     currentSlide,
     followPresenterRef,
+    setFollowPresenter,
     lastPresenterPageRef,
     setSessionStatus,
     setQuickSettings,

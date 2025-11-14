@@ -12,6 +12,7 @@ const useAudienceWebSocketSubscriptions = ({
   changeCurrentSlide,
   currentSlide,
   followPresenterRef,
+  setFollowPresenter,
   lastPresenterPageRef,
   setSessionStatus,
   setQuickSettings,
@@ -209,6 +210,7 @@ const useAudienceWebSocketSubscriptions = ({
     changeCurrentSlide,
     currentSlide,
     followPresenterRef,
+    setFollowPresenter,
     lastPresenterPageRef,
     setSessionStatus,
     setQuickSettings,
@@ -255,9 +257,11 @@ const useAudienceWebSocketSubscriptions = ({
 
       lastPresenterPageRef.current = parsedNumber;
 
-      if (!followPresenterRef.current) {
-        followPresenterRef.current = true;
+      // 집중유도 신호 수신 시 '발표자와 함께보기' 강제 활성화
+      if (typeof setFollowPresenter === "function") {
+        setFollowPresenter(true);
       }
+      followPresenterRef.current = true;
 
       triggerFocusHighlight();
 
@@ -281,6 +285,7 @@ const useAudienceWebSocketSubscriptions = ({
     roomId,
     changeCurrentSlide,
     followPresenterRef,
+    setFollowPresenter,
     lastPresenterPageRef,
     triggerFocusHighlight,
   ]);

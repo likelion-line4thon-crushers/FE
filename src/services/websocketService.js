@@ -70,9 +70,16 @@ class WebSocketService {
 
   // 발표자: 페이지 변경 이벤트 전송
   sendPageChange(sessionId, beforePage, changedPage) {
+    const destination = `/app/presentation/${sessionId}/pageChange/presenter`;
+    const body = { beforePage, changedPage };
+    console.log("[sendPageChange] 발표자 슬라이드 이동 전송:", {
+      destination,
+      sessionId,
+      body,
+    });
     this.send(
-      `/app/presentation/${sessionId}/pageChange/presenter`,
-      { beforePage, changedPage },
+      destination,
+      body,
       { "Idempotency-Key": uuidv4() }
     );
   }
