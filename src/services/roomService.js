@@ -13,12 +13,6 @@ export const createRoom = async (totalPages = 10) => {
 
   try {
     const res = await api.post("/api/rooms", requestData);
-
-    console.log("[createRoom] 방 생성 응답:", {
-      status: res.status,
-      responseData: res.data,
-      extractedData: res.data.data,
-    });
     return res.data.data;
   } catch (error) {
     console.error("[createRoom] 방 생성 실패:", {
