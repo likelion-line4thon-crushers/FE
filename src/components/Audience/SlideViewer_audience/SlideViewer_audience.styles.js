@@ -17,14 +17,14 @@ export const Main = styled.div`
 export const RightContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 180px;
-  height: 30px;
+  gap: 0.52vw;
+  width: 9.38vw;
+  height: 2.78vh;
 `;
 export const ToggleContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.42vw;
   position: relative;
 `;
 export const FocusBar = styled.div`
@@ -69,11 +69,11 @@ export const NavButton = styled.button`
 export const ToggleText = styled.span`
   color: #5c5c5c;
   font-family: Pretendard;
-  font-size: 18px;
+  font-size: 0.94vw;
   font-style: normal;
   font-weight: 600;
-  line-height: 24px;
-  letter-spacing: -0.4px;
+  line-height: 2.22vh;
+  letter-spacing: -0.021vw;
 `;
 
 export const ReactionButton = styled.button`
@@ -97,16 +97,16 @@ export const TooltipWrapper = styled.div`
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.42vw;
 `;
 
 export const Tooltip = styled.div`
   position: absolute;
-  right: 40px;
+  right: 2.08vw;
   top: 50%;
   transform: translateY(-50%);
-  padding: 6px 12px;
-  border-radius: 14px;
+  padding: 0.56vh 0.63vw;
+  border-radius: 0.73vw;
   background: rgb(201, 201, 201);
 
   white-space: nowrap;
@@ -116,24 +116,24 @@ export const Tooltip = styled.div`
 
   color: rgb(0, 0, 0);
   font-family: Pretendard;
-  font-size: 12px;
+  font-size: 0.63vw;
   font-weight: 400;
-  line-height: 18px;
-  letter-spacing: -0.3px;
-  margin-right: 7px;
+  line-height: 1.67vh;
+  letter-spacing: -0.016vw;
+  margin-right: 0.36vw;
 
   &::before {
     content: "";
     position: absolute;
-    right: -7px;
+    right: -0.36vw;
     top: 50%;
     transform: translateY(-50%);
     width: 0;
     height: 0;
 
-    border-top: 9px solid transparent;
-    border-bottom: 9px solid transparent;
-    border-left: 9px solid rgb(201, 201, 201);
+    border-top: 0.83vh solid transparent;
+    border-bottom: 0.83vh solid transparent;
+    border-left: 0.47vw solid rgb(201, 201, 201);
   }
 `;
 
@@ -141,13 +141,13 @@ export const TooltipRight = styled(Tooltip)`
   right: auto;
   left: 100%;
   margin-right: 0;
-  margin-left: -15px;
+  margin-left: -0.78vw;
 
   &::before {
     right: auto;
-    left: -7px;
+    left: -0.36vw;
     border-left: none;
-    border-right: 9px solid rgb(201, 201, 201);
+    border-right: 0.47vw solid rgb(201, 201, 201);
   }
 `;
 
@@ -171,7 +171,7 @@ export const WaitingState = styled.div`
 `;
 
 export const WaitingImage = styled.img`
-  width: clamp(120px, 12vw, 180px);
+  width: clamp(6.25vw, 12vw, 9.38vw);
   height: auto;
   object-fit: contain;
 `;
@@ -180,10 +180,10 @@ export const WaitingText = styled.p`
   margin: 0;
   color: #5c5c5c;
   font-family: Pretendard;
-  font-size: 20px;
+  font-size: 1.04vw;
   font-style: normal;
   font-weight: 600;
-  line-height: 22px;
-  letter-spacing: -0.375px;
+  line-height: 2.04vh;
+  letter-spacing: -0.02vw;
   white-space: pre-line;
 `;
