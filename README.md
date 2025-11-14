@@ -143,24 +143,30 @@ npm run dev
 │   │   └── emojiIcons.js
 │   ├── contexts/             # React Context
 │   ├── hooks/                # Custom Hooks
-│   │   ├── useAudienceJoinRoom.js
-│   │   ├── useAudienceQuestions.js
-│   │   ├── useAudienceStats.js
-│   │   ├── useEmojiReactions.js
-│   │   ├── useFocusHighlight.js
-│   │   ├── useLiveFeedback.js
-│   │   ├── usePdfConverter.js
-│   │   ├── usePresentationSession.js
-│   │   ├── usePresenterPageSync.js
-│   │   ├── usePresenterQuestions.js
-│   │   ├── usePresenterWebSocket.js
-│   │   ├── useQuickSettings.js
-│   │   ├── useQuickSettingsStorage.js
-│   │   ├── useRoom.js
-│   │   ├── useSlideImage.js
-│   │   ├── useSlideLoader.js
-│   │   ├── useStickerLoader.js
-│   │   └── useTimer.js
+│   │   ├── useAudienceJoinRoom.js          # 청중 방 입장 및 초기 설정
+│   │   ├── useAudienceQuestions.js         # 청중 질문 관리
+│   │   ├── useAudienceSlides.js            # 청중 슬라이드 로드 및 관리
+│   │   ├── useAudienceSlideNavigation.js   # 청중 슬라이드 네비게이션
+│   │   ├── useAudienceWebSocketSubscriptions.js  # 청중 WebSocket 구독 관리
+│   │   ├── useAudienceEventHandlers.js     # 청중 이벤트 핸들러
+│   │   ├── useAudienceInitialState.js      # 청중 초기 상태 관리
+│   │   ├── useAudienceFocusHighlight.js    # 청중 Focus Highlight 관리
+│   │   ├── useAudienceStats.js             # 청중 통계
+│   │   ├── useEmojiReactions.js            # 이모지 반응 관리
+│   │   ├── useFocusHighlight.js            # Focus Highlight
+│   │   ├── useLiveFeedback.js              # 실시간 피드백
+│   │   ├── usePdfConverter.js              # PDF 변환
+│   │   ├── usePresentationSession.js       # 프레젠테이션 세션 관리
+│   │   ├── usePresenterPageSync.js         # 발표자 페이지 동기화
+│   │   ├── usePresenterQuestions.js        # 발표자 질문 관리
+│   │   ├── usePresenterWebSocket.js        # 발표자 WebSocket 관리
+│   │   ├── useQuickSettings.js             # 빠른 설정 관리
+│   │   ├── useQuickSettingsStorage.js      # 빠른 설정 스토리지
+│   │   ├── useRoom.js                      # 방 관리
+│   │   ├── useSlideImage.js                # 슬라이드 이미지 로드
+│   │   ├── useSlideLoader.js               # 슬라이드 로더
+│   │   ├── useStickerLoader.js             # 스티커 로더
+│   │   └── useTimer.js                     # 타이머
 │   ├── pages/                # 페이지 컴포넌트
 │   │   ├── AIReport/         # AI 리포트 페이지
 │   │   │   ├── AIReport.jsx
