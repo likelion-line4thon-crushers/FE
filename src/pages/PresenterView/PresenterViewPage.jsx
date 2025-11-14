@@ -129,7 +129,7 @@ const PresenterViewPage = () => {
 
   // 🔹 커스텀 훅 사용
   const { slideUrls, loading } = useSlideLoader({ roomId, deckId, totalPages });
-  const { timer } = useTimer();
+  const { timer } = useTimer({ roomId });
 
   const audienceCapacity = locationState.count ?? storedRoomData.count ?? 50;
 
