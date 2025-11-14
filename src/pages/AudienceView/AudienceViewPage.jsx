@@ -133,6 +133,8 @@ const AudienceViewPage = () => {
     setQuickSettings,
     setUnlockSettings,
     lastPresenterPageRef,
+    setFollowPresenter,
+    changeCurrentSlide,
   });
 
   // 🔹 슬라이드 로드 후 발표자 페이지로 동기화

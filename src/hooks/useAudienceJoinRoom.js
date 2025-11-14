@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { joinRoom } from "../services/roomService";
+import { joinRoom, getRoomInfo } from "../services/roomService";
 
 const useAudienceJoinRoom = ({
   code,
@@ -13,6 +13,8 @@ const useAudienceJoinRoom = ({
   setQuickSettings,
   setUnlockSettings,
   lastPresenterPageRef,
+  setFollowPresenter,
+  changeCurrentSlide,
 }) => {
   useEffect(() => {
     if (!code) return;
@@ -93,8 +95,86 @@ const useAudienceJoinRoom = ({
             setWsUrl(storedData.wsUrl);
           }
           
-          // 기존 정보가 있으면 API 호출하지 않고 종료
-          // currentPage는 WebSocket을 통해 실시간으로 업데이트됨
+          // 새로고침 시 최신 방 정보 조회하여 동기화
+          if (storedData.roomId) {
+            const syncRoomInfo = async () => {
+              try {
+                const roomInfo = await getRoomInfo(storedData.roomId);
+                console.log("[useAudienceJoinRoom] 새로고침 시 방 정보 동기화:", roomInfo);
+                
+                // 발표자 현재 페이지로 동기화 (페이지 번호를 인덱스로 변환)
+                if (roomInfo.currentPage) {
+                  const presenterPage = Number(roomInfo.currentPage);
+                  if (Number.isFinite(presenterPage) && presenterPage > 0) {
+                    const presenterIndex = presenterPage - 1;
+                    lastPresenterPageRef.current = presenterIndex;
+                    
+                    // 발표자 위치로 이동 및 발표자와 함께보기 토글 ON
+                    if (changeCurrentSlide && typeof changeCurrentSlide === "function") {
+                      changeCurrentSlide(presenterIndex, {
+                        source: "presenter",
+                        broadcast: false,
+                        preserveFollowState: true,
+                      });
+                    }
+                    if (setFollowPresenter && typeof setFollowPresenter === "function") {
+                      setFollowPresenter(true);
+                    }
+                  }
+                }
+                
+                // 빠른 설정 토글 상태 반영
+                if (roomInfo.sticker !== undefined && roomInfo.sticker !== null) {
+                  setQuickSettings((prev) => ({
+                    ...prev,
+                    sticker: String(roomInfo.sticker) === "true",
+                  }));
+                }
+                if (roomInfo.question !== undefined && roomInfo.question !== null) {
+                  setQuickSettings((prev) => ({
+                    ...prev,
+                    question: String(roomInfo.question) === "true",
+                  }));
+                }
+                if (roomInfo.feedback !== undefined && roomInfo.feedback !== null) {
+                  setQuickSettings((prev) => ({
+                    ...prev,
+                    feedback: String(roomInfo.feedback) === "true",
+                  }));
+                }
+                
+                // unlock 설정 업데이트
+                if (roomInfo.maxPage !== undefined || roomInfo.slideUnlock !== undefined) {
+                  const maxPage = roomInfo.maxPage ? Number(roomInfo.maxPage) : null;
+                  const slideUnlock = roomInfo.slideUnlock
+                    ? String(roomInfo.slideUnlock) === "true"
+                    : true;
+                  
+                  setUnlockSettings({
+                    maxRevealedPage: maxPage,
+                    revealAllSlides: slideUnlock,
+                    totalPages: roomInfo.totalPages ? Number(roomInfo.totalPages) : null,
+                    presenterPage: roomInfo.currentPage
+                      ? Number(roomInfo.currentPage)
+                      : null,
+                  });
+                }
+                
+                // 세션 상태 업데이트
+                if (roomInfo.sessionStatus) {
+                  setSessionStatus(roomInfo.sessionStatus);
+                }
+              } catch (error) {
+                console.warn("[useAudienceJoinRoom] 방 정보 동기화 실패:", error);
+                // 실패해도 기존 정보로 계속 진행
+              }
+            };
+            
+            syncRoomInfo();
+          }
+          
+          // 기존 정보가 있으면 joinRoom API 호출하지 않고 종료
+          // currentPage는 위에서 getRoomInfo로 최신 정보를 가져옴
           return;
         }
       }
@@ -253,6 +333,8 @@ const useAudienceJoinRoom = ({
     setQuickSettings,
     setUnlockSettings,
     lastPresenterPageRef,
+    setFollowPresenter,
+    changeCurrentSlide,
   ]);
 };
 

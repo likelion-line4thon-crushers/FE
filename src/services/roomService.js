@@ -74,3 +74,23 @@ export const leaveRoom = async (roomId, audienceId, audienceJWT) => {
     throw error;
   }
 };
+
+// 새로고침 시 현재 방 정보 조회
+export const getRoomInfo = async (roomId) => {
+  if (!roomId) {
+    throw new Error("roomId가 필요합니다.");
+  }
+
+  try {
+    const res = await api.post(`/api/roomAudience/rooms/${roomId}/info`);
+    console.log("[getRoomInfo] 방 정보 조회 응답:", {
+      status: res.status,
+      responseData: res.data,
+      extractedData: res.data.data,
+    });
+    return res.data.data;
+  } catch (error) {
+    console.error("[getRoomInfo] 방 정보 조회 실패:", error);
+    throw error;
+  }
+};
