@@ -91,6 +91,7 @@ const SlideViewer = ({
             checked={followPresenter}
             onChange={handleToggleFollowChange}
             disabled={isWaiting}
+            aria-label="발표자와 함께 보기"
           />
           <TooltipHoverArea>
             <TooltipRight>발표자와 함께 보기</TooltipRight>
@@ -104,7 +105,7 @@ const SlideViewer = ({
         {!isWaiting && (
           <TooltipHoverArea>
             <Tooltip>리액션 스티커 보이기</Tooltip>
-            <ReactionButton onClick={handleToggleEyesClick}>
+            <ReactionButton onClick={handleToggleEyesClick} aria-label="리액션 스티커 보이기">
               <img
                 src={showStamps ? openeyes : closeeyes}
                 alt={showStamps ? "openeyes" : "closeeyes"}
@@ -118,6 +119,7 @@ const SlideViewer = ({
         ref={boxRef}
         onClick={handleClick}
         focusHighlight={focusHighlight}
+        data-testid="audience-slide-surface"
         style={{
           cursor: isWaiting ? "default" : "pointer",
         }}

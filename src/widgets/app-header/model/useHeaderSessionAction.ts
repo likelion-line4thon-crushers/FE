@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { startSession, closeSession } from "@/shared/api/room";
 import {
@@ -34,6 +34,13 @@ export const useHeaderSessionAction = ({
   const [isSessionEnding, setIsSessionEnding] = useState(false);
   const [showLandingPage, setShowLandingPage] = useState(false);
   const [landingMessage, setLandingMessage] = useState("AI 리포트 생성 중 ...");
+
+  useEffect(() => {
+    if (location.pathname.endsWith("/report")) {
+      setShowLandingPage(false);
+      setIsSessionEnding(false);
+    }
+  }, [location.pathname]);
 
   const handleSessionAction = useCallback(async () => {
     if (isSessionEnding) return;
@@ -129,6 +136,7 @@ export const useHeaderSessionAction = ({
           replace: false,
           state: nextState,
         });
+        setShowLandingPage(false);
         didNavigate = true;
       } catch (error) {
         log.error("세션 종료 처리 실패:", error);

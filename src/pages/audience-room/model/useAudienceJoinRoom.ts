@@ -8,6 +8,27 @@ import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("join-room");
 
+const parseSlideUnlock = (value: unknown, fallback = true) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  return String(value) === "true";
+};
+
+const parseOptionalNumber = (value: unknown) => {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 /**
  * ! Refactored to use Jotai atoms — no more setter params.
  * Only `lastPresenterPageRef`, `setFollowPresenter`, `changeCurrentSlide` remain as params
@@ -82,10 +103,8 @@ const useAudienceJoinRoom = ({
           }
 
           if (storedData.maxPage !== undefined || storedData.slideUnlock !== undefined) {
-            const maxPage = storedData.maxPage ? Number(storedData.maxPage) : null;
-            const slideUnlock = storedData.slideUnlock
-              ? String(storedData.slideUnlock) === "true"
-              : true;
+            const maxPage = parseOptionalNumber(storedData.maxPage);
+            const slideUnlock = parseSlideUnlock(storedData.slideUnlock);
             setUnlockSettings({
               maxRevealedPage: maxPage,
               revealAllSlides: slideUnlock,
@@ -138,10 +157,8 @@ const useAudienceJoinRoom = ({
                   }));
 
                 if (roomInfo.maxPage !== undefined || roomInfo.slideUnlock !== undefined) {
-                  const maxPage = roomInfo.maxPage ? Number(roomInfo.maxPage) : null;
-                  const slideUnlock = roomInfo.slideUnlock
-                    ? String(roomInfo.slideUnlock) === "true"
-                    : true;
+                  const maxPage = parseOptionalNumber(roomInfo.maxPage);
+                  const slideUnlock = parseSlideUnlock(roomInfo.slideUnlock);
                   setUnlockSettings({
                     maxRevealedPage: maxPage,
                     revealAllSlides: slideUnlock,
@@ -234,14 +251,23 @@ const useAudienceJoinRoom = ({
         }
 
         if (joinData.sticker != null)
-          setQuickSettings((prev) => ({ ...prev, sticker: String(joinData.sticker) === "true" }));
+          setQuickSettings((prev) => ({
+            ...prev,
+            sticker: String(joinData.sticker) === "true",
+          }));
         if (joinData.question != null)
-          setQuickSettings((prev) => ({ ...prev, question: String(joinData.question) === "true" }));
+          setQuickSettings((prev) => ({
+            ...prev,
+            question: String(joinData.question) === "true",
+          }));
         if (joinData.feedback != null)
-          setQuickSettings((prev) => ({ ...prev, feedback: String(joinData.feedback) === "true" }));
+          setQuickSettings((prev) => ({
+            ...prev,
+            feedback: String(joinData.feedback) === "true",
+          }));
 
-        const maxPage = joinData.maxPage ? Number(joinData.maxPage) : null;
-        const slideUnlock = joinData.slideUnlock ? String(joinData.slideUnlock) === "true" : true;
+        const maxPage = parseOptionalNumber(joinData.maxPage);
+        const slideUnlock = parseSlideUnlock(joinData.slideUnlock);
         setUnlockSettings({
           maxRevealedPage: maxPage,
           revealAllSlides: slideUnlock,

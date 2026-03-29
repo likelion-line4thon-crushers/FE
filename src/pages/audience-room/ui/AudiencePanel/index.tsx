@@ -217,7 +217,12 @@ const AudiencePanel = ({
                 disabled={inputDisabled}
               />
               {showSubmitButton && (
-                <SubmitButton type="button" onClick={handleSubmit} disabled={inputDisabled}>
+                <SubmitButton
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={inputDisabled}
+                  aria-label="질문 제출"
+                >
                   <img src={Arrow} alt="제출" width={26} height={26} />
                 </SubmitButton>
               )}

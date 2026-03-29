@@ -6,10 +6,70 @@ import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("ws");
 
+type SubscriptionHandle = {
+  unsubscribe: () => void;
+};
+
+type TestTransportKind = "json" | "text";
+
+type TestTransportConnectArgs = {
+  serviceId: string;
+  wsUrl: string;
+  token: string;
+  onConnect?: (frame: IFrame) => void;
+  onError?: (frame: IFrame) => void;
+};
+
+type TestTransportSubscribeArgs = {
+  serviceId: string;
+  destination: string;
+  kind: TestTransportKind;
+  callback: (payload: unknown) => void;
+};
+
+type TestTransportPublishArgs = {
+  serviceId: string;
+  destination: string;
+  headers?: Record<string, string>;
+  body: unknown;
+};
+
+interface TestWebSocketTransport {
+  connect: (args: TestTransportConnectArgs) => void;
+  disconnect: (serviceId: string) => void;
+  subscribe: (args: TestTransportSubscribeArgs) => (() => void) | SubscriptionHandle;
+  publish: (args: TestTransportPublishArgs) => void;
+  isConnected?: (serviceId: string) => boolean;
+}
+
+declare global {
+  interface Window {
+    __BOINI_TEST_MODE__?: boolean;
+    __BOINI_TEST_WS__?: TestWebSocketTransport;
+  }
+}
+
+let nextServiceId = 0;
+
+const toSubscriptionHandle = (
+  subscription: StompSubscription | (() => void) | SubscriptionHandle
+): SubscriptionHandle =>
+  typeof subscription === "function"
+    ? { unsubscribe: subscription }
+    : "unsubscribe" in subscription
+      ? subscription
+      : { unsubscribe: () => {} };
+
+const getTestTransport = () =>
+  typeof window !== "undefined" && window.__BOINI_TEST_MODE__
+    ? window.__BOINI_TEST_WS__
+    : undefined;
+
 export class WebSocketService {
   private client: Client | null = null;
   private _isConnected = false;
-  private subscriptions = new Map<string, StompSubscription>();
+  private subscriptions = new Map<string, SubscriptionHandle>();
+  private readonly serviceId = `ws-service-${nextServiceId++}`;
 
   get isConnected() {
     return this._isConnected;
@@ -21,6 +81,26 @@ export class WebSocketService {
     onConnect?: (frame: IFrame) => void,
     onError?: (frame: IFrame) => void
   ) {
+    const testTransport = getTestTransport();
+    if (testTransport) {
+      if (this.getIsConnected()) return;
+
+      testTransport.connect({
+        serviceId: this.serviceId,
+        wsUrl,
+        token,
+        onConnect: (frame) => {
+          this._isConnected = true;
+          onConnect?.(frame);
+        },
+        onError: (frame) => {
+          this._isConnected = false;
+          onError?.(frame);
+        },
+      });
+      return;
+    }
+
     if (this._isConnected) return;
 
     let httpUrl = wsUrl;
@@ -109,6 +189,22 @@ export class WebSocketService {
   }
 
   sendEndSession(sessionId: string) {
+    const testTransport = getTestTransport();
+    if (testTransport) {
+      if (!this.getIsConnected()) {
+        log.warn("Cannot send end session — not connected");
+        return;
+      }
+
+      testTransport.publish({
+        serviceId: this.serviceId,
+        destination: `/app/presentation/${sessionId}/end`,
+        headers: { "Content-Type": "text/plain", "Idempotency-Key": uuidv4() },
+        body: "end",
+      });
+      return;
+    }
+
     if (!this._isConnected || !this.client) {
       log.warn("Cannot send end session — not connected");
       return;
@@ -127,6 +223,27 @@ export class WebSocketService {
   }
 
   subscribe<T = any>(destination: string, callback: (data: T) => void): () => void {
+    const testTransport = getTestTransport();
+    if (testTransport) {
+      if (!this.getIsConnected()) return () => {};
+
+      if (this.subscriptions.has(destination)) {
+        this.unsubscribe(destination);
+      }
+
+      const subscription = toSubscriptionHandle(
+        testTransport.subscribe({
+          serviceId: this.serviceId,
+          destination,
+          kind: "json",
+          callback: (data) => callback(data as T),
+        })
+      );
+
+      this.subscriptions.set(destination, subscription);
+      return () => this.unsubscribe(destination);
+    }
+
     if (!this._isConnected || !this.client) return () => {};
 
     if (this.subscriptions.has(destination)) {
@@ -144,11 +261,32 @@ export class WebSocketService {
       }
     });
 
-    this.subscriptions.set(destination, subscription);
+    this.subscriptions.set(destination, toSubscriptionHandle(subscription));
     return () => this.unsubscribe(destination);
   }
 
   subscribeText(destination: string, callback: (body: string) => void): () => void {
+    const testTransport = getTestTransport();
+    if (testTransport) {
+      if (!this.getIsConnected()) return () => {};
+
+      if (this.subscriptions.has(destination)) {
+        this.unsubscribe(destination);
+      }
+
+      const subscription = toSubscriptionHandle(
+        testTransport.subscribe({
+          serviceId: this.serviceId,
+          destination,
+          kind: "text",
+          callback: (body) => callback(String(body ?? "")),
+        })
+      );
+
+      this.subscriptions.set(destination, subscription);
+      return () => this.unsubscribe(destination);
+    }
+
     if (!this._isConnected || !this.client) return () => {};
 
     if (this.subscriptions.has(destination)) {
@@ -159,7 +297,7 @@ export class WebSocketService {
       callback(message?.body ?? "");
     });
 
-    this.subscriptions.set(destination, subscription);
+    this.subscriptions.set(destination, toSubscriptionHandle(subscription));
     return () => this.unsubscribe(destination);
   }
 
@@ -172,6 +310,19 @@ export class WebSocketService {
   }
 
   send(destination: string, body: any, headers: Record<string, string> = {}) {
+    const testTransport = getTestTransport();
+    if (testTransport) {
+      if (!this.getIsConnected()) return;
+
+      testTransport.publish({
+        serviceId: this.serviceId,
+        destination,
+        headers: { "Content-Type": "application/json", ...headers },
+        body,
+      });
+      return;
+    }
+
     if (!this._isConnected || !this.client) return;
 
     try {
@@ -186,6 +337,16 @@ export class WebSocketService {
   }
 
   disconnect() {
+    const testTransport = getTestTransport();
+    if (testTransport) {
+      this.subscriptions.forEach((sub) => sub.unsubscribe());
+      this.subscriptions.clear();
+      testTransport.disconnect(this.serviceId);
+      this.client = null;
+      this._isConnected = false;
+      return;
+    }
+
     if (this.client) {
       this.subscriptions.forEach((sub) => sub.unsubscribe());
       this.subscriptions.clear();
@@ -196,6 +357,11 @@ export class WebSocketService {
   }
 
   getIsConnected() {
+    const testTransport = getTestTransport();
+    if (testTransport?.isConnected) {
+      return testTransport.isConnected(this.serviceId);
+    }
+
     return this._isConnected;
   }
 }

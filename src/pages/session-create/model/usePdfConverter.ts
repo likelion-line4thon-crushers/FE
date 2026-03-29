@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import * as pdfjsLib from "pdfjs-dist";
-// @ts-ignore — pdfjs worker URL import via Vite
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min?url";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;

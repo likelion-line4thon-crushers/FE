@@ -221,7 +221,7 @@ const useAudienceWebSocketSubscriptions = ({
         triggerFocusHighlight();
         changeCurrentSlide(parsedIndex, {
           source: "focusOn",
-          broadcast: true,
+          broadcast: false,
           preserveFollowState: true,
         });
       }

@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useAtomValue } from "jotai";
 import websocketService from "@/shared/api/websocket";
+import { unlockSettingsAtom } from "@/entities/session";
 
 const useAudienceSlideNavigation = ({
   code,
@@ -14,6 +16,8 @@ const useAudienceSlideNavigation = ({
   audienceId?: any;
   lastPresenterPageRef?: any;
 }) => {
+  const unlockSettings = useAtomValue(unlockSettingsAtom);
+
   const getInitialSlide = () => {
     if (!code) return 0;
     try {
@@ -42,16 +46,39 @@ const useAudienceSlideNavigation = ({
     followPresenterRef.current = followPresenter;
   }, [followPresenter]);
 
+  const isLockedTarget = useCallback(
+    (nextIndex: number) => {
+      if (unlockSettings.revealAllSlides) {
+        return false;
+      }
+
+      const maxRevealedPage = unlockSettings.maxRevealedPage;
+      if (maxRevealedPage === null || !Number.isFinite(maxRevealedPage)) {
+        return false;
+      }
+
+      return nextIndex > maxRevealedPage;
+    },
+    [unlockSettings.maxRevealedPage, unlockSettings.revealAllSlides]
+  );
+
   const changeCurrentSlide = useCallback(
     (
       nextIndex: any,
       { source = "audience", broadcast = true, preserveFollowState = false }: any = {}
     ) => {
-      setCurrentSlide((prev) => {
-        if (!Number.isFinite(nextIndex)) {
-          return prev;
-        }
+      if (!Number.isFinite(nextIndex)) {
+        return;
+      }
 
+      const clampedNextIndex = Math.min(Math.max(nextIndex, 0), Math.max(slideCount - 1, 0));
+      const isPresenterDriven = source === "presenter" || source === "focusOn";
+
+      if (!isPresenterDriven && isLockedTarget(clampedNextIndex)) {
+        return;
+      }
+
+      setCurrentSlide((prev) => {
         const maxIndex = Math.max(slideCount - 1, 0);
         const clamped = Math.min(Math.max(nextIndex, 0), maxIndex);
 
@@ -59,8 +86,7 @@ const useAudienceSlideNavigation = ({
           return prev;
         }
 
-        // 모든 청중 페이지 변경을 백엔드로 전송 (동기화 포함)
-        if (roomId && audienceId && websocketService.getIsConnected()) {
+        if (broadcast && roomId && audienceId && websocketService.getIsConnected()) {
           const beforePage = prev + 1;
           const changedPage = clamped + 1;
 
@@ -71,11 +97,11 @@ const useAudienceSlideNavigation = ({
         return clamped;
       });
 
-      if (!preserveFollowState && source !== "presenter") {
+      if (!preserveFollowState && !isPresenterDriven) {
         setFollowPresenter(false);
       }
     },
-    [slideCount, roomId, audienceId]
+    [slideCount, roomId, audienceId, isLockedTarget]
   );
 
   const handleToggleFollowPresenter = useCallback(

@@ -6,7 +6,7 @@ import react from "eslint-plugin-react";
 import tseslint from "typescript-eslint";
 
 export default [
-  { ignores: ["dist"] },
+  { ignores: ["dist", "playwright/.cache", "test-results", "playwright-report", "blob-report"] },
   {
     files: ["**/*.{js,jsx}"],
     languageOptions: {

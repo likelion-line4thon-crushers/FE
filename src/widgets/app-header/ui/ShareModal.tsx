@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
+import { QRCodeSVG } from "qrcode.react";
 import CopyIcon from "@/shared/assets/images/copy.svg";
 import { createRoom } from "@/shared/api/room";
 import { createLogger } from "@/shared/lib/logger";
+import { resolveShareJoinUrl } from "../model/resolveShareJoinUrl";
 
 const log = createLogger("share");
 
@@ -143,14 +145,18 @@ interface ShareModalProps {
 
 const ShareModal = ({ roomData, totalPages = 10, onClose }: ShareModalProps) => {
   const [sessionLink, setSessionLink] = useState("");
-  const [qrBase64, setQrBase64] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (roomData) {
-      setSessionLink(roomData.joinUrl);
-      setQrBase64(roomData.qrPngBase64);
+      const resolvedJoinUrl = resolveShareJoinUrl(roomData);
+      if (!resolvedJoinUrl) {
+        setError("공유 링크를 생성할 수 없습니다.");
+      } else {
+        setSessionLink(resolvedJoinUrl);
+        setError("");
+      }
       setLoading(false);
       return;
     }
@@ -158,8 +164,11 @@ const ShareModal = ({ roomData, totalPages = 10, onClose }: ShareModalProps) => 
     const initRoom = async () => {
       try {
         const data = await createRoom(totalPages);
-        setSessionLink(data.joinUrl);
-        setQrBase64(data.qrPngBase64 ?? "");
+        const resolvedJoinUrl = resolveShareJoinUrl(data);
+        if (!resolvedJoinUrl) {
+          throw new Error("joinUrl resolve failed");
+        }
+        setSessionLink(resolvedJoinUrl);
       } catch (err) {
         log.error("방 생성 실패:", err);
         setError("방 생성 중 오류가 발생했습니다.");
@@ -201,8 +210,15 @@ const ShareModal = ({ roomData, totalPages = 10, onClose }: ShareModalProps) => 
             <div>
               <Label>QR 코드 링크</Label>
               <QrBox>
-                {qrBase64 ? (
-                  <img src={`data:image/png;base64,${qrBase64}`} alt="QR Code" />
+                {sessionLink ? (
+                  <QRCodeSVG
+                    value={sessionLink}
+                    size={240}
+                    bgColor="#FFFFFF"
+                    fgColor="#000000"
+                    level="M"
+                    includeMargin
+                  />
                 ) : (
                   <div className="qr-placeholder">QR 자리</div>
                 )}

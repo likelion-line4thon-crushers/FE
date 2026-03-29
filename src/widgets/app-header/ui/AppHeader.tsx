@@ -9,6 +9,7 @@ import { leaveRoom } from "@/shared/api/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { useHeaderRoomData } from "../model/useHeaderRoomData";
 import { useHeaderSessionAction } from "../model/useHeaderSessionAction";
+import { resolveShareJoinUrl } from "../model/resolveShareJoinUrl";
 
 const HeaderWrapper = styled.header`
   width: 100vw;
@@ -141,7 +142,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   }, [isAudienceView, location.pathname]);
 
   const handleShareClick = () => {
-    if (!roomData || !roomData.joinUrl) {
+    if (!resolveShareJoinUrl(roomData)) {
       alert("⚠️ 방 정보가 없습니다. 발표 준비 완료 후 다시 시도해주세요.");
       return;
     }

@@ -12,6 +12,7 @@ export const storageKeys = {
   currentSlide: (roomId: string) => `boini_current_slide_${roomId}` as const,
   timerElapsed: (roomId: string) => `boini_timer_elapsed_${roomId}` as const,
   audienceCount: (roomId: string) => `boini_audience_count_${roomId}` as const,
+  quickSettings: (roomId: string) => `presentation_quick_settings_${roomId}` as const,
 } as const;
 
 // * All keys used for room data recovery (checked in order)

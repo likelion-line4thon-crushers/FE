@@ -14,21 +14,39 @@ export const useHeaderRoomData = (propRoomData: any) => {
     const locationState = location.state as Record<string, unknown> | null;
     const roomDataFromState =
       locationState && typeof locationState.roomData === "object" ? locationState.roomData : null;
+    let storedRoomData: Record<string, unknown> | null = null;
+
+    try {
+      const stored = sessionStorage.getItem("boini_room");
+      storedRoomData = stored ? JSON.parse(stored) : null;
+    } catch {
+      storedRoomData = null;
+    }
 
     if (roomDataFromState) {
+      const stateRoomId = (roomDataFromState as Record<string, unknown>)?.roomId;
+      const storedRoomId = storedRoomData?.roomId;
+      if (
+        stateRoomId != null &&
+        storedRoomId != null &&
+        String(stateRoomId) === String(storedRoomId)
+      ) {
+        return { ...storedRoomData, ...roomDataFromState };
+      }
       return roomDataFromState;
     }
 
     if (locationState?.roomId && locationState?.deckId) {
+      if (
+        storedRoomData?.roomId != null &&
+        String(locationState.roomId) === String(storedRoomData.roomId)
+      ) {
+        return { ...storedRoomData, ...locationState };
+      }
       return locationState;
     }
 
-    try {
-      const stored = sessionStorage.getItem("boini_room");
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+    return storedRoomData;
   }, [location.state, propRoomData]);
 
   const fileName = useMemo(() => {

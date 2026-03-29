@@ -1,4 +1,3 @@
-/* eslint-disable import/no-anonymous-default-export */
 /**
  * @see https://prettier.io/docs/configuration
  * @type {import("prettier").Config}

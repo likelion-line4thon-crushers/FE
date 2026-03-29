@@ -6,10 +6,12 @@ import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { PresentationLayout, SlideViewer, SettingsPanel } from "@/widgets/presentation-layout";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
 import { useQuickSettingsStorage } from "@/entities/session";
+import { storageKeys } from "@/shared/config/storage-keys";
 
 const log = createLogger("session-create");
 import { v4 as uuidv4 } from "uuid";
 import usePdfConverter from "../model/usePdfConverter";
+import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
 import { createRoom } from "@/shared/api/room";
 import { fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import api from "@/shared/api/api";
@@ -20,40 +22,23 @@ const PresentationPrepPage = () => {
   const navigate = useNavigate();
   const { roomId: roomIdParam } = useParams();
   const { pdfFile } = location.state || {};
+  const initialRoomData = resolvePresenterRoomData(roomIdParam, location.state);
 
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [roomData, setRoomData] = useState<any>(null);
-  const [deckId, setDeckId] = useState<any>(null);
+  const [roomData, setRoomData] = useState<any>(initialRoomData);
+  const [deckId, setDeckId] = useState<any>(initialRoomData?.deckId ?? null);
   const [slideImageFiles, setSlideImageFiles] = useState<any[]>([]);
   const [slideUrls, setSlideUrls] = useState<any[]>([]);
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
-  // 🔹 세션 스토리지에서 방 정보 복원
-  useEffect(() => {
-    if (roomData) return; // 이미 roomData가 있으면 스킵
-
-    try {
-      const storedRoomData = JSON.parse(sessionStorage.getItem("boini_room") || "{}");
-
-      if (storedRoomData && storedRoomData.roomId) {
-        // roomIdParam이 있으면 일치하는지 확인
-        if (roomIdParam && storedRoomData.roomId !== roomIdParam) {
-          return; // roomId가 다르면 스킵
-        }
-
-        // 세션 스토리지에 저장된 방 정보 복원
-        setRoomData(storedRoomData);
-        if (storedRoomData.deckId) {
-          setDeckId(storedRoomData.deckId);
-        }
-      }
-    } catch (error) {
-      log.error("세션 스토리지에서 방 정보 복원 실패:", error);
-    }
+  // roomData에서 roomId 추출
+  const roomId = useMemo(() => {
+    return roomIdParam || roomData?.roomId;
   }, [roomIdParam, roomData]);
+  const quickSettingsStorageKey = roomId ? storageKeys.quickSettings(String(roomId)) : null;
 
   // 🔹 빠른 설정 토글 상태 관리
-  const [quickSettings, setQuickSettings] = useQuickSettingsStorage() as any;
+  const [quickSettings, setQuickSettings] = useQuickSettingsStorage(quickSettingsStorageKey) as any;
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
 
   const hasInitializedRef = useRef(false);
@@ -64,11 +49,6 @@ const PresentationPrepPage = () => {
   });
   const pendingUnlockRef = useRef<any>(quickSettings.unlock);
   const latestQuickSettingsRef = useRef(quickSettings);
-
-  // roomData에서 roomId 추출
-  const roomId = useMemo(() => {
-    return roomIdParam || roomData?.roomId;
-  }, [roomIdParam, roomData]);
 
   const presenterToken = roomData?.presenterToken || null;
   const presenterWsUrl = useMemo(() => {
@@ -317,10 +297,7 @@ const PresentationPrepPage = () => {
 
         setSlideUrls(originalUrls);
         setRoomData(nextRoomData);
-        sessionStorage.setItem(
-          "boini_room",
-          JSON.stringify(nextRoomData)
-        );
+        sessionStorage.setItem("boini_room", JSON.stringify(nextRoomData));
 
         if (roomIdParam !== roomId) {
           navigate(`/rooms/${roomId}/prepare`, {

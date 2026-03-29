@@ -119,6 +119,7 @@ const SlideViewer = ({
         stamps={stamps}
         showStamps={showReactions}
         highlight={focusHighlight}
+        testId="presenter-slide-surface"
       />
 
       {/* 🔹 실시간 피드백 창 */}

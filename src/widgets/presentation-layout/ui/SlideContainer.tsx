@@ -13,11 +13,12 @@ const SlideContainer = ({
   stamps = [] as any[],
   showStamps = true,
   highlight = false,
+  testId,
 }: any) => {
   const imageBorderColor = highlight ? "#ffc551" : "#eee";
 
   return (
-    <SlideBox highlight={highlight}>
+    <SlideBox highlight={highlight} data-testid={testId}>
       <img
         src={src}
         alt={alt}

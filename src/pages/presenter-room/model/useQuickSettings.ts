@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import websocketService from "@/shared/api/websocket";
 import { useQuickSettingsStorage } from "@/entities/session";
+import { storageKeys } from "@/shared/config/storage-keys";
 
 /**
  * 빠른 설정 관리 훅
@@ -14,7 +15,8 @@ export const useQuickSettings = ({
   roomId?: any;
   isPresenterWsReady?: any;
 }) => {
-  const [quickSettings, setQuickSettings] = useQuickSettingsStorage() as any;
+  const quickSettingsStorageKey = roomId ? storageKeys.quickSettings(String(roomId)) : null;
+  const [quickSettings, setQuickSettings] = useQuickSettingsStorage(quickSettingsStorageKey) as any;
   const initialSettingsSyncedRef = useRef(false);
 
   // 🔹 옵션 변경 핸들러 (리액션 스티커, 질문, 실시간 피드백)

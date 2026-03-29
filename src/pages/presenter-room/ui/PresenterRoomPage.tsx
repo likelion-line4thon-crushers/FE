@@ -465,6 +465,7 @@ const QuickSettingToggle = ({
       disabled={disabled}
       checked={typeof checked === "boolean" ? checked : undefined}
       defaultChecked={typeof checked === "boolean" ? undefined : defaultChecked}
+      aria-label={label}
     />
   </ToggleBox>
 );

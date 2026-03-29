@@ -9,6 +9,7 @@ import StarIcon from "@/shared/assets/images/star.svg";
 import StarCheckedIcon from "@/shared/assets/images/star_checked.svg";
 import { submitFeedback } from "@/shared/api/feedback";
 import { getOriginalSlideUrl } from "@/shared/api/presentation";
+import { resolveRatingSessionContext } from "../model/resolveRatingSessionContext";
 
 const RatingPage = () => {
   const { code } = useParams();
@@ -19,45 +20,24 @@ const RatingPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [firstSlideUrl, setFirstSlideUrl] = useState<string | null>(null);
   const [loadingSlide, setLoadingSlide] = useState(false);
+  const [identityWarningDismissed, setIdentityWarningDismissed] = useState(false);
 
-  // * roomId, audienceId, deckId: location state → audience sessionStorage → room sessionStorage
-  const { roomId, audienceId, deckId } = useMemo(() => {
-    try {
-      const locationState = location.state || {};
-      if (locationState.roomId && locationState.audienceId) {
-        return {
-          roomId: locationState.roomId,
-          audienceId: locationState.audienceId,
-          deckId: locationState.deckId || null,
-        };
-      }
-
-      // Read from audience sessionStorage (set during joinRoom)
-      if (code) {
-        const stored = sessionStorage.getItem(`boini_audience_${code}`);
-        if (stored) {
-          const data = JSON.parse(stored);
-          if (data.roomId && data.audienceId) {
-            return {
-              roomId: data.roomId,
-              audienceId: data.audienceId,
-              deckId: data.deckId || null,
-            };
-          }
-        }
-      }
-
-      const storedRoomData = JSON.parse(sessionStorage.getItem("boini_room") || "{}");
-
-      return {
-        roomId: storedRoomData.roomId || null,
-        audienceId: storedRoomData.audienceId || null,
-        deckId: storedRoomData.deckId || null,
-      };
-    } catch (error) {
-      log.error("roomId/audienceId/deckId 가져오기 실패:", error);
-      return { roomId: null, audienceId: null, deckId: null };
+  const clearAudienceSession = () => {
+    if (!code) {
+      return;
     }
+
+    try {
+      sessionStorage.removeItem(`boini_audience_${code}`);
+    } catch (error) {
+      log.warn("평가 세션 스토리지 정리 실패:", error);
+    }
+  };
+
+  // * roomId, audienceId, deckId: route state → audience sessionStorage only
+  const { roomId, audienceId, deckId, hasIdentity } = useMemo(() => {
+    const context = resolveRatingSessionContext(code, location.state);
+    return context;
   }, [location.state, code]);
 
   // 첫 번째 슬라이드 로드
@@ -100,6 +80,8 @@ const RatingPage = () => {
 
       log.log("피드백 제출 성공:", result);
 
+      clearAudienceSession();
+
       // 메인페이지로 이동
       navigate("/", { replace: true });
     } catch (error) {
@@ -112,8 +94,11 @@ const RatingPage = () => {
 
   // 건너뛰기 핸들러
   const handleSkip = () => {
+    clearAudienceSession();
     navigate("/", { replace: true });
   };
+
+  const showIdentityWarning = !hasIdentity && !identityWarningDismissed;
 
   return (
     <MainLayout>
@@ -185,9 +170,21 @@ const RatingPage = () => {
         <Box>
           <FeedbackBox>
             <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
+            {showIdentityWarning && (
+              <IdentityNotice role="status">
+                평가 세션 정보를 찾을 수 없습니다. 청중 입장 후 받은 링크나 방 상태로 다시
+                열어주세요.
+                <IdentityNoticeActions>
+                  <DismissButton type="button" onClick={() => setIdentityWarningDismissed(true)}>
+                    닫기
+                  </DismissButton>
+                </IdentityNoticeActions>
+              </IdentityNotice>
+            )}
             <TextArea
               placeholder="여러분의 한 마디가 세션 진행자에게 큰 도움이 됩니다 :)"
               value={comment}
+              disabled={!hasIdentity}
               onChange={(e) => setComment(e.target.value)}
             />
           </FeedbackBox>
@@ -195,7 +192,7 @@ const RatingPage = () => {
 
         {/* 하단 버튼 영역 */}
         <ButtonRow>
-          <SubmitButton disabled={!rating || isSubmitting} onClick={handleSubmit}>
+          <SubmitButton disabled={!rating || isSubmitting || !hasIdentity} onClick={handleSubmit}>
             {isSubmitting ? "제출 중..." : "제출"}
           </SubmitButton>
           <SkipButton onClick={handleSkip}>건너뛰기</SkipButton>
@@ -373,6 +370,33 @@ const FeedbackTitle = styled.div`
   font-size: clamp(13px, 0.9vw, 16px);
   font-weight: 600;
   color: #333;
+`;
+
+const IdentityNotice = styled.div`
+  width: 100%;
+  border: 0.1vw solid #f2b08d;
+  background: #fff7f2;
+  color: #8a3d1f;
+  border-radius: 0.6vw;
+  padding: 1vh 1vw;
+  font-size: clamp(12px, 0.85vw, 14px);
+  line-height: 1.5;
+`;
+
+const IdentityNoticeActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.8vh;
+`;
+
+const DismissButton = styled.button`
+  border: none;
+  border-radius: 999px;
+  padding: 0.5vh 0.9vw;
+  background: #e8541e;
+  color: #fff;
+  font-size: clamp(11px, 0.8vw, 13px);
+  cursor: pointer;
 `;
 
 const TextArea = styled.textarea`

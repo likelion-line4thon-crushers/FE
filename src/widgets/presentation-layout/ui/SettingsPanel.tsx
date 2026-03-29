@@ -209,7 +209,13 @@ const QuickSettingToggle = ({
   <ToggleBox>
     <ToggleLabel>{label}</ToggleLabel>
     <ToggleDescription>{description}</ToggleDescription>
-    <ToggleInput type="checkbox" checked={checked} onChange={onChange} disabled={disabled} />
+    <ToggleInput
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      disabled={disabled}
+      aria-label={label}
+    />
   </ToggleBox>
 );
 
