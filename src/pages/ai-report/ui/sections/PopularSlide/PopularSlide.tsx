@@ -13,13 +13,10 @@ import {
   SlideWrapper,
 } from "./PopularSlide.styles";
 import { EmojiPanel } from "@/entities/reaction";
-import ContentBox from "../ContentBox/ContentBox";
+import { ContentBox, AITitle, SlideNumber, SlideSkeleton } from "../../summary";
 import NoSlideImage from "@/shared/assets/images/AI/NoSlide.png";
-import AITitle from "../AITitle/AITitle";
-import SlideNumber from "../SlideNumber/SlideNumber";
 import { fetchMostReactionSticker } from "@/shared/api/ai-report";
 import { useSlideImage } from "@/entities/slide";
-import SlideSkeleton from "../SlideSkeleton/SlideSkeleton";
 import type { EmojiId } from "@/entities/reaction";
 
 interface ReactionSlideReportItem {

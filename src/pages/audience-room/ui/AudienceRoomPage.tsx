@@ -8,17 +8,20 @@ import SlideViewer from "./SlideViewerAudience/SlideViewer_audience";
 import { EmojiPanel, useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { WebSocketService } from "@/shared/api/websocket";
 import { useSlideLoader } from "@/entities/slide";
-import usePresenterPageSync from "../model/usePresenterPageSync";
-import useAudienceQuestions from "../model/useAudienceQuestions";
-import useAudienceJoinRoom from "../model/useAudienceJoinRoom";
-import useAudienceSlideNavigation from "../model/useAudienceSlideNavigation";
-import useAudienceWebSocketSubscriptions from "../model/useAudienceWebSocketSubscriptions";
-import useAudienceEventHandlers from "../model/useAudienceEventHandlers";
-import useAudienceInitialState from "../model/useAudienceInitialState";
-import useAudienceFocusHighlight from "../model/useAudienceFocusHighlight";
+import {
+  usePresenterPageSync,
+  useAudienceQuestions,
+  useAudienceJoinRoom,
+  useAudienceSlideNavigation,
+  useAudienceWebSocketSubscriptions,
+  useAudienceEventHandlers,
+  useAudienceInitialState,
+  useAudienceFocusHighlight,
+  audienceIdAtom,
+  audienceTokenAtom,
+} from "../model";
 import DelayAudience from "./DelayAudience";
 import { roomIdAtom, deckIdAtom, totalPagesAtom, wsUrlAtom } from "@/entities/room";
-import { audienceIdAtom, audienceTokenAtom } from "../model/store";
 import { quickSettingsAtom, unlockSettingsAtom } from "@/entities/session";
 
 const AudienceRoomPage = () => {

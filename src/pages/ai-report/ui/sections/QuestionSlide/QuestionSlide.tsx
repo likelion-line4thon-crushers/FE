@@ -12,9 +12,7 @@ import {
 } from "./QuestionSlide.styles";
 import faceImage from "@/shared/assets/images/emoji1_black.svg";
 import rectangleImage from "@/shared/assets/images/AI/Rectangle.png";
-import ContentBox from "../ContentBox/ContentBox";
-import AITitle from "../AITitle/AITitle";
-import SlideNumber from "../SlideNumber/SlideNumber";
+import { ContentBox, AITitle, SlideNumber } from "../../summary";
 import { fetchTopSlideReport } from "@/shared/api/ai-report";
 import { loadStoredRoomData, computeRoomInfo } from "../../../model/room-info";
 import { useSlideImage } from "@/entities/slide";

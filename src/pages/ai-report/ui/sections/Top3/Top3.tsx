@@ -7,8 +7,7 @@ import {
   QuestionText,
   QuestionMeta,
 } from "./Top3.styles";
-import ContentBox from "../ContentBox/ContentBox";
-import AITitle from "../AITitle/AITitle";
+import { ContentBox, AITitle } from "../../summary";
 import { loadStoredRoomData, computeRoomInfo } from "../../../model/room-info";
 import { fetchTopQuestionsReport } from "@/shared/api/ai-report";
 

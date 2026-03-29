@@ -1,6 +1,5 @@
 import styled, { css } from "styled-components";
-import { ToggleInput } from "@/widgets/presentation-layout";
-import { HighlightedSlideStyles } from "@/widgets/presentation-layout/ui/SlideViewer.styles";
+import { ToggleInput, HighlightedSlideStyles } from "@/widgets/presentation-layout";
 
 /* 전체 컨테이너 */
 export const Main = styled.div`

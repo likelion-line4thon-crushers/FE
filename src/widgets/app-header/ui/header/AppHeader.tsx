@@ -3,13 +3,11 @@ import styled, { css } from "styled-components";
 import { useLocation, useNavigate } from "react-router";
 import BoiniLogo from "@/shared/assets/images/Boini_logo.svg";
 import LiveIcon from "@/shared/assets/images/live.png";
-import ShareModal from "./ShareModal";
+import { ShareModal } from "../share";
 import { ShareButton, ExitButton, StartSessionButton } from "./HeaderButtons";
 import { leaveRoom } from "@/shared/api/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
-import { useHeaderRoomData } from "../model/useHeaderRoomData";
-import { useHeaderSessionAction } from "../model/useHeaderSessionAction";
-import { resolveShareJoinUrl } from "../model/resolveShareJoinUrl";
+import { useHeaderRoomData, useHeaderSessionAction, resolveShareJoinUrl } from "../../model";
 
 const HeaderWrapper = styled.header`
   width: 100vw;

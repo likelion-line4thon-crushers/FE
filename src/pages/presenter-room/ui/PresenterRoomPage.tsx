@@ -14,13 +14,15 @@ import websocketService from "@/shared/api/websocket";
 import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { WebSocketService } from "@/shared/api/websocket";
 import { useSlideLoader } from "@/entities/slide";
-import { useTimer } from "../model/useTimer";
-import { usePresenterFocusHighlight } from "../model/usePresenterFocusHighlight";
-import usePresenterQuestions from "../model/usePresenterQuestions";
-import { useLiveFeedback } from "../model/useLiveFeedback";
-import { useAudienceStats } from "../model/useAudienceStats";
-import { usePresenterWebSocket } from "../model/usePresenterWebSocket";
-import { useQuickSettings } from "../model/useQuickSettings";
+import {
+  useTimer,
+  usePresenterFocusHighlight,
+  usePresenterQuestions,
+  useLiveFeedback,
+  useAudienceStats,
+  usePresenterWebSocket,
+  useQuickSettings,
+} from "../model";
 
 // SettingsPanel 스타일 재사용
 import {

@@ -54,6 +54,21 @@ Boini는 발표자와 청중이 실시간으로 상호작용할 수 있는 프�
 
 현재 앱은 `features/`, `services/`, `hooks/`, `store/` 같은 기술 중심 top-level 폴더를 더 이상 사용하지 않고, 책임 기준으로 코드를 배치합니다.
 
+또한 밀도가 높은 slice 내부는 기술 역할별 `hooks/` 같은 폴더로 나누지 않고, **관심사 기준 concern 폴더**로 정리합니다.
+
+- `pages/audience-room/model`
+  - `room`, `navigation`, `realtime`, `question`, `interaction`
+- `pages/presenter-room/model`
+  - `realtime`, `question`, `audience`, `feedback`, `session`
+- `widgets/app-header`
+  - `model/room`, `model/session`, `ui/header`, `ui/share`
+- `widgets/presentation-layout/ui`
+  - `layout`, `viewer`, `settings`
+- `pages/ai-report/ui`
+  - `navigation`, `summary`, `sections`
+
+즉, FSD 레이어는 유지하되 slice 내부는 **비즈니스/렌더링 관심사 단위**로 세분화합니다.
+
 ## 라우트 구조
 
 ```text
@@ -77,12 +92,41 @@ src/
 │   ├── landing/
 │   ├── session-create/
 │   ├── presenter-room/
+│   │   ├── model/
+│   │   │   ├── realtime/
+│   │   │   ├── question/
+│   │   │   ├── audience/
+│   │   │   ├── feedback/
+│   │   │   └── session/
+│   │   └── ui/
 │   ├── audience-room/
+│   │   ├── model/
+│   │   │   ├── room/
+│   │   │   ├── navigation/
+│   │   │   ├── realtime/
+│   │   │   ├── question/
+│   │   │   └── interaction/
+│   │   └── ui/
 │   ├── ai-report/
+│   │   ├── model/
+│   │   └── ui/
+│   │       ├── navigation/
+│   │       ├── summary/
+│   │       └── sections/
 │   └── rating/
 ├── widgets/                    # 재사용 복합 UI
 │   ├── app-header/
+│   │   ├── model/
+│   │   │   ├── room/
+│   │   │   └── session/
+│   │   └── ui/
+│   │       ├── header/
+│   │       └── share/
 │   ├── presentation-layout/
+│   │   └── ui/
+│   │       ├── layout/
+│   │       ├── viewer/
+│   │       └── settings/
 │   └── slides-sidebar/
 ├── entities/                   # 도메인 모델/상태/UI
 │   ├── room/
@@ -150,6 +194,81 @@ npm run lint
 npm run format
 npm run format:check
 ```
+
+## 테스트
+
+이 프로젝트는 세 가지 레벨로 테스트를 나눕니다.
+
+- `Vitest`: 순수 로직, 저장소 복원, 상태 파싱 같은 단위 테스트
+- `Playwright Component Testing`: 브라우저 환경에서 UI 조각 단위 검증
+- `Playwright E2E`: Presenter / Audience 전체 라이프사이클 검증
+
+### 테스트 파일 위치
+
+```text
+tests/
+├── unit/          # Vitest 단위 테스트
+├── component/     # Playwright CT
+├── e2e/           # Playwright E2E
+└── setup/         # 테스트 공통 설정
+```
+
+현재 대표 테스트는 다음을 다룹니다.
+
+- Presenter prepare 복원과 세션 시작
+- Audience waiting → live 복원
+- slide unlock / lock 경계 조건
+- 질문, 스티커, focus, session end 같은 실시간 상호작용
+- rating 세션 복원과 stale storage 방지
+
+### 테스트 실행
+
+브라우저 설치:
+
+```bash
+npm run test:install-browsers
+```
+
+단위 테스트:
+
+```bash
+npm run test:unit
+```
+
+컴포넌트 테스트:
+
+```bash
+npm run test:ct
+```
+
+E2E 테스트:
+
+```bash
+npm run test:e2e
+```
+
+전체 검증 시 자주 사용하는 순서:
+
+```bash
+npm run typecheck
+npm run lint
+npm run test:unit
+npm run test:ct
+npm run test:e2e
+```
+
+### Playwright 실행 방식
+
+- 로컬에서는 **desktop Chromium headed 모드**로 실행됩니다.
+- CI에서는 headless 모드로 실행됩니다.
+- 로컬 Playwright는 작업 확인이 쉽도록 `workers: 1` 로 제한되어 있습니다.
+
+### 테스트 설계 원칙
+
+- 단위 테스트는 구현 세부사항보다 상태 복원과 파싱 규칙을 우선 검증합니다.
+- Playwright 테스트는 접근 가능한 locator와 실제 사용자 상호작용을 기준으로 작성합니다.
+- 외부 의존성이 큰 실시간 흐름은 `tests/e2e/support/mockBoini.ts` 의 mock transport와 API mock으로 결정론적으로 검증합니다.
+- 알려진 제품 버그는 flaky assertion 대신 `fixme` 로 남기고, 수정 후 다시 활성화합니다.
 
 ## 개발 원칙
 

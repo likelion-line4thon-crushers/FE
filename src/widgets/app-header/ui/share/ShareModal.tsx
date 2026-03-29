@@ -4,7 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import CopyIcon from "@/shared/assets/images/copy.svg";
 import { createRoom } from "@/shared/api/room";
 import { createLogger } from "@/shared/lib/logger";
-import { resolveShareJoinUrl } from "../model/resolveShareJoinUrl";
+import { resolveShareJoinUrl } from "../../model";
 
 const log = createLogger("share");
 

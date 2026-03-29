@@ -4,7 +4,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import websocketService from "@/shared/api/websocket";
 import { roomIdAtom, wsUrlAtom, deckIdAtom } from "@/entities/room";
 import { sessionStatusAtom, quickSettingsAtom, unlockSettingsAtom } from "@/entities/session";
-import { audienceIdAtom, audienceTokenAtom } from "./store";
+import { audienceIdAtom, audienceTokenAtom } from "../room/store";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("audience-ws");

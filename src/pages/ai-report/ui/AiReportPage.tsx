@@ -1,13 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router";
-import SideHeader from "./components/SideHeader/SideHeader";
 import { PageContainer, ContentContainer, FooterContainer } from "./AiReportPage.styles";
-import TotalReaction from "./components/TotalReaction/TotalReaction";
-import Top3 from "./components/Top3/Top3";
-import PopularSlide from "./components/PopularSlide/PopularSlide";
-import QuestionSlide from "./components/QuestionSlide/QuestionSlide";
-import ReplaySlide from "./components/ReplaySlide/ReplaySlide";
-import Review from "./components/ReviewSlide/ReviewSlide";
+import { SideHeader } from "./navigation";
+import { TotalReaction, Top3, PopularSlide, QuestionSlide, ReplaySlide, ReviewSlide } from "./sections";
 import FooterImage from "@/shared/assets/images/AI/AIFooter.png";
 import { loadStoredRoomData, computeRoomInfo } from "../model/room-info";
 import { fetchStoredAiReport, fetchMostRevisitSlide } from "@/shared/api/ai-report";
@@ -235,7 +230,7 @@ const AiReportPage = () => {
           />
         </div>
         <div ref={reviewRef}>
-          <Review />
+          <ReviewSlide />
         </div>
         <FooterContainer>
           <img src={FooterImage} alt="footer" />

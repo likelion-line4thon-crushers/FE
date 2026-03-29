@@ -1,10 +1,8 @@
 import React, { useMemo } from "react";
 import { TotalReactionContainer, TitleContainer, ContentContainer } from "./TotalReaction.styles";
 import ReportTitle from "@/shared/assets/images/AI/ReportTitle.png";
-import ContentBox from "../ContentBox/ContentBox";
-import SlideNumber from "../SlideNumber/SlideNumber";
+import { ContentBox, SlideNumber, SlideSkeleton } from "../../summary";
 import { useSlideImage } from "@/entities/slide";
-import SlideSkeleton from "../SlideSkeleton/SlideSkeleton";
 
 const formatValue = (value: any, { loading, error }: { loading: boolean; error: any }) => {
   if (loading) {

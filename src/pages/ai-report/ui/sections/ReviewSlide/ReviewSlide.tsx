@@ -15,8 +15,7 @@ import {
   CenterHeader,
   SmallDivider,
 } from "./ReviewSlide.styles";
-import AITitle from "../AITitle/AITitle";
-import ContentBox from "../ContentBox/ContentBox";
+import { AITitle, ContentBox } from "../../summary";
 import SatisfyImage from "@/shared/assets/images/AI/Satisfy.png";
 import StarImage from "@/shared/assets/images/AI/Star.png";
 import RectangleImage from "@/shared/assets/images/AI/Rectangle.png";

@@ -1,1 +1,1 @@
-export { default as AppHeader } from "./ui/AppHeader";
+export { AppHeader } from "./ui";

@@ -8,9 +8,7 @@ import {
   NumberValue,
   NumberDescription,
 } from "./ReplaySlide.styles";
-import ContentBox from "../ContentBox/ContentBox";
-import AITitle from "../AITitle/AITitle";
-import SlideNumber from "../SlideNumber/SlideNumber";
+import { ContentBox, AITitle, SlideNumber } from "../../summary";
 import { useSlideImage } from "@/entities/slide";
 
 const fallbackText = (loading: boolean, error: any, value: string) => {
