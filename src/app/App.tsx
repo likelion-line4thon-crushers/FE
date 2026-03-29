@@ -1,12 +1,12 @@
 import React from "react";
-import { Outlet } from 'react-router';
-import HeaderBar from "../shared/header/HeaderBar";
+import { Outlet } from "react-router";
+import { AppHeader } from "@/widgets/app-header";
 import "../styles/global.css";
 
 function App() {
   return (
     <div id="root">
-      <HeaderBar />
+      <AppHeader />
       <div className="page">
         <Outlet />
       </div>

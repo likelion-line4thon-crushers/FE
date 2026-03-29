@@ -1,5 +1,6 @@
 /* global.css */
-html, body {
+html,
+body {
   margin: 0;
   height: 100%;
   overflow: hidden; /* 스크롤 완전 차단 */
