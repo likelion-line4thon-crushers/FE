@@ -17,21 +17,27 @@ const SlideContainer = ({
 }: any) => {
   const imageBorderColor = highlight ? "#ffc551" : "#eee";
 
+  const hasSrc = typeof src === "string" && src.length > 0;
+
   return (
     <SlideBox highlight={highlight} data-testid={testId}>
-      <img
-        src={src}
-        alt={alt}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          borderRadius: "0.6vw",
-          border: `0.05vw solid ${imageBorderColor}`,
-          userSelect: "none",
-          pointerEvents: "none",
-        }}
-      />
+      {hasSrc ? (
+        <img
+          src={src}
+          alt={alt}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            borderRadius: "0.6vw",
+            border: `0.05vw solid ${imageBorderColor}`,
+            userSelect: "none",
+            pointerEvents: "none",
+          }}
+        />
+      ) : (
+        <PendingLabel>슬라이드 렌더링 중...</PendingLabel>
+      )}
       {showStamps &&
         Array.isArray(stamps) &&
         stamps.map((stamp, index) => (
@@ -76,4 +82,10 @@ const StampImage = styled.img`
   width: 25px;
   height: 25px;
   pointer-events: none;
+`;
+
+const PendingLabel = styled.div`
+  color: #999;
+  font-size: 0.9vw;
+  letter-spacing: 0.02em;
 `;

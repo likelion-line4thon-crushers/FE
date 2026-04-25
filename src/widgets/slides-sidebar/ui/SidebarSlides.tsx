@@ -57,6 +57,8 @@ const SidebarSlides = ({
       <SlideList>
         {slideItems.map((slide: SlideItem | undefined, i: number) => {
           const locked = isSlideLocked(i);
+          const src = typeof slide === "string" ? slide : slide?.thumbnailUrl || "";
+          const showPlaceholder = isWaiting || locked || !src;
           return (
             <SlideThumb
               key={i}
@@ -65,15 +67,10 @@ const SidebarSlides = ({
               $locked={locked}
               onClick={() => handleSelectSlide(i)}
             >
-              {isWaiting ? (
-                <SlidePlaceholder />
-              ) : locked ? (
+              {showPlaceholder ? (
                 <SlidePlaceholder />
               ) : (
-                <SlideImage
-                  src={typeof slide === "string" ? slide : slide?.thumbnailUrl || ""}
-                  alt={`슬라이드 ${i + 1}`}
-                />
+                <SlideImage src={src} alt={`슬라이드 ${i + 1}`} />
               )}
 
               <SlideIndex $active={!isWaiting && i === currentSlide}>{i + 1}</SlideIndex>

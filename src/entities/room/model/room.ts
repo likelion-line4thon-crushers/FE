@@ -12,6 +12,8 @@ export interface RoomData {
   audienceCount?: number;
   fileName?: string;
   qrPngBase64?: string;
+  pdfId?: string;
+  canStartSession?: boolean;
 }
 
 // ! Backend returns inconsistent field names (deckID vs deckId)

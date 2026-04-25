@@ -1,21 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { KeyboardEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
+import { useSetAtom } from "jotai";
 import { createLogger } from "@/shared/lib/logger";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { PresentationLayout, SlideViewer, SettingsPanel } from "@/widgets/presentation-layout";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
 import { useQuickSettingsStorage } from "@/entities/session";
+import { canStartSessionAtom } from "@/entities/room";
 import { storageKeys } from "@/shared/config/storage-keys";
-
-const log = createLogger("session-create");
-import { v4 as uuidv4 } from "uuid";
-import usePdfConverter from "../model/usePdfConverter";
+import { useChunkedPdfUpload } from "../model/useChunkedPdfUpload";
+import { usePdfStream } from "../model/usePdfStream";
 import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
 import { createRoom } from "@/shared/api/room";
-import { fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
-import api from "@/shared/api/api";
+import { fetchSlidesMeta, fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import websocketService from "@/shared/api/websocket";
+
+const log = createLogger("session-create");
 
 const PresentationPrepPage = () => {
   const location = useLocation();
@@ -26,18 +27,15 @@ const PresentationPrepPage = () => {
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [roomData, setRoomData] = useState<any>(initialRoomData);
-  const [deckId, setDeckId] = useState<any>(initialRoomData?.deckId ?? null);
-  const [slideImageFiles, setSlideImageFiles] = useState<any[]>([]);
-  const [slideUrls, setSlideUrls] = useState<any[]>([]);
-  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [restoredSlides, setRestoredSlides] = useState<string[] | null>(null);
+  const [fatalMessage, setFatalMessage] = useState<string | null>(null);
 
-  // roomData에서 roomId 추출
-  const roomId = useMemo(() => {
-    return roomIdParam || roomData?.roomId;
-  }, [roomIdParam, roomData]);
+  const roomId = useMemo(
+    () => roomIdParam || roomData?.roomId || null,
+    [roomIdParam, roomData]
+  );
   const quickSettingsStorageKey = roomId ? storageKeys.quickSettings(String(roomId)) : null;
 
-  // 🔹 빠른 설정 토글 상태 관리
   const [quickSettings, setQuickSettings] = useQuickSettingsStorage(quickSettingsStorageKey) as any;
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
 
@@ -61,7 +59,7 @@ const PresentationPrepPage = () => {
         const protocol =
           url.protocol === "ws:" ? "http:" : url.protocol === "wss:" ? "https:" : url.protocol;
         return `${protocol}//${url.host}/ws/presenter`;
-      } catch (error) {
+      } catch {
         return null;
       }
     };
@@ -84,17 +82,33 @@ const PresentationPrepPage = () => {
     pendingUnlockRef.current = quickSettings.unlock;
   }, [quickSettings]);
 
-  const { convertPdfToImages } = usePdfConverter();
+  const { upload: uploadPdf, progress: uploadProgress } = useChunkedPdfUpload();
 
-  // 🔹 옵션 변경 핸들러 (리액션 스티커, 질문, 실시간 피드백)
+  // 업로드 & 스트림 상태
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState<number>(
+    typeof initialRoomData?.totalPages === "number" ? initialRoomData.totalPages : 0
+  );
+
+  const {
+    slides: streamedSlides,
+    canStartSession,
+    done: streamDone,
+    fatalError,
+  } = usePdfStream({
+    streamUrl,
+    totalPages,
+    enabled: !!streamUrl && totalPages > 0,
+  });
+
+  const setCanStartSessionAtomValue = useSetAtom(canStartSessionAtom);
+
   const handleOptionChange = useCallback(
     (optionKey: any, value: any) => {
       setQuickSettings((prev: any) => {
         const newSettings = { ...prev, [optionKey]: value };
 
-        // unlock 옵션이 아닌 경우만 sendOptionChange 호출
         if (optionKey !== "unlock") {
-          // 웹소켓으로 전송 (연결되어 있을 경우에만)
           if (roomId && websocketService.getIsConnected()) {
             const options = {
               sticker: newSettings.sticker,
@@ -115,15 +129,13 @@ const PresentationPrepPage = () => {
         return newSettings;
       });
     },
-    [roomId]
+    [roomId, setQuickSettings]
   );
 
-  // 🔹 다음 슬라이드 공개 옵션 변경 핸들러
   const handleUnlockChange = useCallback(
     (value: any) => {
       setQuickSettings((prev: any) => ({ ...prev, unlock: value }));
 
-      // 웹소켓으로 전송 (연결되어 있을 경우에만)
       if (roomId && websocketService.getIsConnected()) {
         const unlock = value ? "true" : "false";
         websocketService.sendUnlockChange(roomId, unlock);
@@ -132,10 +144,9 @@ const PresentationPrepPage = () => {
         pendingUnlockRef.current = value;
       }
     },
-    [roomId]
+    [roomId, setQuickSettings]
   );
 
-  // 🔹 발표자 웹소켓 연결 (발표 준비 단계에서도 연결 유지)
   useEffect(() => {
     if (!roomId || !presenterToken || !presenterWsUrl) {
       return undefined;
@@ -164,7 +175,7 @@ const PresentationPrepPage = () => {
       setIsPresenterWsReady(true);
     };
 
-    const onError = (error: any) => {
+    const onError = () => {
       setIsPresenterWsReady(false);
       syncPendingFromLatest();
     };
@@ -178,7 +189,6 @@ const PresentationPrepPage = () => {
     };
   }, [roomId, presenterToken, presenterWsUrl]);
 
-  // 🔹 웹소켓 연결 이후, 대기 중이던 옵션 변경을 한번에 전송
   useEffect(() => {
     if (!roomId || !isPresenterWsReady || !websocketService.getIsConnected()) {
       return;
@@ -197,177 +207,229 @@ const PresentationPrepPage = () => {
     }
   }, [isPresenterWsReady, roomId]);
 
-  // 🔹 세션 스토리지에 방 정보가 있으면 슬라이드 URL 복원
+  // 새로고침 복원: sessionStorage 에 roomData 가 있고 pdfFile 이 없을 때.
+  // 우선순위:
+  //  1) meta 엔드포인트로 모든 페이지 URL 이 완비돼 있으면 restoredSlides 로 고정 표시.
+  //  2) meta 가 부분만 돌려주거나 실패 + pdfId 가 있으면 SSE 스트림을 재구독해서 남은 페이지를 수신.
+  //     (BE 는 subscribe 시점 이전 이벤트를 버퍼링 후 flush 해주므로 안전.)
+  //  3) meta 도 실패·pdfId 도 없으면 레거시 per-page API 로 마지막 폴백.
   useEffect(() => {
-    if (!roomData || !roomData.roomId || !roomData.deckId || slideUrls.length > 0) {
-      return;
-    }
+    if (pdfFile) return;
+    if (!roomData?.roomId || !roomData?.deckId) return;
+    if (restoredSlides !== null) return;
 
-    const restoreSlides = async () => {
+    const pages = roomData.totalPages || 0;
+    if (pages <= 0) return;
+
+    const pdfIdFromStorage: string | undefined = roomData.pdfId;
+
+    const resubscribeSse = () => {
+      if (!pdfIdFromStorage) return false;
+      setTotalPages(pages);
+      setStreamUrl(`/api/pdf/${pdfIdFromStorage}/stream`);
+      hasInitializedRef.current = true;
+      return true;
+    };
+
+    const restore = async () => {
       try {
-        // 세션 스토리지에서 totalPages 확인
-        const totalPages = roomData.totalPages || 0;
-        if (totalPages === 0) return;
-
-        // Presigned URL로 원본 슬라이드 불러오기
-        const originalUrls = await fetchAllOriginalSlideUrls(
-          roomData.roomId,
-          roomData.deckId,
-          totalPages
-        );
-
-        setSlideUrls(originalUrls);
-        hasInitializedRef.current = true; // 방 생성 스킵을 위해 플래그 설정
-      } catch (error) {
-        log.error("슬라이드 복원 실패:", error);
-        // 복원 실패 시 기존 로직으로 진행
-        hasInitializedRef.current = false;
+        const urls = await fetchSlidesMeta(roomData.roomId, roomData.deckId, pages);
+        const allReady = urls.length === pages && urls.every((u) => !!u);
+        if (allReady) {
+          setRestoredSlides(urls);
+          setTotalPages(pages);
+          setRoomData((prev: any) => ({ ...prev, canStartSession: true }));
+          hasInitializedRef.current = true;
+          return;
+        }
+        // meta 가 부분만 반환 → BE 가 아직 렌더링 중. SSE 로 재구독해 남은 페이지 수신.
+        if (resubscribeSse()) {
+          log.warn("meta 부분 응답, SSE 재구독으로 전환");
+          return;
+        }
+        throw new Error("meta 응답이 비어 있음");
+      } catch (metaErr) {
+        log.warn("meta 조회 실패:", metaErr);
+        if (resubscribeSse()) return;
+        // 최후 폴백: 레거시 per-page API
+        try {
+          const urls = await fetchAllOriginalSlideUrls(roomData.roomId, roomData.deckId, pages);
+          setRestoredSlides(urls);
+          setTotalPages(pages);
+          setRoomData((prev: any) => ({ ...prev, canStartSession: true }));
+          hasInitializedRef.current = true;
+        } catch (err) {
+          log.error("슬라이드 복원 실패:", err);
+        }
       }
     };
 
-    restoreSlides();
-  }, [roomData, slideUrls.length]);
+    restore();
+  }, [pdfFile, roomData?.roomId, roomData?.deckId, roomData?.totalPages, roomData?.pdfId, restoredSlides]);
 
-  // 1. PDF → 이미지 변환
+  // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
   useEffect(() => {
-    // 세션 스토리지에 방 정보가 있으면 PDF 변환 스킵
-    if (roomData && roomData.roomId) {
-      return;
-    }
-
-    if (pdfFile) {
-      convertPdfToImages(pdfFile).then(setSlideImageFiles);
-    } else if (!roomData || !roomData.roomId) {
-      // 방 정보도 없고 PDF 파일도 없으면 메인 페이지로 이동
-      navigate("/");
-    }
-  }, [pdfFile, navigate, convertPdfToImages, roomData]);
-
-  // 2. 이미지 업로드 + 방 생성
-  useEffect(() => {
-    if (!slideImageFiles || slideImageFiles.length === 0) {
-      return;
-    }
-
-    if (hasInitializedRef.current) {
-      return;
-    }
-
-    // 세션 스토리지에 방 정보가 있으면 방 생성 스킵
-    if (roomData && roomData.roomId) {
+    if (hasInitializedRef.current) return;
+    // pdfFile 이 없는 경우(= 새로고침 복원)만 기존 roomData 로 skip. pdfFile 이 있으면
+    // stale roomData 가 있더라도 신규 업로드가 우선.
+    if (!pdfFile && roomData?.roomId) {
       hasInitializedRef.current = true;
       return;
     }
+    if (!pdfFile) {
+      navigate("/");
+      return;
+    }
 
-    const initRoomAndUpload = async () => {
+    hasInitializedRef.current = true;
+
+    // 신규 업로드 진입 — 이전 세션 잔재(atom, sessionStorage, 로컬 state)를 모두 리셋.
+    setCanStartSessionAtomValue(false);
+    try {
+      sessionStorage.removeItem("boini_room");
+    } catch {
+      /* ignore */
+    }
+    setTotalPages(0);
+    setStreamUrl(null);
+    setRoomData(null);
+
+    const run = async () => {
       try {
-        hasInitializedRef.current = true;
+        // BE 는 totalPages >= 1 을 요구하므로 placeholder 로 1 을 보낸다.
+        // 실제 총 페이지는 업로드 조립 완료 응답(ready.totalPages) 에서 확정된다.
+        const room = await createRoom(1);
+        const ready = await uploadPdf(pdfFile, room.roomId, room.deckId);
 
-        // 1️⃣ 방 생성
-        const room = await createRoom(slideImageFiles.length);
-        const { roomId, deckId: serverDeckId } = room;
-        setDeckId(serverDeckId);
-
-        // 2️⃣ 이미지 업로드 (API 명세에 맞게 한번에 전송)
-        const formData = new FormData();
-        slideImageFiles.forEach((dataUrl, idx) => {
-          const blob = dataURLtoBlob(dataUrl);
-          // API 명세에 따라 필드명을 'files'로 지정
-          formData.append("files", blob, `page_${idx + 1}.png`);
-        });
-
-        const uploadRes = await api.post(
-          `/api/presentations/${roomId}/${serverDeckId}/pages`,
-          formData
-        );
-
-        // 3️⃣ Presigned URL로 원본 슬라이드 불러오기
-        const originalUrls = await fetchAllOriginalSlideUrls(
-          roomId,
-          serverDeckId,
-          slideImageFiles.length
-        );
-
-        // 4️⃣ 상태 저장 + sessionStorage
         const nextRoomData = {
           ...room,
-          deckId: serverDeckId,
-          totalPages: slideImageFiles.length,
+          deckId: room.deckId,
+          totalPages: ready.totalPages,
+          pdfId: ready.pdfId,
+          fileName: ready.fileName,
+          canStartSession: false,
         };
 
-        setSlideUrls(originalUrls);
         setRoomData(nextRoomData);
+        setTotalPages(ready.totalPages);
+        setStreamUrl(ready.streamUrl);
         sessionStorage.setItem("boini_room", JSON.stringify(nextRoomData));
 
-        if (roomIdParam !== roomId) {
-          navigate(`/rooms/${roomId}/prepare`, {
+        if (roomIdParam !== room.roomId) {
+          navigate(`/rooms/${room.roomId}/prepare`, {
             replace: true,
             state: {
               ...(location.state || {}),
               roomData: nextRoomData,
-              roomId,
-              deckId: serverDeckId,
-              totalPages: slideImageFiles.length,
+              roomId: room.roomId,
+              deckId: room.deckId,
+              totalPages: ready.totalPages,
             },
           });
         }
       } catch (err) {
+        log.error("PDF 업로드/스트림 준비 실패:", err);
         hasInitializedRef.current = false;
+        setFatalMessage("PDF 업로드에 실패했습니다. 다시 시도해주세요.");
       }
     };
 
-    initRoomAndUpload();
-  }, [slideImageFiles, navigate, roomIdParam, pdfFile, roomData]);
+    run();
+  }, [
+    pdfFile,
+    roomData?.roomId,
+    roomIdParam,
+    navigate,
+    location.state,
+    uploadPdf,
+    setCanStartSessionAtomValue,
+  ]);
 
-  // 3. 슬라이드 이미지 로딩 확인
+  // canStartSession 이 true 가 되면 atom + roomData + sessionStorage 를 모두 동기화.
+  // AppHeader 는 atom 을 구독해 즉시 재렌더되고, 새로고침 대비로 sessionStorage 에도 저장한다.
+  // 새로고침 복원 경로는 restoredSlides 채워지는 시점에 canStartSession 을 true 로 간주.
   useEffect(() => {
-    if (!slideUrls || slideUrls.length === 0) return;
-
-    const loadPromises = slideUrls.map((slide) => {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.src = slide.thumbnailUrl || slide;
-        img.onload = () => resolve(true);
-        img.onerror = () => resolve(false);
-      });
+    const effective = canStartSession || !!restoredSlides;
+    if (!effective) return;
+    setCanStartSessionAtomValue(true);
+    setRoomData((prev: any) => {
+      if (!prev || prev.canStartSession === true) return prev;
+      const next = { ...prev, canStartSession: true };
+      try {
+        sessionStorage.setItem("boini_room", JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
     });
+  }, [canStartSession, restoredSlides, setCanStartSessionAtomValue]);
 
-    Promise.all(loadPromises).then(() => {
-      setImagesLoaded(true);
-    });
-  }, [slideUrls]);
+  // 페이지 이탈 시 atom 리셋 — 다음 세션 준비 때 잔여 값이 남아있지 않도록.
+  useEffect(() => {
+    return () => setCanStartSessionAtomValue(false);
+  }, [setCanStartSessionAtomValue]);
 
-  // 🔹 방향키로 슬라이드 이동
+  // 치명 에러 (PDF_LOAD_FAILED) 발생 시 오버레이 표시
+  useEffect(() => {
+    if (!fatalError) return;
+    const message =
+      fatalError instanceof Error ? fatalError.message : fatalError.message || "PDF 로드에 실패했습니다.";
+    setFatalMessage(message);
+  }, [fatalError]);
+
+  // 표시용 슬라이드 배열 (SSE 진행 중엔 null → "" 플레이스홀더)
+  const displaySlides = useMemo<string[]>(() => {
+    if (restoredSlides) return restoredSlides;
+    if (totalPages > 0 && streamedSlides.length === 0) {
+      return new Array<string>(totalPages).fill("");
+    }
+    return streamedSlides.map((s) => s ?? "");
+  }, [restoredSlides, streamedSlides, totalPages]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent | globalThis.KeyboardEvent) => {
       if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-        // 이전 슬라이드
         setCurrentSlide((prev) => Math.max(0, prev - 1));
       } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-        // 다음 슬라이드
-        setCurrentSlide((prev) => Math.min(slideUrls.length - 1, prev + 1));
+        setCurrentSlide((prev) => Math.min(displaySlides.length - 1, prev + 1));
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [slideUrls.length]);
+  }, [displaySlides.length]);
 
-  if (!slideUrls || slideUrls.length === 0 || !imagesLoaded)
-    return <SessionLoadingOverlay message="세션 자료 준비 중..." />;
+  if (fatalMessage) {
+    return (
+      <SessionLoadingOverlay message={`⚠️ ${fatalMessage}`} />
+    );
+  }
+
+  // 오버레이는 "아직 대시보드를 그릴 근거가 없는 동안"에만 띄운다.
+  // 업로드 완료로 totalPages 가 확정되거나 새로고침 복원이 끝나면 곧바로 대시보드를 열고,
+  // 각 슬라이드는 SSE 로 도착하는 대로 비동기로 채워진다.
+  if (totalPages === 0 && !restoredSlides) {
+    const msg =
+      uploadProgress.total > 0
+        ? `PDF 업로드 중... (${uploadProgress.sent}/${uploadProgress.total})`
+        : "세션 자료 준비 중...";
+    return <SessionLoadingOverlay message={msg} />;
+  }
+
+  void streamDone;
+  void totalPages;
 
   return (
     <PresentationLayout>
       <SlidesSidebar
-        slides={slideUrls}
+        slides={displaySlides}
         currentSlide={currentSlide}
         setCurrentSlide={setCurrentSlide}
       />
       <SlideViewer
-        slides={slideUrls}
+        slides={displaySlides}
         currentSlide={currentSlide}
         setCurrentSlide={setCurrentSlide}
         mode="prepare"
@@ -385,15 +447,3 @@ const PresentationPrepPage = () => {
 };
 
 export default PresentationPrepPage;
-
-// 유틸: dataURL → Blob 변환
-function dataURLtoBlob(dataUrl: string) {
-  const arr = dataUrl.split(",");
-  const mimeMatch = arr[0]?.match(/:(.*?);/);
-  const mime = mimeMatch?.[1] ?? "application/octet-stream";
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while (n--) u8arr[n] = bstr.charCodeAt(n);
-  return new Blob([u8arr], { type: mime });
-}

@@ -11,6 +11,7 @@ export type BoiniScenario = {
   totalPages: number;
   wsBaseUrl: string;
   fileName: string;
+  pdfId: string;
 };
 
 type InstallApiMocksOptions = {
@@ -50,6 +51,7 @@ export const defaultScenario: BoiniScenario = {
   totalPages: 3,
   wsBaseUrl: "http://127.0.0.1:5174",
   fileName: "demo.pdf",
+  pdfId: "pdf-test-1",
 };
 
 const resolveScenario = (scenario?: Partial<BoiniScenario>): BoiniScenario => ({
@@ -173,7 +175,7 @@ export const installApiMocks = async (
   await context.route("**/*", async (route) => {
     const url = route.request().url();
     const method = route.request().method();
-    const { roomId, deckId, code, audienceId, audienceToken, totalPages, wsBaseUrl } =
+    const { roomId, deckId, code, audienceId, audienceToken, totalPages, wsBaseUrl, pdfId } =
       resolvedScenario;
 
     if (url.includes(`/api/rooms/${roomId}/session/start`) && method === "POST") {
@@ -300,6 +302,65 @@ export const installApiMocks = async (
       return;
     }
 
+    if (url.includes(`/api/presentations/${roomId}/${deckId}/meta`) && method === "GET") {
+      const pages = Array.from({ length: totalPages }, (_, i) => ({
+        page: i + 1,
+        url: svgDataUrl(`Slide ${i + 1}`),
+      }));
+      await route.fulfill({ json: { success: true, data: { pages } } });
+      return;
+    }
+
+    if (url.endsWith("/api/upload/chunk") && method === "POST") {
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          message: "ok",
+          data: {
+            status: "READY",
+            uploadId: "u-1",
+            pdfId,
+            fileName: resolvedScenario.fileName,
+            totalPages,
+            streamUrl: `/api/pdf/${pdfId}/stream`,
+          },
+        }),
+      });
+      return;
+    }
+
+    if (url.includes(`/api/pdf/${pdfId}/stream`) && method === "GET") {
+      // SSE 본문: page 이벤트 N개 + complete 이벤트.
+      // 총 페이지가 10 미만이면 마지막 page 이벤트에 canStartSession: true.
+      const threshold = Math.min(10, totalPages);
+      const lines: string[] = [];
+      for (let i = 0; i < totalPages; i++) {
+        const payload = {
+          pdfId,
+          pageIndex: i,
+          totalPages,
+          imageUrl: svgDataUrl(`Slide ${i + 1}`),
+          format: "webp",
+          width: 1600,
+          height: 900,
+          canStartSession: i === threshold - 1,
+        };
+        lines.push(`event: page\ndata: ${JSON.stringify(payload)}\n\n`);
+      }
+      lines.push(
+        `event: complete\ndata: ${JSON.stringify({ pdfId, totalPages, status: "DONE" })}\n\n`
+      );
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        headers: { "cache-control": "no-cache", connection: "keep-alive" },
+        body: lines.join(""),
+      });
+      return;
+    }
+
     await route.continue();
   });
 };
@@ -324,6 +385,8 @@ export const seedPresenterSession = async (
           totalPages: nextScenario.totalPages,
           joinUrl: `${nextScenario.wsBaseUrl}/join/${nextScenario.code}`,
           fileName: nextScenario.fileName,
+          pdfId: nextScenario.pdfId,
+          canStartSession: true,
         })
       );
 
@@ -360,15 +423,20 @@ export const seedAudienceSession = async (page: Page, scenario?: Partial<BoiniSc
 export const getSentMessages = async (page: Page) =>
   getPageHelper(page, () => {
     const helper = (
-      window as typeof window & { __boiniTestWs?: { getSentMessages: () => unknown[] } }
+      window as typeof window & {
+        __boiniTestWs?: { getSentMessages: () => unknown[] };
+      }
     ).__boiniTestWs;
     return helper?.getSentMessages() ?? [];
   });
 
 export const clearSentMessages = async (page: Page) =>
   getPageHelper(page, () => {
-    const helper = (window as typeof window & { __boiniTestWs?: { clearSentMessages: () => void } })
-      .__boiniTestWs;
+    const helper = (
+      window as typeof window & {
+        __boiniTestWs?: { clearSentMessages: () => void };
+      }
+    ).__boiniTestWs;
     helper?.clearSentMessages();
   });
 
@@ -377,7 +445,9 @@ export const emitJson = async (page: Page, destination: string, payload: unknown
     ([targetDestination, targetPayload]) => {
       const helper = (
         window as typeof window & {
-          __boiniTestWs?: { emitJson: (destination: string, payload: unknown) => void };
+          __boiniTestWs?: {
+            emitJson: (destination: string, payload: unknown) => void;
+          };
         }
       ).__boiniTestWs;
       helper?.emitJson(targetDestination, targetPayload);
@@ -390,7 +460,9 @@ export const emitText = async (page: Page, destination: string, payload: string)
     ([targetDestination, targetPayload]) => {
       const helper = (
         window as typeof window & {
-          __boiniTestWs?: { emitText: (destination: string, payload: string) => void };
+          __boiniTestWs?: {
+            emitText: (destination: string, payload: string) => void;
+          };
         }
       ).__boiniTestWs;
       helper?.emitText(targetDestination, targetPayload);

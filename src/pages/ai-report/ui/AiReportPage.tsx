@@ -2,7 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router";
 import { PageContainer, ContentContainer, FooterContainer } from "./AiReportPage.styles";
 import { SideHeader } from "./navigation";
-import { TotalReaction, Top3, PopularSlide, QuestionSlide, ReplaySlide, ReviewSlide } from "./sections";
+import {
+  TotalReaction,
+  Top3,
+  PopularSlide,
+  QuestionSlide,
+  ReplaySlide,
+  ReviewSlide,
+} from "./sections";
 import FooterImage from "@/shared/assets/images/AI/AIFooter.png";
 import { loadStoredRoomData, computeRoomInfo } from "../model/room-info";
 import { fetchStoredAiReport, fetchMostRevisitSlide } from "@/shared/api/ai-report";

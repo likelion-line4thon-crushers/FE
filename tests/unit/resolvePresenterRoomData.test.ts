@@ -38,6 +38,20 @@ describe("resolvePresenterRoomData", () => {
     });
   });
 
+  it("returns null for /rooms/new (no roomIdParam) even if sessionStorage has stale data", () => {
+    sessionStorage.setItem(
+      "boini_room",
+      JSON.stringify({
+        roomId: "stale-room",
+        deckId: "stale-deck",
+        canStartSession: true,
+        totalPages: 20,
+      })
+    );
+
+    expect(resolvePresenterRoomData(undefined, { pdfFile: {} as File })).toBeNull();
+  });
+
   it("prefers explicit route state room data over storage", () => {
     sessionStorage.setItem(
       "boini_room",

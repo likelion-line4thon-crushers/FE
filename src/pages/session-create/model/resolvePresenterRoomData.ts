@@ -19,9 +19,12 @@ const toRoomData = (value: unknown): PresenterRoomData | null => {
   return value as PresenterRoomData;
 };
 
+// roomIdParam 이 없으면(= /rooms/new 신규 업로드 진입) stale sessionStorage 값을 채택하지 않도록 false 반환.
+// 이전 구현은 true 를 돌려 이전 세션의 roomData 가 신규 플로우로 흘러들어 upload effect 를 skip 시키고,
+// canStartSession/totalPages 를 오염시켰다.
 const roomIdsMatch = (storedRoomId: PresenterRoomData["roomId"], roomIdParam?: string) => {
   if (!roomIdParam) {
-    return true;
+    return false;
   }
 
   if (storedRoomId == null) {

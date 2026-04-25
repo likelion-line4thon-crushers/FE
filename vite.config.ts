@@ -15,10 +15,4 @@ export default defineConfig({
   define: {
     global: "globalThis",
   },
-  optimizeDeps: {
-    include: ["pdfjs-dist"],
-  },
-  worker: {
-    format: "es",
-  },
 });

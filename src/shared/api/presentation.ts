@@ -1,12 +1,14 @@
 import api from "./api";
 import type { AudienceStats } from "@/entities/slide";
 
+// 백엔드는 WebP 포맷만 S3 에 저장하므로 기본 ext 를 'webp' 로 고정.
 export async function getOriginalSlideUrl(
   roomId: string,
   deckId: string,
-  page: number
+  page: number,
+  ext: 'webp' | 'png' = 'webp'
 ): Promise<string> {
-  const response = await api.get(`/api/presentations/${roomId}/${deckId}/pages/${page}?ext=png`);
+  const response = await api.get(`/api/presentations/${roomId}/${deckId}/pages/${page}?ext=${ext}`);
   return response.data.data.originalUrl;
 }
 
@@ -19,6 +21,29 @@ export async function fetchAllOriginalSlideUrls(
     getOriginalSlideUrl(roomId, deckId, i + 1)
   );
   return Promise.all(promises);
+}
+
+interface SlideMetaItem {
+  page: number;
+  url: string;
+}
+
+// 새로고침 복원용 일괄 조회. N+1 호출 없이 한 번에 presigned URL 배열을 받는다.
+// BE SlidesMetaResponse 실제 형태가 `pages` 혹은 `items` 로 다를 수 있어 둘 다 시도.
+export async function fetchSlidesMeta(
+  roomId: string,
+  deckId: string,
+  totalPages: number
+): Promise<string[]> {
+  const response = await api.get(`/api/presentations/${roomId}/${deckId}/meta`, {
+    params: { totalPages },
+  });
+  const payload = response.data?.data ?? {};
+  const items: SlideMetaItem[] = payload.pages ?? payload.items ?? [];
+  return items
+    .slice()
+    .sort((a, b) => a.page - b.page)
+    .map((i) => i.url);
 }
 
 // * Coerces backend field names (frontCount/currentCount/backCount) to our domain model

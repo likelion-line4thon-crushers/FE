@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import styled, { css } from "styled-components";
 import { useLocation, useNavigate } from "react-router";
+import { useAtomValue } from "jotai";
 import BoiniLogo from "@/shared/assets/images/Boini_logo.svg";
 import LiveIcon from "@/shared/assets/images/live.png";
 import { ShareModal } from "../share";
 import { ShareButton, ExitButton, StartSessionButton } from "./HeaderButtons";
 import { leaveRoom } from "@/shared/api/room";
+import { canStartSessionAtom } from "@/entities/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { useHeaderRoomData, useHeaderSessionAction, resolveShareJoinUrl } from "../../model";
 
@@ -108,9 +110,18 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const [sessionStatus, setSessionStatus] = useState("waiting");
 
   const { roomData, fileName } = useHeaderRoomData(propRoomData);
+  // roomData.canStartSession 은 sessionStorage 스냅샷이라 이전 세션 값이 남아있을 수 있다.
+  // 단일 진실 소스로 atom 만 사용. SessionCreatePage 가 SSE 수신/복원 시 atom 을 true 로 세팅하고,
+  // 진입 시점엔 항상 false 로 리셋한다.
+  const resolvedCanStartSession = useAtomValue(canStartSessionAtom);
 
   const { isSessionEnding, showLandingPage, landingMessage, handleSessionAction } =
-    useHeaderSessionAction({ roomData, fileName, totalPages });
+    useHeaderSessionAction({
+      roomData,
+      fileName,
+      totalPages,
+      canStartSession: resolvedCanStartSession,
+    });
 
   // * Audience view: poll sessionStatus from sessionStorage
   useEffect(() => {
@@ -214,7 +225,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
             {(isPrep || isPresenter) && (
               <StartSessionButton
                 onClick={handleSessionAction}
-                disabled={isSessionEnding}
+                disabled={isSessionEnding || (isPrep && !resolvedCanStartSession)}
                 isEndSession={isPresenter}
               >
                 {isPrep ? "세션 시작" : "세션 종료"}

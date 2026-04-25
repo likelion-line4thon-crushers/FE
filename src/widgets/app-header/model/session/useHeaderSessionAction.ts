@@ -15,6 +15,7 @@ interface UseHeaderSessionActionParams {
   roomData: any;
   fileName: string;
   totalPages?: number;
+  canStartSession?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export const useHeaderSessionAction = ({
   roomData,
   fileName,
   totalPages,
+  canStartSession = false,
 }: UseHeaderSessionActionParams) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -48,6 +50,11 @@ export const useHeaderSessionAction = ({
     if (isPrep) {
       if (!roomData?.roomId || !roomData?.deckId) {
         alert("⚠️ 방 정보가 아직 준비되지 않았습니다.");
+        return;
+      }
+
+      if (!canStartSession) {
+        alert("⚠️ 아직 슬라이드 준비 중입니다. 잠시만 기다려주세요.");
         return;
       }
 
@@ -156,6 +163,7 @@ export const useHeaderSessionAction = ({
     roomData,
     fileName,
     totalPages,
+    canStartSession,
     navigate,
     location.state,
   ]);
