@@ -49,40 +49,42 @@ export const QuestionHeader = styled.div`
   display: flex;
   align-items: center;
   margin-bottom: 0.74vh;
-  gap: 0.6vw;
+  gap: 7px;
 `;
 
 export const SlideTag = styled.button<{ $active?: boolean }>`
   background: #5c5c5c;
   color: #fff;
-  font-size: clamp(9px, 0.65vw, 11px);
+  font-size: 12px;
   font-weight: 600;
-  border-radius: 0.21vw;
-  padding: 0.19vh 0.42vw;
-  min-width: 3.07vw;
+  border-radius: 4px;
+  padding: 4px 8px;
+  letter-spacing: -0.3px;
+  line-height: 1.45;
   border: none;
   cursor: pointer;
-  transition:
-    background 0.2s ease,
-    transform 0.2s ease;
+  transition: background 0.2s ease;
+  white-space: nowrap;
 
   &:hover {
     background: #4a4a4a;
-    transform: translateY(-1px);
   }
 `;
 
 export const Time = styled.div`
-  font-size: clamp(9px, 0.6vw, 11px);
+  font-size: 12px;
   color: #767676;
   font-weight: 400;
+  letter-spacing: -0.3px;
+  line-height: 1.45;
 `;
 
 export const Content = styled.div`
   color: #111;
-  font-size: clamp(10px, 0.7vw, 12px);
+  font-size: 15px;
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 1.45;
+  letter-spacing: -0.375px;
   text-align: left;
 `;
 
@@ -95,4 +97,29 @@ export const StatusMessage = styled.div`
 
 export const ErrorMessage = styled(StatusMessage)`
   color: #d14343;
+`;
+
+export const ActionGroup = styled.div`
+  margin-left: auto;
+  display: flex;
+  gap: 5px;
+`;
+
+export const ActionButton = styled.button<{ $variant: "delete" | "complete" }>`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  color: ${({ $variant }) => ($variant === "delete" ? "#999" : "#43a047")};
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.7;
+  }
 `;

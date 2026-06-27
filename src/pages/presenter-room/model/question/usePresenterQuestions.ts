@@ -3,12 +3,17 @@ import websocketService from "@/shared/api/websocket";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("presenter-questions");
-import { fetchRoomQuestions } from "@/shared/api/question";
+import {
+  fetchRoomQuestions,
+  completeQuestion as apiComplete,
+  deleteQuestion as apiDelete,
+} from "@/shared/api/question";
 import {
   normalizeQuestion,
   sortQuestionsAsc,
   upsertQuestion,
   buildQuestionTopics,
+  applyQuestionStatusEvent,
 } from "@/entities/question";
 import type { NormalizedQuestion } from "@/entities/question";
 
@@ -36,7 +41,7 @@ const usePresenterQuestions = ({
   enabled = true,
   subscribe = true,
 }: {
-  roomId?: any;
+  roomId?: string;
   enabled?: boolean;
   subscribe?: boolean;
 }) => {
@@ -74,14 +79,49 @@ const usePresenterQuestions = ({
   }, [roomId, enabled]);
 
   const handleIncomingQuestion = useCallback((payload: any) => {
+    // Status events (QUESTION_COMPLETED / QUESTION_DELETED) arrive on the same channel
+    if (payload?.type === "QUESTION_COMPLETED" || payload?.type === "QUESTION_DELETED") {
+      setQuestions((prev) => applyQuestionStatusEvent(prev, payload));
+      return;
+    }
+
     const raw = payload?.data ?? payload;
     const normalized = normalizeQuestion(raw);
     if (!normalized) return;
 
     latestQuestionTsRef.current = Math.max(latestQuestionTsRef.current || 0, normalized.ts ?? 0);
-
     setQuestions((prev) => upsertQuestion(prev, normalized));
   }, []);
+
+  const completeQuestion = useCallback(
+    async (questionId: string) => {
+      if (!roomId) return;
+      setQuestions((prev) =>
+        applyQuestionStatusEvent(prev, { type: "QUESTION_COMPLETED", questionId })
+      );
+      try {
+        await apiComplete(roomId, questionId);
+      } catch {
+        // optimistic remove — no rollback
+      }
+    },
+    [roomId]
+  );
+
+  const deleteQuestion = useCallback(
+    async (questionId: string) => {
+      if (!roomId) return;
+      setQuestions((prev) =>
+        applyQuestionStatusEvent(prev, { type: "QUESTION_DELETED", questionId })
+      );
+      try {
+        await apiDelete(roomId, questionId);
+      } catch {
+        // optimistic remove — no rollback
+      }
+    },
+    [roomId]
+  );
 
   useEffect(() => {
     if (!roomId || !enabled) {
@@ -99,7 +139,6 @@ const usePresenterQuestions = ({
       return undefined;
     }
 
-    unsubscribeRef.current?.();
     const topics = [`/topic/presentation/${roomId}/question`, ...buildQuestionTopics(roomId)];
 
     const unsubscribes = topics
@@ -129,6 +168,8 @@ const usePresenterQuestions = ({
     questionsLoading: loading,
     questionsError: error,
     reloadQuestions: loadQuestions,
+    completeQuestion,
+    deleteQuestion,
   };
 };
 

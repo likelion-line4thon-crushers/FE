@@ -27,13 +27,10 @@ const PresentationPrepPage = () => {
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [roomData, setRoomData] = useState<any>(initialRoomData);
-  const [restoredSlides, setRestoredSlides] = useState<string[] | null>(null);
+  const [restoredSlides, setRestoredSlides] = useState<(string | null)[] | null>(null);
   const [fatalMessage, setFatalMessage] = useState<string | null>(null);
 
-  const roomId = useMemo(
-    () => roomIdParam || roomData?.roomId || null,
-    [roomIdParam, roomData]
-  );
+  const roomId = useMemo(() => roomIdParam || roomData?.roomId || null, [roomIdParam, roomData]);
   const quickSettingsStorageKey = roomId ? storageKeys.quickSettings(String(roomId)) : null;
 
   const [quickSettings, setQuickSettings] = useQuickSettingsStorage(quickSettingsStorageKey) as any;
@@ -265,7 +262,14 @@ const PresentationPrepPage = () => {
     };
 
     restore();
-  }, [pdfFile, roomData?.roomId, roomData?.deckId, roomData?.totalPages, roomData?.pdfId, restoredSlides]);
+  }, [
+    pdfFile,
+    roomData?.roomId,
+    roomData?.deckId,
+    roomData?.totalPages,
+    roomData?.pdfId,
+    restoredSlides,
+  ]);
 
   // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
   useEffect(() => {
@@ -373,12 +377,14 @@ const PresentationPrepPage = () => {
   useEffect(() => {
     if (!fatalError) return;
     const message =
-      fatalError instanceof Error ? fatalError.message : fatalError.message || "PDF 로드에 실패했습니다.";
+      fatalError instanceof Error
+        ? fatalError.message
+        : fatalError.message || "PDF 로드에 실패했습니다.";
     setFatalMessage(message);
   }, [fatalError]);
 
   // 표시용 슬라이드 배열 (SSE 진행 중엔 null → "" 플레이스홀더)
-  const displaySlides = useMemo<string[]>(() => {
+  const displaySlides = useMemo<(string | null)[]>(() => {
     if (restoredSlides) return restoredSlides;
     if (totalPages > 0 && streamedSlides.length === 0) {
       return new Array<string>(totalPages).fill("");
@@ -402,9 +408,7 @@ const PresentationPrepPage = () => {
   }, [displaySlides.length]);
 
   if (fatalMessage) {
-    return (
-      <SessionLoadingOverlay message={`⚠️ ${fatalMessage}`} />
-    );
+    return <SessionLoadingOverlay message={`⚠️ ${fatalMessage}`} />;
   }
 
   // 오버레이는 "아직 대시보드를 그릴 근거가 없는 동안"에만 띄운다.

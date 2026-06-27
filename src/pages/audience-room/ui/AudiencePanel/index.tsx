@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
-import type { NormalizedQuestion } from "@/entities/question";
+import type { NormalizedQuestion, QuestionCluster } from "@/entities/question";
+import AudienceClusterList from "./AudienceClusterList";
 import {
   PanelWrapper,
   HeaderBox,
@@ -45,6 +46,9 @@ interface AudiencePanelProps {
   onSubmitQuestion?: (content: string) => Promise<void>;
   canSubmit?: boolean;
   isLocked?: boolean;
+  clusters?: QuestionCluster[];
+  isExpanded?: (representative: string) => boolean;
+  toggleExpand?: (representative: string) => void;
 }
 
 const formatTimestamp = (ts: number | string | null | undefined) => {
@@ -82,6 +86,9 @@ const AudiencePanel = ({
   onSubmitQuestion,
   canSubmit = true,
   isLocked = false,
+  clusters,
+  isExpanded,
+  toggleExpand,
 }: AudiencePanelProps) => {
   const [questionText, setQuestionText] = useState("");
   const [isInputting, setIsInputting] = useState(false);
@@ -145,8 +152,10 @@ const AudiencePanel = ({
 
   const inputDisabled = isLocked || !canSubmit || isSubmitting;
   const showSubmitButton = isInputting && !inputDisabled;
+  const hasClusters = Array.isArray(clusters) && clusters.length > 0;
   const showLoadingMessage = questionsLoading && formattedQuestions.length === 0;
-  const showEmptyMessage = !questionsLoading && !questionsError && formattedQuestions.length === 0;
+  const showEmptyMessage =
+    !questionsLoading && !questionsError && formattedQuestions.length === 0 && !hasClusters;
   const connectionMessage = !canSubmit && !isLocked ? "발표자와의 연결을 기다리고 있습니다." : null;
 
   return (
@@ -170,6 +179,14 @@ const AudiencePanel = ({
                       "질문을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
                     )}
                   </ErrorMessage>
+                )}
+
+                {Array.isArray(clusters) && clusters.length > 0 && isExpanded && toggleExpand && (
+                  <AudienceClusterList
+                    clusters={clusters}
+                    isExpanded={isExpanded}
+                    toggleExpand={toggleExpand}
+                  />
                 )}
 
                 {formattedQuestions.map(

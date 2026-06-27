@@ -59,3 +59,35 @@ export function buildQuestionTopics(roomId: string): string[] {
   if (!roomId) return [];
   return [`/topic/p/${roomId}/public`, `/topic/p/${roomId}/presenter`];
 }
+
+export interface QuestionCluster {
+  representative: string;
+  count: number;
+  questionIds: string[];
+  slides: number[];
+  samples: string[];
+}
+
+export function selectUnclusteredQuestions(
+  questions: NormalizedQuestion[],
+  clusters: QuestionCluster[]
+): NormalizedQuestion[] {
+  if (!clusters || clusters.length === 0) return questions;
+  const clustered = new Set(clusters.flatMap((c) => c.questionIds));
+  return questions.filter((q) => !clustered.has(q.id));
+}
+
+// Returns a filtered list with the given questionId removed,
+// or the original list unchanged if the event type is unrecognised.
+export function applyQuestionStatusEvent(
+  questions: NormalizedQuestion[],
+  payload: { type?: string; questionId?: string }
+): NormalizedQuestion[] {
+  if (
+    (payload.type === "QUESTION_COMPLETED" || payload.type === "QUESTION_DELETED") &&
+    payload.questionId
+  ) {
+    return questions.filter((q) => q.id !== payload.questionId);
+  }
+  return questions;
+}

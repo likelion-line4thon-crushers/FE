@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 
-// TODO(types): slides are strings from API — SlideUrl type will be reconciled when services are fully typed
-type SlideUrlString = string;
-
 interface UseSlideLoaderParams {
   roomId: string | null;
   deckId: string | null;
@@ -11,7 +8,7 @@ interface UseSlideLoaderParams {
 }
 
 interface UseSlideLoaderReturn {
-  slides: SlideUrlString[];
+  slides: (string | null)[];
   loading: boolean;
   error: Error | null;
   retry: () => void;
@@ -19,6 +16,7 @@ interface UseSlideLoaderReturn {
   hasError: boolean;
   showPlaceholder: boolean;
   waitingMessage: string;
+  applySlideReady: (pageIndex: number, imageUrl: string) => void;
 }
 
 /**
@@ -29,7 +27,7 @@ export const useSlideLoader = ({
   deckId,
   totalPages,
 }: UseSlideLoaderParams): UseSlideLoaderReturn => {
-  const [slides, setSlides] = useState<SlideUrlString[]>([]);
+  const [slides, setSlides] = useState<(string | null)[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -73,9 +71,24 @@ export const useSlideLoader = ({
     loadSlides();
   }, [roomId, deckId, totalPages, loadSlides]);
 
-  const isInitialLoading = loading && slides.length === 0;
-  const hasError = !loading && !!error && slides.length === 0;
-  const showPlaceholder = isInitialLoading || hasError;
+  const applySlideReady = useCallback(
+    (pageIndex: number, imageUrl: string) => {
+      setSlides((prev) => {
+        const len = Math.max(prev.length, totalPages ?? 0, pageIndex + 1);
+        const next =
+          prev.length === len ? [...prev] : Array.from({ length: len }, (_, i) => prev[i] ?? null);
+        if (!next[pageIndex]) next[pageIndex] = imageUrl;
+        return next;
+      });
+    },
+    [totalPages]
+  );
+
+  const hasReadySlide = slides.some((s) => !!s);
+  const isInitialLoading = loading && !hasReadySlide;
+  const hasError = !loading && !!error && !hasReadySlide;
+  const waitingForSlides = !loading && !error && slides.length > 0 && !hasReadySlide;
+  const showPlaceholder = isInitialLoading || hasError || waitingForSlides;
   const waitingMessage = hasError
     ? "슬라이드를 불러오는 중 오류가 발생했습니다."
     : "슬라이드를 불러오는 중입니다.";
@@ -89,6 +102,7 @@ export const useSlideLoader = ({
     hasError,
     showPlaceholder,
     waitingMessage,
+    applySlideReady,
   };
 };
 

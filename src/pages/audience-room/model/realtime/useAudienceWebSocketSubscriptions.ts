@@ -23,6 +23,7 @@ const useAudienceWebSocketSubscriptions = ({
   lastPresenterPageRef,
   code,
   triggerFocusHighlight,
+  applySlideReady,
 }: {
   [key: string]: any;
 }) => {
@@ -43,7 +44,7 @@ const useAudienceWebSocketSubscriptions = ({
   const focusOnUnsubscribeRef = useRef<(() => void) | null>(null);
   const optionUnsubscribeRef = useRef<(() => void) | null>(null);
   const unlockUnsubscribeRef = useRef<(() => void) | null>(null);
-  const sessionStateUnsubscribeRef = useRef<(() => void) | null>(null);
+  const slideReadyUnsubscribeRef = useRef<(() => void) | null>(null);
   const hasNavigatedToRatingRef = useRef(false);
   const [isWebsocketReady, setIsWebsocketReady] = useState(false);
 
@@ -74,9 +75,31 @@ const useAudienceWebSocketSubscriptions = ({
 
     if (!isWebsocketReady || !roomId) return undefined;
 
+    // The websocket service uses a Map keyed by destination — only one handler per topic.
+    // /topic/p/{roomId}/public carries both question events AND session state events,
+    // so we route both through a single combined handler to avoid one overwriting the other.
+    const handlePublic = (data: any) => {
+      if (data?.type === "SESSION_STATE" && data.status) {
+        log.log("Session state change:", data);
+        setSessionStatus(data.status);
+        if (
+          (data.status === "ended" || data.status === "ENDED") &&
+          !hasNavigatedToRatingRef.current
+        ) {
+          hasNavigatedToRatingRef.current = true;
+          const targetCode = code || codeParam;
+          const targetUrl = targetCode ? `/audience/${encodeURIComponent(targetCode)}/rating` : "/";
+          navigate(targetUrl, { replace: false, state: { roomId, audienceId, deckId } });
+        }
+        return;
+      }
+      handleIncomingQuestion(data);
+    };
+
     const topics = Array.isArray(questionTopics) ? questionTopics : [];
     topics.forEach((topic) => {
-      const unsub = websocketService.subscribe(topic, handleIncomingQuestion);
+      const handler = topic === `/topic/p/${roomId}/public` ? handlePublic : handleIncomingQuestion;
+      const unsub = websocketService.subscribe(topic, handler);
       if (typeof unsub === "function") questionSubscriptionsRef.current.push(unsub);
     });
 
@@ -135,24 +158,18 @@ const useAudienceWebSocketSubscriptions = ({
       }
     ) as unknown as (() => void) | null;
 
-    // Session state
-    sessionStateUnsubscribeRef.current = websocketService.subscribe(
-      `/topic/p/${roomId}/public`,
+    // Session state is handled inside handlePublic above (combined with question events on /public).
+
+    // Slide ready — audience receives pages live while PDF is being parsed
+    slideReadyUnsubscribeRef.current = websocketService.subscribe(
+      `/topic/presentation/${roomId}/slideReady`,
       (data: any) => {
-        log.log("Session state change:", data);
-        if (data && data.type === "SESSION_STATE" && data.status) {
-          setSessionStatus(data.status);
-          if (
-            (data.status === "ended" || data.status === "ENDED") &&
-            !hasNavigatedToRatingRef.current
-          ) {
-            hasNavigatedToRatingRef.current = true;
-            const targetCode = code || codeParam;
-            const targetUrl = targetCode
-              ? `/audience/${encodeURIComponent(targetCode)}/rating`
-              : "/";
-            navigate(targetUrl, { replace: false, state: { roomId, audienceId, deckId } });
-          }
+        if (!data) return;
+        const payload = data?.data ?? data;
+        const idx = Number(payload?.pageIndex);
+        const url = payload?.imageUrl;
+        if (Number.isFinite(idx) && idx >= 0 && url && typeof applySlideReady === "function") {
+          applySlideReady(idx, url);
         }
       }
     ) as unknown as (() => void) | null;
@@ -166,8 +183,8 @@ const useAudienceWebSocketSubscriptions = ({
       optionUnsubscribeRef.current = null;
       unlockUnsubscribeRef.current?.();
       unlockUnsubscribeRef.current = null;
-      sessionStateUnsubscribeRef.current?.();
-      sessionStateUnsubscribeRef.current = null;
+      slideReadyUnsubscribeRef.current?.();
+      slideReadyUnsubscribeRef.current = null;
     };
   }, [
     isWebsocketReady,
@@ -187,6 +204,7 @@ const useAudienceWebSocketSubscriptions = ({
     code,
     codeParam,
     navigate,
+    applySlideReady,
   ]);
 
   // FocusOn subscription

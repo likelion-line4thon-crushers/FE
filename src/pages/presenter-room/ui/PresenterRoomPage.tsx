@@ -1,4 +1,3 @@
-// src/pages/Presentation/PresenterViewPage.jsx
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { ChangeEvent } from "react";
 import { useLocation, useParams } from "react-router";
@@ -10,14 +9,20 @@ import {
 } from "@/widgets/presentation-layout";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
 import QuestionList from "./QuestionList";
+import ClusterQuestionList from "./ClusterQuestionList";
+import CompletedQuestionList from "./CompletedQuestionList";
+import QuestionTabs from "./QuestionTabs";
 import websocketService from "@/shared/api/websocket";
 import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { WebSocketService } from "@/shared/api/websocket";
 import { useSlideLoader } from "@/entities/slide";
+import { selectUnclusteredQuestions } from "@/entities/question";
 import {
   useTimer,
   usePresenterFocusHighlight,
   usePresenterQuestions,
+  usePresenterClusters,
+  usePresenterCompletedQuestions,
   useLiveFeedback,
   useAudienceStats,
   usePresenterWebSocket,
@@ -115,7 +120,11 @@ const PresenterRoomPage = () => {
   }, [currentSlide, roomId]);
 
   // 🔹 커스텀 훅 사용
-  const { slides: slideUrls, loading } = useSlideLoader({ roomId, deckId, totalPages });
+  const {
+    slides: slideUrls,
+    loading,
+    applySlideReady,
+  } = useSlideLoader({ roomId, deckId, totalPages });
   const { timer } = useTimer({ roomId });
 
   const audienceCapacity = locationState.count ?? storedRoomData.count ?? 50;
@@ -256,11 +265,53 @@ const PresenterRoomPage = () => {
     questions: presenterQuestions,
     questionsLoading,
     questionsError,
+    completeQuestion,
+    deleteQuestion,
   } = usePresenterQuestions({
     roomId,
     enabled: Boolean(roomId),
     subscribe: Boolean(roomId && isPresenterWsReady),
   });
+
+  const { clusters, toggleExpand, isExpanded, dismissCluster } = usePresenterClusters({
+    roomId,
+    isPresenterWsReady,
+  });
+
+  const unclusteredQuestions = useMemo(
+    () => selectUnclusteredQuestions(presenterQuestions, clusters),
+    [presenterQuestions, clusters]
+  );
+
+  const [questionTab, setQuestionTab] = useState<"unanswered" | "completed">("unanswered");
+
+  const {
+    completedQuestions,
+    loading: completedLoading,
+    error: completedError,
+  } = usePresenterCompletedQuestions({
+    roomId,
+    enabled: questionTab === "completed",
+  });
+
+  // 🔹 PDF 파싱 중 slideReady 수신 (발표자도 구독)
+  useEffect(() => {
+    if (!isPresenterWsReady || !roomId) return;
+    const unsub = websocketService.subscribe(
+      `/topic/presentation/${roomId}/slideReady`,
+      (data: any) => {
+        const payload = data?.data ?? data;
+        const idx = Number(payload?.pageIndex);
+        const url = payload?.imageUrl;
+        if (Number.isFinite(idx) && idx >= 0 && url && typeof applySlideReady === "function") {
+          applySlideReady(idx, url);
+        }
+      }
+    );
+    return () => {
+      if (typeof unsub === "function") unsub();
+    };
+  }, [isPresenterWsReady, roomId, applySlideReady]);
 
   // 🔹 방향키로 슬라이드 이동
   useEffect(() => {
@@ -403,14 +454,39 @@ const PresenterRoomPage = () => {
         {/* === 실시간 질문 섹션 === */}
         <QuestionSection>
           <Title>실시간 질문</Title>
-          <QuestionList
-            questions={presenterQuestions}
-            loading={questionsLoading}
-            error={questionsError}
-            currentSlide={currentSlide}
-            onSelectSlide={handleSelectQuestionSlide}
-          />
-          {!quickSettings.question && (
+          <QuestionTabs value={questionTab} onChange={setQuestionTab} />
+          {questionTab === "completed" ? (
+            <CompletedQuestionList
+              questions={completedQuestions}
+              loading={completedLoading}
+              error={completedError}
+            />
+          ) : (
+            <>
+              {clusters.length > 0 && (
+                <ClusterQuestionList
+                  clusters={clusters}
+                  isExpanded={isExpanded}
+                  toggleExpand={toggleExpand}
+                  onComplete={completeQuestion}
+                  onDelete={deleteQuestion}
+                  onDismiss={dismissCluster}
+                />
+              )}
+              {(clusters.length === 0 || unclusteredQuestions.length > 0) && (
+                <QuestionList
+                  questions={clusters.length > 0 ? unclusteredQuestions : presenterQuestions}
+                  loading={questionsLoading}
+                  error={questionsError}
+                  currentSlide={currentSlide}
+                  onSelectSlide={handleSelectQuestionSlide}
+                  onComplete={completeQuestion}
+                  onDelete={deleteQuestion}
+                />
+              )}
+            </>
+          )}
+          {!quickSettings.question && questionTab === "unanswered" && (
             <LockButtonWrapper>
               <LiveLockButton />
             </LockButtonWrapper>

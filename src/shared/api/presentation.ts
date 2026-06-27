@@ -6,7 +6,7 @@ export async function getOriginalSlideUrl(
   roomId: string,
   deckId: string,
   page: number,
-  ext: 'webp' | 'png' = 'webp'
+  ext: "webp" | "png" = "webp"
 ): Promise<string> {
   const response = await api.get(`/api/presentations/${roomId}/${deckId}/pages/${page}?ext=${ext}`);
   return response.data.data.originalUrl;
@@ -16,11 +16,12 @@ export async function fetchAllOriginalSlideUrls(
   roomId: string,
   deckId: string,
   totalPages: number
-): Promise<string[]> {
+): Promise<(string | null)[]> {
   const promises = Array.from({ length: totalPages }, (_, i) =>
     getOriginalSlideUrl(roomId, deckId, i + 1)
   );
-  return Promise.all(promises);
+  const results = await Promise.allSettled(promises);
+  return results.map((r) => (r.status === "fulfilled" ? r.value : null));
 }
 
 interface SlideMetaItem {

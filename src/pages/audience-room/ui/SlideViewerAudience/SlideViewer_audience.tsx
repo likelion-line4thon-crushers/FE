@@ -28,7 +28,7 @@ interface StampItem {
 }
 
 interface SlideViewerProps {
-  slides?: string[];
+  slides?: (string | null)[];
   currentSlide?: number;
   stamps?: StampItem[];
   onPlace?: (coords: { xPct: number; yPct: number }) => void;

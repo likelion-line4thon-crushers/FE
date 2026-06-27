@@ -17,9 +17,11 @@ import {
   useAudienceEventHandlers,
   useAudienceInitialState,
   useAudienceFocusHighlight,
+  useAudienceClusters,
   audienceIdAtom,
   audienceTokenAtom,
 } from "../model";
+import { selectUnclusteredQuestions } from "@/entities/question";
 import DelayAudience from "./DelayAudience";
 import { roomIdAtom, deckIdAtom, totalPagesAtom, wsUrlAtom } from "@/entities/room";
 import { quickSettingsAtom, unlockSettingsAtom } from "@/entities/session";
@@ -50,6 +52,7 @@ const AudienceRoomPage = () => {
     waitingMessage,
     hasError: hasSlidesError,
     retry: handleRetryFetchSlides,
+    applySlideReady,
   } = useSlideLoader({ roomId, deckId, totalPages });
 
   const {
@@ -133,7 +136,18 @@ const AudienceRoomPage = () => {
     lastPresenterPageRef,
     code,
     triggerFocusHighlight,
+    applySlideReady,
   });
+
+  const { clusters, isExpanded, toggleExpand } = useAudienceClusters({
+    roomId,
+    isWsReady: isWebsocketReady,
+  });
+
+  const unclusteredQuestions = useMemo(
+    () => selectUnclusteredQuestions(questions, clusters),
+    [questions, clusters]
+  );
 
   const { handleSelectEmoji, handlePlaceStamp, handleToggleShowStamps } = useAudienceEventHandlers({
     selectedEmoji,
@@ -216,7 +230,7 @@ const AudienceRoomPage = () => {
         <AudiencePanel
           currentSlide={currentSlide}
           onSelectSlide={handleAudienceSelectSlide}
-          questions={questions}
+          questions={unclusteredQuestions}
           questionsLoading={questionsLoading}
           questionsError={questionsError}
           isWaiting={isQuestionListWaiting}
@@ -224,6 +238,9 @@ const AudienceRoomPage = () => {
           onSubmitQuestion={submitQuestion}
           canSubmit={isWebsocketReady && reactionsReady}
           isLocked={!quickSettings.question}
+          clusters={clusters}
+          isExpanded={isExpanded}
+          toggleExpand={toggleExpand}
         />
       </RightPanelContainer>
     </PageContainer>

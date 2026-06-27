@@ -37,6 +37,15 @@ const BasePillButton = styled.button`
     background: #f0f0f0;
     transform: translateY(0);
   }
+
+  &:disabled {
+    background: #e0e0e0;
+    color: #9e9e9e;
+    cursor: not-allowed;
+  }
+  &:disabled:hover {
+    background: #e0e0e0;
+  }
 `;
 
 const ExitPillButton = styled(BasePillButton)`

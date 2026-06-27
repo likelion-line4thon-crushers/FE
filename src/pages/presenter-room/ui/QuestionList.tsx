@@ -10,6 +10,8 @@ import {
   Content,
   StatusMessage,
   ErrorMessage,
+  ActionButton,
+  ActionGroup,
 } from "./QuestionList.styles";
 
 type QuestionListItem = NormalizedQuestion & {
@@ -24,6 +26,8 @@ interface QuestionListProps {
   currentSlide: number;
   onSelectSlide?: (slideIndex: number) => void;
   emptyMessage?: string;
+  onComplete?: (questionId: string) => void;
+  onDelete?: (questionId: string) => void;
 }
 
 const formatTimestamp = (ts: number | string | null | undefined) => {
@@ -44,6 +48,8 @@ const QuestionList = ({
   currentSlide,
   onSelectSlide,
   emptyMessage = "아직 등록된 질문이 없습니다.",
+  onComplete,
+  onDelete,
 }: QuestionListProps) => {
   const hasQuestions = Array.isArray(questions) && questions.length > 0;
 
@@ -85,6 +91,24 @@ const QuestionList = ({
                     슬라이드 {slideNumber}
                   </SlideTag>
                   {timestamp && <Time>{timestamp}</Time>}
+                  <ActionGroup>
+                    <ActionButton
+                      type="button"
+                      $variant="delete"
+                      aria-label="질문 삭제"
+                      onClick={() => onDelete?.(question.id)}
+                    >
+                      삭제
+                    </ActionButton>
+                    <ActionButton
+                      type="button"
+                      $variant="complete"
+                      aria-label="질문 완료"
+                      onClick={() => onComplete?.(question.id)}
+                    >
+                      완료
+                    </ActionButton>
+                  </ActionGroup>
                 </QuestionHeader>
                 <Content>{question.content ?? ""}</Content>
               </QuestionItem>

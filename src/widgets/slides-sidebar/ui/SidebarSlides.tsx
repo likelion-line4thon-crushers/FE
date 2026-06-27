@@ -8,7 +8,7 @@ import {
   SlidePlaceholder,
 } from "./SidebarSlides.styles";
 
-type SlideItem = string | { thumbnailUrl?: string | null };
+type SlideItem = string | null | { thumbnailUrl?: string | null };
 
 interface SidebarSlidesProps {
   slides?: SlideItem[];

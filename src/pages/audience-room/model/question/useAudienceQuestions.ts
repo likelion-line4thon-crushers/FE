@@ -9,6 +9,7 @@ import {
   sortQuestionsAsc,
   upsertQuestion,
   buildQuestionTopics,
+  applyQuestionStatusEvent,
 } from "@/entities/question";
 import type { NormalizedQuestion } from "@/entities/question";
 
@@ -94,6 +95,11 @@ export const useAudienceQuestions = ({
   }, [loadQuestions]);
 
   const handleIncomingQuestion = useCallback((payload: any) => {
+    if (payload?.type === "QUESTION_COMPLETED" || payload?.type === "QUESTION_DELETED") {
+      setQuestions((prev) => applyQuestionStatusEvent(prev, payload));
+      return;
+    }
+
     const raw = payload?.data ?? payload;
     const normalized = normalizeQuestion(raw);
     if (!normalized) return;
