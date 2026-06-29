@@ -2,6 +2,7 @@ import styled, { css, keyframes } from "styled-components";
 
 /* 전체 컨테이너 */
 export const Main = styled.div`
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -10,6 +11,53 @@ export const Main = styled.div`
   padding: 2vh 1vw;
   background: #fff;
   width: 100%;
+`;
+
+/* 다음 슬라이드 미공개 토스트 (Figma: 슬라이드 상단 중앙, 수초간 표시) */
+const unlockToastFade = keyframes`
+  0% { opacity: 0; transform: translate(-50%, -0.6vh); }
+  12% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -0.6vh); }
+`;
+
+export const UnlockToast = styled.div`
+  position: absolute;
+  top: 2.2vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5vw;
+  padding: 1vh 1.4vw;
+  background: rgba(48, 48, 48, 0.92);
+  backdrop-filter: blur(3px);
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: ${unlockToastFade} 3s ease forwards;
+
+  img {
+    width: clamp(18px, 1.25vw, 24px);
+    height: clamp(18px, 1.25vw, 24px);
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+`;
+
+export const UnlockToastText = styled.span`
+  font-family: Pretendard;
+  font-size: clamp(12px, 0.9vw, 14px);
+  font-weight: 600;
+  letter-spacing: -0.35px;
+  line-height: 1.45;
+  color: #eaeaea;
+
+  strong {
+    color: #ff905d;
+    font-weight: 600;
+  }
 `;
 
 /* 상단 FocusBar */

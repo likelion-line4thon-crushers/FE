@@ -57,9 +57,17 @@ const useAudienceSlideNavigation = ({
         return false;
       }
 
-      return nextIndex > maxRevealedPage;
+      // 발표자가 보여준(이동한) 슬라이드까지는 공개된 것으로 취급한다.
+      // 미공개 상태에서 발표자가 슬라이드를 건너뛰어 이동하면 maxRevealedPage 가
+      // 아직 따라오지 못해, 그 구간을 오갈 수 없는 문제를 방지. (사이드바 잠금 로직과 정렬)
+      const presenterDrivenIndex = Number.isFinite(lastPresenterPageRef?.current)
+        ? lastPresenterPageRef.current
+        : -1;
+      const revealedBoundaryIndex = Math.max(maxRevealedPage, presenterDrivenIndex);
+
+      return nextIndex > revealedBoundaryIndex;
     },
-    [unlockSettings.maxRevealedPage, unlockSettings.revealAllSlides]
+    [unlockSettings.maxRevealedPage, unlockSettings.revealAllSlides, lastPresenterPageRef]
   );
 
   const changeCurrentSlide = useCallback(

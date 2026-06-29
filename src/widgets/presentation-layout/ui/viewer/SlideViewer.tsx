@@ -20,6 +20,8 @@ import {
   FeedbackContainer,
   FeedbackIcon,
   FeedbackText,
+  UnlockToast,
+  UnlockToastText,
 } from "./SlideViewer.styles";
 
 import SlideContainer from "./SlideContainer";
@@ -28,6 +30,7 @@ import TimerIcon from "@/shared/assets/images/timer.svg";
 import openeyes from "@/shared/assets/images/openeyes.png";
 import closeeyes from "@/shared/assets/images/closeeyes.png";
 import FeedbackIconImage from "@/shared/assets/images/feedback.svg";
+import SlideHiddenIcon from "@/shared/assets/images/slide-hidden.svg";
 
 const SlideViewer = ({
   slides,
@@ -42,6 +45,9 @@ const SlideViewer = ({
   timer = "00:00",
   showFeedback = false,
   feedbackContent = "반응 분석 중 ...",
+  // Figma 개편으로 청중 분포 범례는 기본 숨김 (컴포넌트는 보존, 필요 시 prop 으로 재노출)
+  showAudienceLegend = false,
+  showUnlockToast = false,
 }: any) => {
   const { prev, current, next } = audienceStats;
   const total = Math.max(prev + current + next, 1);
@@ -58,6 +64,14 @@ const SlideViewer = ({
 
   return (
     <Main>
+      {showUnlockToast && (
+        <UnlockToast>
+          <img src={SlideHiddenIcon} alt="" aria-hidden="true" />
+          <UnlockToastText>
+            다음 슬라이드 <strong>미공개</strong> 상태입니다.
+          </UnlockToastText>
+        </UnlockToast>
+      )}
       <FocusBar>
         {/* 🔹 왼쪽 그룹 (집중유도 + 검정바) */}
         <FocusGroupLeft>
@@ -66,32 +80,34 @@ const SlideViewer = ({
             <span>집중 유도</span>
           </FocusLeft>
 
-          <LegendContainer>
-            <AudienceBar>
-              {showAudienceDistribution ? (
-                <>
-                  <SegmentPrev width={prevPct} />
-                  <SegmentCurrent width={currentPct} />
-                  <SegmentNext width={nextPct} />
-                </>
-              ) : (
-                <SegmentDefault />
-              )}
-            </AudienceBar>
+          {showAudienceLegend && (
+            <LegendContainer>
+              <AudienceBar>
+                {showAudienceDistribution ? (
+                  <>
+                    <SegmentPrev width={prevPct} />
+                    <SegmentCurrent width={currentPct} />
+                    <SegmentNext width={nextPct} />
+                  </>
+                ) : (
+                  <SegmentDefault />
+                )}
+              </AudienceBar>
 
-            <LegendItem>
-              <ColorDot color="#C53B2C" />
-              이전 구간 슬라이드
-            </LegendItem>
-            <LegendItem>
-              <ColorDot color="#FFFFFF" border />
-              현재 슬라이드
-            </LegendItem>
-            <LegendItem>
-              <ColorDot color="#4467FF" />
-              다음 구간 슬라이드
-            </LegendItem>
-          </LegendContainer>
+              <LegendItem>
+                <ColorDot color="#C53B2C" />
+                이전 구간 슬라이드
+              </LegendItem>
+              <LegendItem>
+                <ColorDot color="#FFFFFF" border />
+                현재 슬라이드
+              </LegendItem>
+              <LegendItem>
+                <ColorDot color="#4467FF" />
+                다음 구간 슬라이드
+              </LegendItem>
+            </LegendContainer>
+          )}
         </FocusGroupLeft>
 
         {/* 🔹 오른쪽 (로고, 타이머) */}

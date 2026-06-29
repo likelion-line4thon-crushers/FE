@@ -1,4 +1,5 @@
 export type { QuickSettings, UnlockSettings } from "./model/session";
+export { revealedPageToIndex } from "./model/session";
 export type {
   PageChangeMessage,
   OptionChangeMessage,

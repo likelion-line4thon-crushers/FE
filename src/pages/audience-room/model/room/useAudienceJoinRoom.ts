@@ -2,7 +2,12 @@ import { useEffect } from "react";
 import { useSetAtom } from "jotai";
 import { joinRoom, getRoomInfo } from "@/shared/api/room";
 import { roomIdAtom, deckIdAtom, totalPagesAtom, wsUrlAtom } from "@/entities/room";
-import { sessionStatusAtom, quickSettingsAtom, unlockSettingsAtom } from "@/entities/session";
+import {
+  sessionStatusAtom,
+  quickSettingsAtom,
+  unlockSettingsAtom,
+  revealedPageToIndex,
+} from "@/entities/session";
 import { audienceIdAtom, audienceTokenAtom } from "./store";
 import { createLogger } from "@/shared/lib/logger";
 
@@ -106,7 +111,7 @@ const useAudienceJoinRoom = ({
             const maxPage = parseOptionalNumber(storedData.maxPage);
             const slideUnlock = parseSlideUnlock(storedData.slideUnlock);
             setUnlockSettings({
-              maxRevealedPage: maxPage,
+              maxRevealedPage: revealedPageToIndex(maxPage),
               revealAllSlides: slideUnlock,
               totalPages: storedData.totalPages ? Number(storedData.totalPages) : null,
               presenterPage: storedData.currentPage ? Number(storedData.currentPage) : null,
@@ -160,7 +165,7 @@ const useAudienceJoinRoom = ({
                   const maxPage = parseOptionalNumber(roomInfo.maxPage);
                   const slideUnlock = parseSlideUnlock(roomInfo.slideUnlock);
                   setUnlockSettings({
-                    maxRevealedPage: maxPage,
+                    maxRevealedPage: revealedPageToIndex(maxPage),
                     revealAllSlides: slideUnlock,
                     totalPages: roomInfo.totalPages ? Number(roomInfo.totalPages) : null,
                     presenterPage: roomInfo.currentPage ? Number(roomInfo.currentPage) : null,
@@ -269,7 +274,7 @@ const useAudienceJoinRoom = ({
         const maxPage = parseOptionalNumber(joinData.maxPage);
         const slideUnlock = parseSlideUnlock(joinData.slideUnlock);
         setUnlockSettings({
-          maxRevealedPage: maxPage,
+          maxRevealedPage: revealedPageToIndex(maxPage),
           revealAllSlides: slideUnlock,
           totalPages: joinData.totalPages ? Number(joinData.totalPages) : null,
           presenterPage: joinData.currentPage ? Number(joinData.currentPage) : null,

@@ -3,7 +3,12 @@ import { useNavigate, useParams } from "react-router";
 import { useAtomValue, useSetAtom } from "jotai";
 import websocketService from "@/shared/api/websocket";
 import { roomIdAtom, wsUrlAtom, deckIdAtom } from "@/entities/room";
-import { sessionStatusAtom, quickSettingsAtom, unlockSettingsAtom } from "@/entities/session";
+import {
+  sessionStatusAtom,
+  quickSettingsAtom,
+  unlockSettingsAtom,
+  revealedPageToIndex,
+} from "@/entities/session";
 import { audienceIdAtom, audienceTokenAtom } from "../room/store";
 import { createLogger } from "@/shared/lib/logger";
 
@@ -150,7 +155,7 @@ const useAudienceWebSocketSubscriptions = ({
           lastPresenterPageRef.current = presenterPage - 1;
         }
         setUnlockSettings({
-          maxRevealedPage: maxPage,
+          maxRevealedPage: revealedPageToIndex(maxPage),
           revealAllSlides: revealAll,
           totalPages: Number(payload?.totalPages),
           presenterPage,

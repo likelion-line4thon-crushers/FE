@@ -30,16 +30,13 @@ import {
 } from "../model";
 
 // SettingsPanel 스타일 재사용
+import { PanelWrapper, Section, Title } from "@/widgets/presentation-layout";
 import {
-  PanelWrapper,
-  Section,
-  Title,
-  QuickTogglesGrid,
-  ToggleBox,
-  ToggleLabel,
-  ToggleDescription,
-  ToggleInput,
-} from "@/widgets/presentation-layout";
+  QuickTogglesList,
+  ToggleRow,
+  ToggleRowLabel,
+  RowToggleInput,
+} from "./QuickSettings.styles";
 import styled from "styled-components";
 
 const PresenterRoomPage = () => {
@@ -229,6 +226,29 @@ const PresenterRoomPage = () => {
     isPresenterWsReady,
   });
 
+  // 🔹 "다음 슬라이드 공개" 토글이 켜짐→꺼짐으로 바뀔 때만 미공개 토스트를 수초간 노출
+  const [showUnlockToast, setShowUnlockToast] = useState(false);
+  const prevUnlockRef = useRef(quickSettings.unlock);
+  const unlockToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const prevUnlock = prevUnlockRef.current;
+    const currUnlock = quickSettings.unlock;
+    prevUnlockRef.current = currUnlock;
+    if (prevUnlock && !currUnlock) {
+      setShowUnlockToast(true);
+      if (unlockToastTimerRef.current) clearTimeout(unlockToastTimerRef.current);
+      unlockToastTimerRef.current = setTimeout(() => setShowUnlockToast(false), 3000);
+    }
+  }, [quickSettings.unlock]);
+
+  useEffect(
+    () => () => {
+      if (unlockToastTimerRef.current) clearTimeout(unlockToastTimerRef.current);
+    },
+    []
+  );
+
   // 🔹 실시간 피드백
   const { feedbackContent } = useLiveFeedback({
     roomId,
@@ -400,6 +420,7 @@ const PresenterRoomPage = () => {
         timer={timer}
         showFeedback={quickSettings.feedback}
         feedbackContent={feedbackContent}
+        showUnlockToast={showUnlockToast}
       />
 
       {/* 🔹 우측: 빠른 설정 + 실시간 질문 */}
@@ -414,41 +435,22 @@ const PresenterRoomPage = () => {
             initialAudienceCount={initialAudienceCount}
           />
 
-          <QuickTogglesGrid>
-            <QuickSettingToggle
-              label="리액션 스티커"
-              description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
-              checked={quickSettings.sticker}
-              onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                handleOptionChange("sticker", event.target.checked);
-              }}
-              disabled={!reactionsReady}
-            />
+          <QuickTogglesList>
             <QuickSettingToggle
               label="실시간 질문"
-              description="청중이 실시간으로 질문을 남길 수 있습니다."
               checked={quickSettings.question}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 handleOptionChange("question", event.target.checked)
               }
             />
             <QuickSettingToggle
-              label="실시간 피드백"
-              description="수집된 청중의 반응을 실시간으로 분석합니다."
-              checked={quickSettings.feedback}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                handleOptionChange("feedback", event.target.checked)
-              }
-            />
-            <QuickSettingToggle
               label="다음 슬라이드 공개"
-              description="청중이 다음 슬라이드 화면들을 미리 볼 수 있습니다."
               checked={quickSettings.unlock}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 handleUnlockChange(event.target.checked)
               }
             />
-          </QuickTogglesGrid>
+          </QuickTogglesList>
         </Section>
 
         {/* === 실시간 질문 섹션 === */}
@@ -518,32 +520,26 @@ const LockButtonWrapper = styled.div`
   }
 `;
 
-// 빠른 설정 토글 UI
+// 빠른 설정 토글 UI (라벨 + 토글 한 줄)
 const QuickSettingToggle = ({
   label,
-  description,
   checked,
-  defaultChecked,
   onChange,
   disabled,
 }: {
   label?: any;
-  description?: any;
   checked?: any;
-  defaultChecked?: any;
   onChange?: any;
   disabled?: any;
 }) => (
-  <ToggleBox>
-    <ToggleLabel>{label}</ToggleLabel>
-    <ToggleDescription>{description}</ToggleDescription>
-    <ToggleInput
+  <ToggleRow>
+    <ToggleRowLabel>{label}</ToggleRowLabel>
+    <RowToggleInput
       type="checkbox"
       onChange={onChange}
       disabled={disabled}
       checked={typeof checked === "boolean" ? checked : undefined}
-      defaultChecked={typeof checked === "boolean" ? undefined : defaultChecked}
       aria-label={label}
     />
-  </ToggleBox>
+  </ToggleRow>
 );
