@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent, PointerEvent } from "react";
 import { useParams } from "react-router";
 import { useAtomValue } from "jotai";
 import AudiencePanel from "./AudiencePanel";
@@ -27,6 +28,17 @@ import DelayAudience from "./DelayAudience";
 import { roomIdAtom, deckIdAtom, totalPagesAtom, wsUrlAtom } from "@/entities/room";
 import { quickSettingsAtom, unlockSettingsAtom } from "@/entities/session";
 
+type FullscreenElement = HTMLDivElement & {
+  webkitRequestFullscreen?: () => Promise<void>;
+};
+
+type FullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void>;
+};
+
+const FULLSCREEN_CONTROLS_IDLE_MS = 5000;
+
 const AudienceRoomPage = () => {
   const { code } = useParams();
 
@@ -43,8 +55,15 @@ const AudienceRoomPage = () => {
   // Local UI state
   const [selectedEmoji, setSelectedEmoji] = useState<any>(null);
   const [showStamps, setShowStamps] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [areFullscreenControlsVisible, setAreFullscreenControlsVisible] = useState(false);
+  const [isFullscreenSlideChipVisible, setIsFullscreenSlideChipVisible] = useState(false);
   const [showAudienceJoinWarning, setShowAudienceJoinWarning] = useState(false);
   const lastPresenterPageRef = useRef(0);
+  const centerContainerRef = useRef<FullscreenElement | null>(null);
+  const fullscreenControlsTimerRef = useRef<number | null>(null);
+  const fullscreenSlideChipTimerRef = useRef<number | null>(null);
+  const shouldConsumeFullscreenClickRef = useRef(false);
   const hasShownAudienceJoinWarningRef = useRef(false);
 
   const { sessionStatus } = useAudienceInitialState({ code, roomId });
@@ -176,6 +195,132 @@ const AudienceRoomPage = () => {
     setShowAudienceJoinWarning(true);
   }, [audienceId, audienceToken, roomId]);
 
+  const clearFullscreenControlsTimer = useCallback(() => {
+    if (fullscreenControlsTimerRef.current == null) return;
+
+    window.clearTimeout(fullscreenControlsTimerRef.current);
+    fullscreenControlsTimerRef.current = null;
+  }, []);
+
+  const scheduleFullscreenControlsHide = useCallback(() => {
+    clearFullscreenControlsTimer();
+    fullscreenControlsTimerRef.current = window.setTimeout(() => {
+      setAreFullscreenControlsVisible(false);
+      fullscreenControlsTimerRef.current = null;
+    }, FULLSCREEN_CONTROLS_IDLE_MS);
+  }, [clearFullscreenControlsTimer]);
+
+  const clearFullscreenSlideChipTimer = useCallback(() => {
+    if (fullscreenSlideChipTimerRef.current == null) return;
+
+    window.clearTimeout(fullscreenSlideChipTimerRef.current);
+    fullscreenSlideChipTimerRef.current = null;
+  }, []);
+
+  const showFullscreenSlideChip = useCallback(() => {
+    if (!isFullscreen) return;
+
+    clearFullscreenSlideChipTimer();
+    setIsFullscreenSlideChipVisible(true);
+    fullscreenSlideChipTimerRef.current = window.setTimeout(() => {
+      setIsFullscreenSlideChipVisible(false);
+      fullscreenSlideChipTimerRef.current = null;
+    }, FULLSCREEN_CONTROLS_IDLE_MS);
+  }, [clearFullscreenSlideChipTimer, isFullscreen]);
+
+  const revealFullscreenControls = useCallback(() => {
+    if (!isFullscreen) return;
+
+    setAreFullscreenControlsVisible(true);
+    scheduleFullscreenControlsHide();
+  }, [isFullscreen, scheduleFullscreenControlsHide]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const fullscreenDocument = document as FullscreenDocument;
+      const isCurrentContainerFullscreen =
+        document.fullscreenElement === centerContainerRef.current ||
+        fullscreenDocument.webkitFullscreenElement === centerContainerRef.current;
+
+      setIsFullscreen(isCurrentContainerFullscreen);
+      setAreFullscreenControlsVisible(false);
+      setIsFullscreenSlideChipVisible(false);
+      clearFullscreenControlsTimer();
+      clearFullscreenSlideChipTimer();
+      shouldConsumeFullscreenClickRef.current = false;
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+    };
+  }, [clearFullscreenControlsTimer, clearFullscreenSlideChipTimer]);
+
+  useEffect(() => clearFullscreenControlsTimer, [clearFullscreenControlsTimer]);
+  useEffect(() => clearFullscreenSlideChipTimer, [clearFullscreenSlideChipTimer]);
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      setIsFullscreenSlideChipVisible(false);
+      clearFullscreenSlideChipTimer();
+      return;
+    }
+
+    showFullscreenSlideChip();
+  }, [clearFullscreenSlideChipTimer, currentSlide, isFullscreen, showFullscreenSlideChip]);
+
+  const handleFullscreenPointerMove = () => {
+    revealFullscreenControls();
+  };
+
+  const handleFullscreenPointerDownCapture = (_event: PointerEvent<HTMLDivElement>) => {
+    if (!isFullscreen) return;
+
+    shouldConsumeFullscreenClickRef.current = !areFullscreenControlsVisible;
+    revealFullscreenControls();
+  };
+
+  const handleFullscreenClickCapture = (event: MouseEvent<HTMLDivElement>) => {
+    if (!shouldConsumeFullscreenClickRef.current) return;
+
+    shouldConsumeFullscreenClickRef.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleToggleFullscreen = async () => {
+    const fullscreenDocument = document as FullscreenDocument;
+    const activeFullscreenElement =
+      document.fullscreenElement || fullscreenDocument.webkitFullscreenElement;
+
+    if (activeFullscreenElement) {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      if (fullscreenDocument.webkitExitFullscreen) {
+        await fullscreenDocument.webkitExitFullscreen();
+      }
+      return;
+    }
+
+    const fullscreenElement = centerContainerRef.current;
+    if (!fullscreenElement) return;
+
+    if (fullscreenElement.requestFullscreen) {
+      await fullscreenElement.requestFullscreen();
+      return;
+    }
+
+    if (fullscreenElement.webkitRequestFullscreen) {
+      await fullscreenElement.webkitRequestFullscreen();
+    }
+  };
+
   if (isSessionWaiting) {
     return (
       <>
@@ -206,7 +351,14 @@ const AudienceRoomPage = () => {
         maxRevealedPage={unlockSettings.maxRevealedPage}
         revealAllSlides={unlockSettings.revealAllSlides}
       />
-      <CenterContainer>
+      <CenterContainer
+        ref={centerContainerRef}
+        $isFullscreen={isFullscreen}
+        onPointerMove={handleFullscreenPointerMove}
+        onPointerDownCapture={handleFullscreenPointerDownCapture}
+        onClickCapture={handleFullscreenClickCapture}
+        onTouchStart={revealFullscreenControls}
+      >
         <SlideViewer
           slides={slides}
           currentSlide={currentSlide}
@@ -219,6 +371,10 @@ const AudienceRoomPage = () => {
           isWaiting={showSlidesPlaceholder}
           waitingMessage={showSlidesPlaceholder ? waitingMessage : undefined}
           focusHighlight={showFocusHighlight}
+          isFullscreen={isFullscreen}
+          fullscreenControlsVisible={!isFullscreen || areFullscreenControlsVisible}
+          fullscreenSlideChipVisible={isFullscreen && isFullscreenSlideChipVisible}
+          onToggleFullscreen={handleToggleFullscreen}
         />
         {hasSlidesError && (
           <div
@@ -248,7 +404,7 @@ const AudienceRoomPage = () => {
             </button>
           </div>
         )}
-        {quickSettings.sticker && (
+        {quickSettings.sticker && (!isFullscreen || areFullscreenControlsVisible) && (
           <EmojiPanel selectedId={selectedEmoji?.id} onSelect={handleSelectEmoji} />
         )}
       </CenterContainer>

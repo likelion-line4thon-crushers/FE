@@ -15,10 +15,16 @@ import {
   WaitingText,
   RightContainer,
   ToggleContainer,
+  FullscreenButton,
+  FullscreenExitIcon,
+  SlideNumberChip,
 } from "./SlideViewer_audience.styles";
-import openeyes from "@/shared/assets/images/openeyes.png";
-import closeeyes from "@/shared/assets/images/closeeyes.png";
 import TipIcon from "@/shared/assets/images/tooltip.png";
+import fullscreenIcon from "@/shared/assets/icons/fullscreen.svg";
+import fullscreenExitPrimaryIcon from "@/shared/assets/icons/fullscreen-exit-primary.svg";
+import fullscreenExitSecondaryIcon from "@/shared/assets/icons/fullscreen-exit-secondary.svg";
+import reactionStickerIcon from "@/shared/assets/icons/reaction-sticker.svg";
+import reactionStickerFullscreenIcon from "@/shared/assets/icons/reaction-sticker-fullscreen.svg";
 
 interface StampItem {
   id?: string | number;
@@ -40,6 +46,10 @@ interface SlideViewerProps {
   waitingImage?: string;
   waitingMessage?: string;
   focusHighlight?: boolean;
+  isFullscreen?: boolean;
+  fullscreenControlsVisible?: boolean;
+  fullscreenSlideChipVisible?: boolean;
+  onToggleFullscreen?: () => void | Promise<void>;
 }
 
 const SlideViewer = ({
@@ -55,6 +65,10 @@ const SlideViewer = ({
   waitingImage,
   waitingMessage = "현재 라이브 대기중입니다.",
   focusHighlight = false,
+  isFullscreen = false,
+  fullscreenControlsVisible = true,
+  fullscreenSlideChipVisible = false,
+  onToggleFullscreen,
 }: SlideViewerProps) => {
   const boxRef = useRef<HTMLDivElement | null>(null);
   const hasSlides = Array.isArray(slides) && slides.length > 0;
@@ -83,10 +97,16 @@ const SlideViewer = ({
     }
   };
 
+  const handleFullscreenClick = () => {
+    if (typeof onToggleFullscreen === "function") {
+      void onToggleFullscreen();
+    }
+  };
+
   return (
-    <Main>
-      <FocusBar>
-        <ToggleContainer>
+    <Main $isFullscreen={isFullscreen}>
+      <FocusBar $isFullscreen={isFullscreen} $controlsVisible={fullscreenControlsVisible}>
+        <ToggleContainer $isFullscreen={isFullscreen}>
           <SingleToggleInput
             checked={followPresenter}
             onChange={handleToggleFollowChange}
@@ -105,10 +125,15 @@ const SlideViewer = ({
         {!isWaiting && (
           <TooltipHoverArea>
             <Tooltip>리액션 스티커 보이기</Tooltip>
-            <ReactionButton onClick={handleToggleEyesClick} aria-label="리액션 스티커 보이기">
+            <ReactionButton
+              onClick={handleToggleEyesClick}
+              aria-label="리액션 스티커 보이기"
+              $isFullscreen={isFullscreen}
+            >
               <img
-                src={showStamps ? openeyes : closeeyes}
-                alt={showStamps ? "openeyes" : "closeeyes"}
+                src={isFullscreen ? reactionStickerFullscreenIcon : reactionStickerIcon}
+                alt=""
+                aria-hidden="true"
               />
             </ReactionButton>
           </TooltipHoverArea>
@@ -119,6 +144,7 @@ const SlideViewer = ({
         ref={boxRef}
         onClick={handleClick}
         focusHighlight={focusHighlight}
+        $isFullscreen={isFullscreen}
         data-testid="audience-slide-surface"
         style={{
           cursor: isWaiting ? "default" : "pointer",
@@ -165,6 +191,36 @@ const SlideViewer = ({
             />
           ))}
       </SlideBox>
+
+      {!isWaiting && (
+        <FullscreenButton
+          type="button"
+          onClick={handleFullscreenClick}
+          $isFullscreen={isFullscreen}
+          $controlsVisible={fullscreenControlsVisible}
+          aria-label={isFullscreen ? "전체 화면 종료" : "전체 화면 보기"}
+          title={isFullscreen ? "전체 화면 종료" : "전체 화면 보기"}
+        >
+          {isFullscreen ? (
+            <FullscreenExitIcon aria-hidden="true">
+              <span>
+                <img src={fullscreenExitPrimaryIcon} alt="" />
+              </span>
+              <span>
+                <img src={fullscreenExitSecondaryIcon} alt="" />
+              </span>
+            </FullscreenExitIcon>
+          ) : (
+            <img src={fullscreenIcon} alt="" aria-hidden="true" />
+          )}
+        </FullscreenButton>
+      )}
+
+      {!isWaiting && isFullscreen && (
+        <SlideNumberChip $visible={fullscreenSlideChipVisible}>
+          슬라이드 {safeSlideIndex + 1}
+        </SlideNumberChip>
+      )}
     </Main>
   );
 };

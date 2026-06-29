@@ -4,9 +4,10 @@ export const EmojiContainer = styled.div`
   width: 80%;
   max-width: 36.67vw;
   height: 4.5vh;
-  background: #fafafa;
+  background: rgba(250, 250, 250, 0.6);
   border: 1px solid #eaeaea;
-  border-radius: 5.21vw;
+  border-radius: 100px;
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;

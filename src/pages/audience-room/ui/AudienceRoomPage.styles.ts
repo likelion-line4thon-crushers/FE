@@ -6,7 +6,7 @@ export const PageContainer = styled.div`
   background-color: #fff;
 `;
 
-export const CenterContainer = styled.div`
+export const CenterContainer = styled.div<{ $isFullscreen?: boolean }>`
   display: flex;
   height: 100%;
   flex-direction: column;
@@ -15,6 +15,35 @@ export const CenterContainer = styled.div`
   padding: 0vh 1vw;
   position: relative;
   background: #fff;
+
+  ${({ $isFullscreen }) =>
+    $isFullscreen &&
+    `
+      width: 100vw;
+      height: 100vh;
+      padding: 0;
+      gap: 0;
+      overflow: hidden;
+      background: #121212;
+    `}
+
+  &:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    background: #121212;
+  }
+
+  &:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    background: #121212;
+  }
 `;
 
 export const RightPanelContainer = styled.div`

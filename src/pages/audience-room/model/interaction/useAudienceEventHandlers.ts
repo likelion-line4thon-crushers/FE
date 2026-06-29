@@ -17,8 +17,10 @@ const useAudienceEventHandlers = ({
   [key: string]: any;
 }) => {
   const handleSelectEmoji = useCallback(
-    (emoji: any) => setSelectedEmoji(emoji),
-    [setSelectedEmoji]
+    (emoji: any) => {
+      setSelectedEmoji(selectedEmoji?.id === emoji?.id ? null : emoji);
+    },
+    [selectedEmoji, setSelectedEmoji]
   );
 
   const handlePlaceStamp = useCallback(

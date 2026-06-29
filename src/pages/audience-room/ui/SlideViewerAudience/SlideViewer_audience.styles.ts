@@ -2,7 +2,7 @@ import styled, { css } from "styled-components";
 import { ToggleInput, HighlightedSlideStyles } from "@/widgets/presentation-layout";
 
 /* 전체 컨테이너 */
-export const Main = styled.div`
+export const Main = styled.div<{ $isFullscreen?: boolean }>`
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -11,6 +11,19 @@ export const Main = styled.div`
   padding: 2vh 2vw;
   gap: 2vh;
   background: #fff;
+  position: relative;
+
+  ${({ $isFullscreen }) =>
+    $isFullscreen &&
+    `
+      width: 100vw;
+      height: 100vh;
+      padding: clamp(24px, 3vh, 32px) 0 clamp(72px, 8vh, 88px);
+      gap: 0;
+      justify-content: center;
+      background: #121212;
+      overflow: hidden;
+    `}
 `;
 
 export const RightContainer = styled.div`
@@ -20,18 +33,57 @@ export const RightContainer = styled.div`
   width: 9.38vw;
   height: 2.78vh;
 `;
-export const ToggleContainer = styled.div`
+export const ToggleContainer = styled.div<{ $isFullscreen?: boolean }>`
   display: flex;
   align-items: center;
   gap: 0.42vw;
   position: relative;
+
+  ${({ $isFullscreen }) =>
+    $isFullscreen &&
+    `
+      gap: 8px;
+      padding: 20px 30px;
+      border: 1px solid #eaeaea;
+      border-radius: 100px;
+      background: rgba(250, 250, 250, 0.9);
+      backdrop-filter: blur(5px);
+    `}
+
+  ${({ $isFullscreen }) =>
+    $isFullscreen &&
+    css`
+      img {
+        display: none;
+      }
+    `}
 `;
-export const FocusBar = styled.div`
+export const FocusBar = styled.div<{ $isFullscreen?: boolean; $controlsVisible?: boolean }>`
   display: flex;
   align-self: flex-start;
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  transition: opacity 0.2s ease;
+
+  ${({ $isFullscreen }) =>
+    $isFullscreen &&
+    `
+      position: absolute;
+      top: clamp(24px, 3vh, 32px);
+      left: clamp(42px, 4.2vw, 80px);
+      right: clamp(42px, 4.2vw, 80px);
+      width: auto;
+      z-index: 12;
+    `}
+
+  ${({ $isFullscreen, $controlsVisible }) =>
+    $isFullscreen &&
+    !$controlsVisible &&
+    `
+      opacity: 0;
+      pointer-events: none;
+    `}
 `;
 
 export const SingleToggleInput = styled(ToggleInput)`
@@ -39,7 +91,7 @@ export const SingleToggleInput = styled(ToggleInput)`
 `;
 
 /* 슬라이드 본문 */
-export const SlideBox = styled.div<{ focusHighlight?: boolean }>`
+export const SlideBox = styled.div<{ focusHighlight?: boolean; $isFullscreen?: boolean }>`
   background-color: white;
   padding: 0;
   width: 100%;
@@ -52,6 +104,16 @@ export const SlideBox = styled.div<{ focusHighlight?: boolean }>`
   border-radius: 0.6vw;
   border: 0.05vw solid #ddd;
   ${({ focusHighlight }) => (focusHighlight ? HighlightedSlideStyles : css``)}
+
+  ${({ $isFullscreen }) =>
+    $isFullscreen &&
+    `
+      width: min(100%, calc((100vh - clamp(112px, 12vh, 140px)) * 16 / 9));
+      aspect-ratio: 16 / 9;
+      border: 1px solid #eaeaea;
+      border-radius: 10px;
+      background: #f2f9ff;
+    `}
 `;
 
 export const NavButton = styled.button`
@@ -72,21 +134,153 @@ export const ToggleText = styled.span`
   letter-spacing: -0.021vw;
 `;
 
-export const ReactionButton = styled.button`
+export const ReactionButton = styled.button<{ $isFullscreen?: boolean }>`
   display: inline-flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  width: 2vw;
-  height: 2vw;
-  border: none;
-  background: transparent;
-  padding: 0;
+  border: 1px solid #eaeaea;
+  border-radius: 999px;
+  background: #fafafa;
+  padding: clamp(12px, 0.7vw, 13px);
   cursor: pointer;
+
+  ${({ $isFullscreen }) =>
+    $isFullscreen &&
+    `
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(5px);
+      padding: clamp(12px, 0.9vw, 16px);
+    `}
+
+  img {
+    width: clamp(24px, 2vw, 32px);
+    aspect-ratio: 1;
+    object-fit: contain;
+  }
+`;
+
+export const FullscreenButton = styled.button<{
+  $isFullscreen?: boolean;
+  $controlsVisible?: boolean;
+}>`
+  position: absolute;
+  right: 1.6vw;
+  bottom: 5.56vh;
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 0.75vw, 14px);
+  color: #303030;
+  border: 1px solid #eaeaea;
+  border-radius: 999px;
+  background: #fafafa;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease;
+
+  &:hover {
+    background: #ffffff;
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #303030;
+    outline-offset: 3px;
+  }
+
+  > img {
+    width: clamp(1.5rem, 1.55vw, 1.75rem);
+    aspect-ratio: 1;
+    display: block;
+  }
+
+  ${({ $isFullscreen }) =>
+    $isFullscreen &&
+    `
+      right: clamp(42px, 4.2vw, 80px);
+      bottom: clamp(40px, 4.6vh, 50px);
+      padding: clamp(18px, 1.1vw, 20px);
+      border-width: 1px;
+      background: rgba(250, 250, 250, 0.8);
+      backdrop-filter: blur(6.786px);
+    `}
+
+  ${({ $isFullscreen, $controlsVisible }) =>
+    $isFullscreen &&
+    !$controlsVisible &&
+    `
+      opacity: 0;
+      pointer-events: none;
+    `}
+
+  ${({ $isFullscreen }) =>
+    $isFullscreen &&
+    css`
+      > img {
+        width: clamp(30px, 1.9vw, 36px);
+      }
+    `}
+`;
+
+export const FullscreenExitIcon = styled.span`
+  position: relative;
+  display: block;
+  width: clamp(30px, 1.9vw, 36px);
+  aspect-ratio: 1;
+
+  span {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 57.13%;
+    aspect-ratio: 1;
+  }
+
+  span:first-child {
+    left: 42.9%;
+    top: 42.9%;
+    transform: rotate(180deg) scaleY(-1);
+  }
+
+  span:last-child {
+    left: 3.86%;
+    top: 3.86%;
+    transform: scaleY(-1);
+  }
+
   img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    display: block;
   }
+`;
+
+export const SlideNumberChip = styled.div<{ $visible?: boolean }>`
+  position: absolute;
+  left: clamp(42px, 4.2vw, 80px);
+  bottom: clamp(40px, 4.6vh, 50px);
+  z-index: 12;
+  padding: 12px 20px;
+  border: 1px solid #eaeaea;
+  border-radius: 100px;
+  background: rgba(250, 250, 250, 0.6);
+  backdrop-filter: blur(10px);
+  color: #303030;
+  font-family: Pretendard;
+  font-size: clamp(14px, 0.9vw, 16px);
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.45;
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  pointer-events: none;
+  transition: opacity 0.2s ease;
 `;
 
 export const TooltipWrapper = styled.div`

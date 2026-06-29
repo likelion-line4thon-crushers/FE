@@ -36,7 +36,7 @@ const EmojiPanel = ({
   onSelect,
 }: {
   selectedId?: any;
-  onSelect?: (emoji: any) => void;
+  onSelect?: (emoji: any | null) => void;
 }) => {
   const isControlled = controlledSelectedId !== undefined;
   const [uncontrolledSelectedId, setUncontrolledSelectedId] = useState<number | null>(null);
@@ -94,8 +94,9 @@ const EmojiPanel = ({
                   selectedId === emoji.id ? emoji.selectedIcon : emoji.icon;
               }}
               onClick={() => {
-                if (onSelect) onSelect(emoji);
-                if (!isControlled) setUncontrolledSelectedId(emoji.id);
+                const isSelected = selectedId === emoji.id;
+                if (onSelect) onSelect(isSelected ? null : emoji);
+                if (!isControlled) setUncontrolledSelectedId(isSelected ? null : emoji.id);
               }} //마우스 포인터 변경
             />
           </EmojiItem>
