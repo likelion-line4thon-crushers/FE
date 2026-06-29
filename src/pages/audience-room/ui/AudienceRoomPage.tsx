@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { useAtomValue } from "jotai";
 import AudiencePanel from "./AudiencePanel";
@@ -8,6 +8,7 @@ import SlideViewer from "./SlideViewerAudience/SlideViewer_audience";
 import { EmojiPanel, useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { WebSocketService } from "@/shared/api/websocket";
 import { useSlideLoader } from "@/entities/slide";
+import { SessionWarningModal } from "@/shared/ui/session-warning-modal";
 import {
   usePresenterPageSync,
   useAudienceQuestions,
@@ -42,7 +43,9 @@ const AudienceRoomPage = () => {
   // Local UI state
   const [selectedEmoji, setSelectedEmoji] = useState<any>(null);
   const [showStamps, setShowStamps] = useState(true);
+  const [showAudienceJoinWarning, setShowAudienceJoinWarning] = useState(false);
   const lastPresenterPageRef = useRef(0);
+  const hasShownAudienceJoinWarningRef = useRef(false);
 
   const { sessionStatus } = useAudienceInitialState({ code, roomId });
 
@@ -165,8 +168,31 @@ const AudienceRoomPage = () => {
   const isQuestionListWaiting = questionsLoading && questions.length === 0;
   const isSessionWaiting = sessionStatus === "waiting";
 
+  useEffect(() => {
+    if (hasShownAudienceJoinWarningRef.current) return;
+    if (!roomId || !audienceId || !audienceToken) return;
+
+    hasShownAudienceJoinWarningRef.current = true;
+    setShowAudienceJoinWarning(true);
+  }, [audienceId, audienceToken, roomId]);
+
   if (isSessionWaiting) {
-    return <DelayAudience placeholderCount={totalPages || 10} />;
+    return (
+      <>
+        <DelayAudience placeholderCount={totalPages || 10} />
+        {showAudienceJoinWarning && (
+          <SessionWarningModal
+            title="꼭 주의해 주세요!"
+            description={[
+              "발표 자료의 저작권은 발표자에게 있습니다.",
+              "무단 캡처 및 유포 시 법적 제재를 받을 수 있어요.",
+            ]}
+            onClose={() => setShowAudienceJoinWarning(false)}
+            onConfirm={() => setShowAudienceJoinWarning(false)}
+          />
+        )}
+      </>
+    );
   }
 
   return (
@@ -243,6 +269,17 @@ const AudienceRoomPage = () => {
           toggleExpand={toggleExpand}
         />
       </RightPanelContainer>
+      {showAudienceJoinWarning && (
+        <SessionWarningModal
+          title="꼭 주의해 주세요!"
+          description={[
+            "발표 자료의 저작권은 발표자에게 있습니다.",
+            "무단 캡처 및 유포 시 법적 제재를 받을 수 있어요.",
+          ]}
+          onClose={() => setShowAudienceJoinWarning(false)}
+          onConfirm={() => setShowAudienceJoinWarning(false)}
+        />
+      )}
     </PageContainer>
   );
 };

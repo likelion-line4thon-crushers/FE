@@ -9,6 +9,7 @@ import { ShareButton, ExitButton, StartSessionButton } from "./HeaderButtons";
 import { leaveRoom } from "@/shared/api/room";
 import { canStartSessionAtom } from "@/entities/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
+import { SessionWarningModal } from "@/shared/ui/session-warning-modal";
 import { useHeaderRoomData, useHeaderSessionAction, resolveShareJoinUrl } from "../../model";
 
 const HeaderWrapper = styled.header`
@@ -107,6 +108,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const isAudienceView = location.pathname.startsWith("/join/");
 
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showPresenterStartWarning, setShowPresenterStartWarning] = useState(false);
   const [sessionStatus, setSessionStatus] = useState("waiting");
 
   const { roomData, fileName } = useHeaderRoomData(propRoomData);
@@ -156,6 +158,20 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
       return;
     }
     setShowShareModal(true);
+  };
+
+  const handleStartSessionClick = () => {
+    if (isPrep) {
+      setShowPresenterStartWarning(true);
+      return;
+    }
+
+    handleSessionAction();
+  };
+
+  const handleConfirmStartSession = () => {
+    setShowPresenterStartWarning(false);
+    handleSessionAction();
   };
 
   const handleExitClick = async () => {
@@ -224,7 +240,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
             {(isPrep || isPresenter) && (
               <StartSessionButton
-                onClick={handleSessionAction}
+                onClick={handleStartSessionClick}
                 disabled={isSessionEnding || (isPrep && !resolvedCanStartSession)}
                 isEndSession={isPresenter}
               >
@@ -239,6 +255,17 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
       {showShareModal && roomData && (
         <ShareModal roomData={roomData} onClose={() => setShowShareModal(false)} />
+      )}
+      {showPresenterStartWarning && (
+        <SessionWarningModal
+          title="라이브 전, 꼭 확인해 주세요!"
+          description={[
+            "청중에게 공개되는 자료는 스크린샷될 수 있어요.",
+            "민감한 내용은 사전에 검토 후 라이브를 진행해 주세요.",
+          ]}
+          onClose={() => setShowPresenterStartWarning(false)}
+          onConfirm={handleConfirmStartSession}
+        />
       )}
       {showLandingPage && <SessionLoadingOverlay message={landingMessage} />}
     </>
