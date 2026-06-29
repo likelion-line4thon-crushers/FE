@@ -13,6 +13,7 @@ import ClusterQuestionList from "./ClusterQuestionList";
 import CompletedQuestionList from "./CompletedQuestionList";
 import QuestionTabs from "./QuestionTabs";
 import websocketService from "@/shared/api/websocket";
+import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { WebSocketService } from "@/shared/api/websocket";
 import { useSlideLoader } from "@/entities/slide";
@@ -363,16 +364,32 @@ const PresenterRoomPage = () => {
   if (loading) {
     return (
       <PresentationLayout>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            height: "100vh",
-          }}
-        >
-          <p>슬라이드 로딩 중...</p>
-        </div>
+        <SlidesSidebar
+          slides={[]}
+          currentSlide={0}
+          setCurrentSlide={() => undefined}
+          isWaiting
+          placeholderCount={totalPages || 10}
+        />
+        <SlideViewer
+          slides={[""]}
+          currentSlide={0}
+          setCurrentSlide={() => undefined}
+          audienceStats={{ prev: 0, current: 100, next: 0 }}
+          mode="present"
+          stamps={[]}
+          showReactions={false}
+          timer="00:00"
+        />
+        <PanelWrapper>
+          <Section>
+            <Title>빠른 설정</Title>
+          </Section>
+          <Section>
+            <Title>실시간 질문</Title>
+          </Section>
+        </PanelWrapper>
+        <SessionLoadingOverlay message="세션 초기화 중..." />
       </PresentationLayout>
     );
   }

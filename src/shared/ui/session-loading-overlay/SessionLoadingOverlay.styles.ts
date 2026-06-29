@@ -1,89 +1,101 @@
 import styled, { keyframes } from "styled-components";
-import BackgroundPNG from "@/shared/assets/images/background.png";
 
 export const spin = keyframes`
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 `;
 
-/* 배경 */
 export const Overlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
-  height: 100vh;
-  background-image: url(${BackgroundPNG});
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 28px;
   z-index: 9999;
   font-family: "Pretendard", sans-serif;
 `;
 
 export const LoaderRing = styled.div`
-  --size: 14vmin;
-  --thickness: 0.6vmin;
+  --size: 130px;
+  --thickness: 4px;
 
   position: absolute;
+  inset: 0;
   width: var(--size);
   height: var(--size);
   border-radius: 50%;
-
-  background: conic-gradient(
-    from 270deg,
-    #000 0deg,
-    rgba(0, 0, 0, 0.85) 20deg,
-    rgba(0, 0, 0, 0.55) 60deg,
-    rgba(0, 0, 0, 0.25) 100deg,
-    rgba(0, 0, 0, 0) 150deg 360deg
-  );
-  mask: radial-gradient(farthest-side, transparent calc(100% - var(--thickness)), #000 0);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--thickness)), #000 0);
-
   animation: ${spin} 1.2s linear infinite;
 
+  &::before,
   &::after {
     content: "";
     position: absolute;
-    left: 50%;
-    top: 50%;
-    width: var(--thickness);
-    height: var(--thickness);
-    background: #000;
-    border-radius: 50%;
-    transform: translate(-50%, -50%) rotate(270deg)
-      translateY(calc(-0.5 * var(--size) + 0.5 * var(--thickness)));
-    transform-origin: center;
-    box-shadow: 0 0 0.2vmin rgba(0, 0, 0, 0.35);
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  &::before {
+    border: var(--thickness) solid #d9d9d9;
+  }
+
+  &::after {
+    background: conic-gradient(from 242deg, #303030 0deg 112deg, transparent 112deg 360deg);
+    mask: radial-gradient(farthest-side, transparent calc(100% - var(--thickness)), #000 0);
+    -webkit-mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - var(--thickness)),
+      #000 0
+    );
   }
 `;
 
 export const Center = styled.div`
   position: relative;
-  width: 14vmin;
-  height: 14vmin;
+  width: 130px;
+  height: 130px;
   aspect-ratio: 1 / 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
 `;
 
-export const Logo = styled.img<{ $active?: boolean }>`
-  width: 15vmin;
-  height: auto;
-  position: absolute;
-  transition: opacity 0.4s ease-in-out;
-  opacity: ${(props) => (props.$active ? 1 : 0)};
+export const MarkSurface = styled.div`
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 200px;
+  display: grid;
+  place-items: center;
+`;
+
+export const BrandMark = styled.svg`
+  width: 43px;
+  height: 45px;
+  overflow: visible;
+
+  path {
+    fill: #303030;
+  }
+
+  .accent {
+    fill: #e74d07;
+  }
 `;
 
 export const Message = styled.p`
-  margin-top: 2vh;
-  font-size: clamp(14px, 1vw, 18px);
-  color: #333;
-  font-weight: 500;
+  margin: 0;
+  color: #5c5c5c;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 42px;
+  letter-spacing: 0;
+  text-align: center;
+  word-break: keep-all;
 `;
