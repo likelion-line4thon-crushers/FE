@@ -35,3 +35,4 @@ playwright/.cache
 .env.production.local
 
 docs/
+.omc/
