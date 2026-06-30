@@ -11,7 +11,6 @@ export const SlideNumberButton = styled.button<{ $variant?: string }>`
   gap: 6px;
   border-radius: 6px;
   border: none;
-  font-family: Pretendard, sans-serif;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;

@@ -73,7 +73,6 @@ const LiveBadge = styled.div`
   border-radius: 999px;
   background: #fff;
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: 0.83vw;
   font-weight: 500;
 

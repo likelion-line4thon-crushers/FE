@@ -25,7 +25,6 @@ export const QuestionContentWrapper = styled.div`
 `;
 
 export const QuestionText = styled.p`
-  font-family: Pretendard;
   font-size: 24px;
   font-weight: 400;
   color: #434343;
@@ -35,7 +34,6 @@ export const QuestionText = styled.p`
 `;
 
 export const QuestionMeta = styled.div`
-  font-family: Pretendard;
   font-size: 16px;
   font-weight: 400;
   color: #666;

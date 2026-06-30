@@ -37,7 +37,6 @@ export const TitleText = styled.h2<{
   $fontStyle?: string;
   $color?: string;
 }>`
-  font-family: Pretendard;
   font-size: ${(props) => props.$fontSize || "16px"};
   font-weight: ${(props) => props.$fontWeight || "500"};
   font-style: ${(props) => props.$fontStyle || "normal"};
@@ -55,14 +54,12 @@ export const BottomSection = styled.div`
 
 export const NumberDisplay = styled.div`
   color: #434343;
-  font-family: Pretendard;
   font-size: 80px;
   font-style: normal;
   font-weight: 400;
 `;
 
 export const UnitText = styled.span`
-  font-family: Pretendard;
   font-size: 20px;
   font-weight: 400;
   color: #333;
@@ -92,7 +89,6 @@ export const SlideNumber = styled.div`
   position: absolute;
   bottom: 20px;
   left: 20px;
-  font-family: Pretendard;
   font-size: 14px;
   font-weight: 400;
   color: #333;
@@ -115,7 +111,6 @@ export const ContentText = styled.p<{
   $fontStyle?: string;
   $color?: string;
 }>`
-  font-family: Pretendard;
   font-size: ${(props) => props.$fontSize || "14px"};
   font-weight: ${(props) => props.$fontWeight || "400"};
   font-style: ${(props) => props.$fontStyle || "normal"};

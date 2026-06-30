@@ -343,7 +343,6 @@ const Stars = styled.div`
 const RatingText = styled.div`
   margin-top: 1vh;
   text-align: center;
-  font-family: Pretendard;
   font-size: 14px;
   line-height: 26px;
   letter-spacing: -0.45px;
@@ -415,7 +414,6 @@ const TextArea = styled.textarea`
 
   &::placeholder {
     color: #b5b5b5;
-    font-family: Pretendard;
     font-weight: 400;
     opacity: 0.8; /* 흐릿한 효과 */
     font-size: clamp(12px, 0.9vw, 15px);

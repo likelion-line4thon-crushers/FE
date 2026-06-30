@@ -50,7 +50,6 @@ export const NumberCenter = styled.div`
 export const NumberValue = styled.div`
   color: #434343;
   text-align: center;
-  font-family: Pretendard;
   font-size: 80px;
   font-style: normal;
   font-weight: 700;
@@ -59,7 +58,6 @@ export const NumberValue = styled.div`
 export const NumberDescription = styled.div`
   margin-top: 12px;
   text-align: center;
-  font-family: Pretendard;
   font-size: 16px;
   font-style: normal;
   font-weight: 400;

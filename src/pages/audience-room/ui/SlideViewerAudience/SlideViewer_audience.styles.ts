@@ -126,7 +126,6 @@ export const NavButton = styled.button`
 
 export const ToggleText = styled.span`
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: 0.94vw;
   font-style: normal;
   font-weight: 600;
@@ -273,7 +272,6 @@ export const SlideNumberChip = styled.div<{ $visible?: boolean }>`
   background: rgba(250, 250, 250, 0.6);
   backdrop-filter: blur(10px);
   color: #303030;
-  font-family: Pretendard;
   font-size: clamp(14px, 0.9vw, 16px);
   font-style: normal;
   font-weight: 600;
@@ -305,7 +303,6 @@ export const Tooltip = styled.div`
   transition: opacity 0.15s ease;
 
   color: rgb(0, 0, 0);
-  font-family: Pretendard;
   font-size: 0.63vw;
   font-weight: 400;
   line-height: 1.67vh;
@@ -369,7 +366,6 @@ export const WaitingImage = styled.img`
 export const WaitingText = styled.p`
   margin: 0;
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: 1.04vw;
   font-style: normal;
   font-weight: 600;

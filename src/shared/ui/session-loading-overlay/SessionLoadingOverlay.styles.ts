@@ -20,7 +20,6 @@ export const Overlay = styled.div`
   align-items: center;
   gap: 28px;
   z-index: 9999;
-  font-family: "Pretendard", sans-serif;
 `;
 
 export const LoaderRing = styled.div`

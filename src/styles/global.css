@@ -6,6 +6,15 @@ body {
   overflow: hidden; /* 스크롤 완전 차단 */
 }
 
+body {
+  font-family: "Pretendard", sans-serif;
+  /* 폰트 최적화: 안티앨리어싱 + 렌더링 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "tnum"; /* 숫자 고정폭 */
+}
+
 #root {
   display: grid;
   grid-template-rows: 5.2vh 1fr; /* 헤더 + 나머지 */

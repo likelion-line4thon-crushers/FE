@@ -35,7 +35,6 @@ export const Section = styled.div`
 
 export const Title = styled.h2`
   color: #303030;
-  font-family: Pretendard;
   font-size: 15px;
   font-style: normal;
   font-weight: 600;
@@ -114,7 +113,6 @@ export const SlideLabel = styled.button<{ $active?: boolean }>`
   min-width: 3.07vw;
   border: none;
   color: #fff;
-  font-family: Pretendard;
   font-size: 10px;
   font-style: normal;
   font-weight: 600;
@@ -156,7 +154,6 @@ export const QuestionContent = styled.div`
 
 export const QuestionText = styled.div`
   color: #111;
-  font-family: Pretendard;
   font-size: 12px;
   font-style: normal;
   font-weight: 400;
@@ -178,7 +175,6 @@ export const Scrollbar = styled.div`
 
 export const WaitingMessage = styled.div`
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: 14px;
   font-style: normal;
   font-weight: 600;
@@ -204,7 +200,6 @@ export const LockBanner = styled.div`
   white-space: nowrap;
 
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: 13px;
   font-weight: 600;
 `;
@@ -252,7 +247,6 @@ export const QuestionInput = styled.textarea<{ $isInputting?: boolean }>`
   &::placeholder {
     color: #999;
 
-    font-family: Pretendard;
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
@@ -293,7 +287,6 @@ export const SubmitButton = styled.button`
 
 export const StatusMessage = styled.div`
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: 15px;
   font-style: normal;
   font-weight: 500;

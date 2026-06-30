@@ -77,7 +77,6 @@ export const TextGroup = styled.div`
 export const Title = styled.h2`
   margin: 0;
   color: #111;
-  font-family: Pretendard, sans-serif;
   font-size: 18px;
   font-weight: 500;
   line-height: 1.4;
@@ -87,7 +86,6 @@ export const Title = styled.h2`
 export const Description = styled.p`
   margin: 0;
   color: #505050;
-  font-family: Pretendard, sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 1.45;
@@ -109,7 +107,6 @@ export const ConfirmButton = styled.button`
   border-radius: 3px;
   background: #303030;
   color: #fff;
-  font-family: Pretendard, sans-serif;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.45;

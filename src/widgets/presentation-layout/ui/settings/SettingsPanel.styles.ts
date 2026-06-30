@@ -24,7 +24,6 @@ export const Title = styled.h2`
   height: 3vh;
   margin: 0;
   padding: 0.7vh 0.55vw;
-  font-family: Pretendard;
   font-size: clamp(12px, 0.8vw, 15px);
   font-weight: 600;
   color: #303030;
@@ -41,7 +40,6 @@ export const AudienceCountWrapper = styled.div`
   padding: 1.2vh 0.8vw;
   gap: 0.4vw;
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: clamp(13px, 0.9vw, 16px);
   font-weight: 600;
   border-radius: 1vw;

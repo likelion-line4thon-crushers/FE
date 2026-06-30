@@ -11,7 +11,6 @@ export const QuickTogglesList = styled.div`
 
 export const ToggleRowLabel = styled.span`
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: clamp(13px, 0.85vw, 16px);
   font-weight: 600;
   letter-spacing: -0.4px;

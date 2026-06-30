@@ -33,7 +33,6 @@ export const SummaryBoxContainer = styled.div`
     color: #5c5c5c;
     text-align: center;
 
-    font-family: Pretendard;
     font-size: 15px;
     font-style: normal;
     font-weight: 400;

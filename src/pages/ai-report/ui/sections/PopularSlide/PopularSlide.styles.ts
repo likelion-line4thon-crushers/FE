@@ -112,7 +112,6 @@ export const NoSlideMessage = styled.div`
   }
 
   p {
-    font-family: Pretendard;
     font-size: 18px;
     font-weight: 400;
     color: #666;

@@ -14,7 +14,6 @@ const BasePillButton = styled.button`
   border: 1px solid #e6e6e6;
   background: #fff;
   color: #5c5c5c;
-  font-family: Pretendard, sans-serif;
   font-size: clamp(11px, 0.8vw, 13px);
   font-weight: 500;
   cursor: pointer;

@@ -35,7 +35,6 @@ const ClusterExpandToggle = styled.button`
   color: #303030;
   letter-spacing: -0.35px;
   line-height: 1.45;
-  font-family: Pretendard, sans-serif;
 `;
 
 const ClusterSamplesWrapper = styled.div`

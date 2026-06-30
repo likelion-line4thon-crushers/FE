@@ -24,7 +24,6 @@ export const WaitingImage = styled.img`
 `;
 
 export const WaitingMessage = styled.p`
-  font-family: Pretendard;
   font-size: 18px;
   font-weight: 400;
   color: #666;

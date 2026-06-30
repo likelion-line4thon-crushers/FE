@@ -53,7 +53,6 @@ export const CenterHeader = styled.div`
   h2 {
     margin: 0;
     color: #5c5c5c;
-    font-family: Pretendard;
     font-size: 28px;
     font-weight: 600;
   }
@@ -74,7 +73,6 @@ export const RatingRow = styled.div`
 `;
 
 export const RatingScore = styled.div`
-  font-family: Pretendard;
   font-size: 38px;
   font-weight: 600;
   color: #222;
@@ -112,7 +110,6 @@ export const SummaryBoxContainer = styled.div`
   h3 {
     color: #5c5c5c;
     text-align: center;
-    font-family: Pretendard;
     font-size: 15px;
     font-style: normal;
     font-weight: 400;
@@ -127,7 +124,6 @@ export const SummaryBoxContainer = styled.div`
   h2 {
     color: #5c5c5c;
 
-    font-family: Pretendard;
     font-size: 28px;
 
     font-weight: 600;

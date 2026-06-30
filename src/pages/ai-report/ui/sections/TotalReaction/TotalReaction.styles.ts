@@ -18,7 +18,6 @@ export const TitleContainer = styled.div`
   }
 
   h1 {
-    font-family: Pretendard;
     font-size: 40px;
     font-style: normal;
     font-weight: 600;
@@ -27,7 +26,6 @@ export const TitleContainer = styled.div`
   }
   h2 {
     color: #5c5c5c;
-    font-family: Pretendard;
     font-size: 20px;
     font-style: normal;
     font-weight: 400;

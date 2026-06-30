@@ -47,7 +47,6 @@ export const UnlockToast = styled.div`
 `;
 
 export const UnlockToastText = styled.span`
-  font-family: Pretendard;
   font-size: clamp(12px, 0.9vw, 14px);
   font-weight: 600;
   letter-spacing: -0.35px;
@@ -80,7 +79,6 @@ export const FocusGroupLeft = styled.div`
 /* 집중유도 버튼 */
 export const FocusLeft = styled.div`
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: clamp(14px, 1vw, 18px);
   font-weight: 600;
   display: inline-flex;
@@ -142,7 +140,6 @@ export const LegendContainer = styled.div`
   border-radius: 2vh;
   padding: 1vh 1vw;
   color: #fff;
-  font-family: Pretendard;
   font-weight: 500;
   font-size: clamp(11px, 0.8vw, 14px);
 `;
@@ -277,7 +274,6 @@ export const Tooltip = styled.div`
   transition: opacity 0.15s ease;
 
   color: rgb(0, 0, 0);
-  font-family: Pretendard;
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -353,7 +349,6 @@ export const FeedbackText = styled.div`
   display: flex;
   align-items: center;
   color: #5c5c5c;
-  font-family: Pretendard;
   font-size: clamp(13px, 0.9vw, 16px);
   font-weight: 500;
   white-space: nowrap;

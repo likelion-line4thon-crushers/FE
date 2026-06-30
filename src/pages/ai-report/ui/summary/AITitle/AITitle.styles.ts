@@ -9,7 +9,6 @@ export const AITitleWrapper = styled.div`
 
 export const TitleText = styled.h1`
   color: #000;
-  font-family: Pretendard;
   font-size: 32px;
   font-style: normal;
   font-weight: 600;
@@ -32,7 +31,6 @@ export const DescriptionBox = styled.div`
 
 export const DescriptionText = styled.p`
   color: #767676;
-  font-family: Pretendard;
   font-size: 28px;
   font-style: normal;
   font-weight: 400;
