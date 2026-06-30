@@ -4,13 +4,16 @@ import styled, { css, keyframes } from "styled-components";
 export const Main = styled.div`
   position: relative;
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 2vh 1vw;
+  padding: 4vh 1.04vw 3.1vh;
   background: #fff;
   width: 100%;
+  box-sizing: border-box;
 `;
 
 /* 다음 슬라이드 미공개 토스트 (Figma: 슬라이드 상단 중앙, 수초간 표시) */
@@ -65,7 +68,7 @@ export const FocusBar = styled.div`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin-bottom: 1.5vh;
+  margin-bottom: 2.2vh;
 `;
 
 /* 왼쪽 그룹 */
@@ -317,17 +320,17 @@ export const SlideContainer = styled.div`
 
 /* 실시간 피드백 창 */
 export const FeedbackContainer = styled.div<{ show?: boolean }>`
-  width: 97%;
-  height: 2vh;
+  width: 100%;
   margin-top: 2vh;
   display: ${({ show }) => (show ? "flex" : "none")};
   align-items: center;
   justify-content: flex-start;
-  padding: 1.2vh 1.2vw;
+  padding: clamp(12px, 1.2vh, 13px) clamp(14px, 0.9vw, 17px);
   background: #fafafa;
-  border-radius: 2vw;
+  border-radius: 100px;
   border: 0.05vw solid #eaeaea;
   gap: 0.8vw;
+  box-sizing: border-box;
 `;
 
 export const FeedbackIcon = styled.div`

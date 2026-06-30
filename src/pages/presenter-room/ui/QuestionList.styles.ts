@@ -1,21 +1,20 @@
 import styled from "styled-components";
 
-export const LiveBox = styled.div`
-  width: 90%;
-  height: 40vh;
-  margin: 2vh 0.6vw;
-  border-radius: 1vw;
-  border: 0.05vw solid #eaeaea;
+// The #fafafa rounded box that holds the whole question list (cluster list +
+// question list read as one continuous list with uniform 20px gaps).
+export const QuestionScrollArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  margin: 1vh 0.6vw 1.5vh;
+  border: 1px solid #eaeaea;
   background: #fafafa;
+  border-radius: 1.04vw;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-`;
-
-export const QuestionContainer = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 1vh 0.63vw;
+  gap: 20px;
+  padding: 20px 11px;
+  box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: #ccc transparent;
 
@@ -28,27 +27,30 @@ export const QuestionContainer = styled.div`
   }
 `;
 
+export const LiveBox = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+`;
+
+export const QuestionContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
 export const QuestionItem = styled.div<{ $active?: boolean }>`
-  margin-bottom: 0.9vh;
-  padding: 1.11vh 0.63vw;
-  background: ${({ $active }) => ($active ? "#f1f1f1" : "#fff")};
-  border-radius: 0.51vw;
-  border: 1px solid ${({ $active }) => ($active ? "#eaeaea" : "transparent")};
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   width: 100%;
   box-sizing: border-box;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
 `;
 
 export const QuestionHeader = styled.div`
   display: flex;
   align-items: center;
-  margin-bottom: 0.74vh;
   gap: 7px;
 `;
 
