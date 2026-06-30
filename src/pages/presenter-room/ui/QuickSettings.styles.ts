@@ -9,7 +9,16 @@ export const QuickTogglesList = styled.div`
   padding: 0 0.6vw 1vh;
 `;
 
-/* 한 줄: 라벨(좌) + 토글(우) */
+export const ToggleRowLabel = styled.span`
+  color: #5c5c5c;
+  font-family: Pretendard;
+  font-size: clamp(13px, 0.85vw, 16px);
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  transition: color 0.2s ease;
+`;
+
+/* 한 줄: 라벨(좌) + 토글(우) — 켜지면 행이 어둡게(#303030) 강조됨 (Figma) */
 export const ToggleRow = styled.div`
   display: flex;
   flex-direction: row;
@@ -21,19 +30,22 @@ export const ToggleRow = styled.div`
   border-radius: 1vw;
   border: 0.05vw solid #eaeaea;
   background: #fafafa;
-  transition: background 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 
-  &:hover {
+  &:not(:has(input:checked)):hover {
     background: #f5f5f5;
   }
-`;
 
-export const ToggleRowLabel = styled.span`
-  color: #5c5c5c;
-  font-family: Pretendard;
-  font-size: clamp(13px, 0.85vw, 16px);
-  font-weight: 600;
-  letter-spacing: -0.4px;
+  &:has(input:checked) {
+    background: #303030;
+    border-color: #303030;
+  }
+
+  &:has(input:checked) ${ToggleRowLabel} {
+    color: #ffffff;
+  }
 `;
 
 /* 카드용 ToggleInput 의 margin/align 을 리셋해 행 안에서 우측 정렬 */

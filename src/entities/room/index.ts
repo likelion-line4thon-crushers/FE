@@ -7,4 +7,6 @@ export {
   fileNameAtom,
   pdfIdAtom,
   canStartSessionAtom,
+  presenterModeAtom,
 } from "./model/store";
+export type { PresenterMode } from "./model/store";

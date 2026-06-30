@@ -36,3 +36,5 @@ playwright/.cache
 
 docs/
 .omc/
+playwright/
+.playwright-mcp

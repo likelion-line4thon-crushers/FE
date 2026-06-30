@@ -1,6 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useSetAtom } from "jotai";
+import { presenterModeAtom } from "@/entities/room";
 import { startSession, closeSession } from "@/shared/api/room";
+import { sessionStartMarker } from "@/shared/config/storage-keys";
 import {
   fetchTopSlideReport,
   fetchTopQuestionsReport,
@@ -16,22 +19,25 @@ interface UseHeaderSessionActionParams {
   fileName: string;
   totalPages?: number;
   canStartSession?: boolean;
+  isPrep?: boolean;
+  isPresenter?: boolean;
 }
 
 /**
- * * Handles session start (prep → present) and session end (present → report).
+ * * Handles session start (prepare → present) and session end (present → report).
+ * 준비/발표 구분은 URL 이 아니라 presenterModeAtom 기반으로 상위(AppHeader)에서 전달받는다.
  */
 export const useHeaderSessionAction = ({
   roomData,
   fileName,
   totalPages,
   canStartSession = false,
+  isPrep = false,
+  isPresenter = false,
 }: UseHeaderSessionActionParams) => {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const isPrep = location.pathname === "/rooms/new" || location.pathname.endsWith("/prepare");
-  const isPresenter = location.pathname.endsWith("/present");
+  const setPresenterMode = useSetAtom(presenterModeAtom);
 
   const [isSessionEnding, setIsSessionEnding] = useState(false);
   const [showLandingPage, setShowLandingPage] = useState(false);
@@ -60,14 +66,11 @@ export const useHeaderSessionAction = ({
 
       try {
         await startSession(roomData.roomId);
-        navigate(`/rooms/${roomData.roomId}/present`, {
-          state: {
-            fileName,
-            roomId: roomData.roomId,
-            deckId: roomData.deckId,
-            totalPages: totalPages || 0,
-          },
-        });
+        // 새로고침 시에도 발표 화면으로 복원되도록 시작 마커를 저장.
+        sessionStartMarker.set(roomData.roomId);
+        // 단일 경로이므로 라우팅하지 않고 모드만 발표로 전환한다.
+        // (게이트가 presenterModeAtom 을 구독해 발표 화면으로 즉시 전환)
+        setPresenterMode("present");
       } catch {
         alert("⚠️ 세션 시작에 실패했습니다. 다시 시도해주세요.");
       }
@@ -117,6 +120,7 @@ export const useHeaderSessionAction = ({
         }
 
         await closeSession(resolvedRoomId);
+        sessionStartMarker.clear(resolvedRoomId);
         log.log("세션 종료 API(DELETE) 성공:", resolvedRoomId);
 
         const nextState = {
@@ -166,6 +170,7 @@ export const useHeaderSessionAction = ({
     canStartSession,
     navigate,
     location.state,
+    setPresenterMode,
   ]);
 
   return {

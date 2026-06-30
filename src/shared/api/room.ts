@@ -23,6 +23,18 @@ export async function startSession(roomId: string) {
   return res.data.data;
 }
 
+/** 세션 상태 조회 ("waiting" | "live" | "ended"). 실패 시 null 반환. */
+export async function getSessionStatus(roomId: string): Promise<string | null> {
+  if (!roomId) return null;
+  try {
+    const res = await api.get(`/api/rooms/${roomId}/session/status`);
+    return res?.data?.data?.status ?? null;
+  } catch (error) {
+    log.warn("Failed to fetch session status", error);
+    return null;
+  }
+}
+
 export async function closeSession(roomId: string) {
   if (!roomId) throw new Error("roomId is required");
   const res = await api.delete(`/api/rooms/close/${roomId}`);

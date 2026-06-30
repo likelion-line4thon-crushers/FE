@@ -7,7 +7,7 @@ import LiveIcon from "@/shared/assets/images/live.png";
 import { ShareModal } from "../share";
 import { ShareButton, ExitButton, StartSessionButton } from "./HeaderButtons";
 import { leaveRoom } from "@/shared/api/room";
-import { canStartSessionAtom } from "@/entities/room";
+import { canStartSessionAtom, presenterModeAtom } from "@/entities/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { SessionWarningModal } from "@/shared/ui/session-warning-modal";
 import { useHeaderRoomData, useHeaderSessionAction, resolveShareJoinUrl } from "../../model";
@@ -103,9 +103,13 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const isMain = location.pathname === "/";
   const isRating = location.pathname.includes("/rating");
   const isAiReport = location.pathname.endsWith("/report");
-  const isPrep = location.pathname === "/rooms/new" || location.pathname.endsWith("/prepare");
-  const isPresenter = location.pathname.endsWith("/present");
   const isAudienceView = location.pathname.startsWith("/join/");
+
+  // 발표자 방은 단일 경로(/rooms/new, /rooms/:roomId). 준비/발표 구분은 presenterModeAtom 으로.
+  const presenterMode = useAtomValue(presenterModeAtom);
+  const isPresenterRoom = /^\/rooms\/[^/]+$/.test(location.pathname);
+  const isPrep = isPresenterRoom && presenterMode === "prepare";
+  const isPresenter = isPresenterRoom && presenterMode === "present";
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [showPresenterStartWarning, setShowPresenterStartWarning] = useState(false);
@@ -123,6 +127,8 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
       fileName,
       totalPages,
       canStartSession: resolvedCanStartSession,
+      isPrep,
+      isPresenter,
     });
 
   // * Audience view: poll sessionStatus from sessionStorage

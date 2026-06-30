@@ -320,7 +320,7 @@ const PresentationPrepPage = () => {
         sessionStorage.setItem("boini_room", JSON.stringify(nextRoomData));
 
         if (roomIdParam !== room.roomId) {
-          navigate(`/rooms/${room.roomId}/prepare`, {
+          navigate(`/rooms/${room.roomId}`, {
             replace: true,
             state: {
               ...(location.state || {}),
