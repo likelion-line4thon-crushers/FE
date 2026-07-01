@@ -295,7 +295,7 @@ const PresenterRoomPage = () => {
     subscribe: Boolean(roomId && isPresenterWsReady),
   });
 
-  const { clusters, toggleExpand, isExpanded, dismissCluster } = usePresenterClusters({
+  const { clusters, toggleExpand, isExpanded } = usePresenterClusters({
     roomId,
     isPresenterWsReady,
   });
@@ -500,7 +500,6 @@ const PresenterRoomPage = () => {
                     toggleExpand={toggleExpand}
                     onComplete={completeQuestion}
                     onDelete={deleteQuestion}
-                    onDismiss={dismissCluster}
                     tsByContent={questionTsByContent}
                   />
                 )}

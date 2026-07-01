@@ -21,13 +21,19 @@ import {
 
 interface ClusterQuestionListProps {
   clusters: QuestionCluster[];
-  isExpanded: (representative: string) => boolean;
-  toggleExpand: (representative: string) => void;
+  isExpanded: (clusterKey: string) => boolean;
+  toggleExpand: (clusterKey: string) => void;
   onComplete?: (questionId: string) => void;
   onDelete?: (questionId: string) => void;
-  onDismiss?: (representative: string) => void;
   tsByContent?: Map<string, number>;
 }
+
+type ClusterDisplayQuestion = {
+  id: string;
+  content: string;
+  slide: number;
+  ts?: number;
+};
 
 const formatTimestamp = (ts: number | null | undefined) => {
   if (ts === null || ts === undefined) return "";
@@ -56,18 +62,47 @@ const ClusterQuestionList = ({
   toggleExpand,
   onComplete,
   onDelete,
-  onDismiss,
   tsByContent,
 }: ClusterQuestionListProps) => {
-  const [actedReps, setActedReps] = React.useState<Set<string>>(new Set());
+  const [actedQuestionIds, setActedQuestionIds] = React.useState<Set<string>>(new Set());
 
   const timeFor = (content: string) => formatTimestamp(tsByContent?.get(content));
 
-  const runAction = (rep: string, ids: string[], fn?: (id: string) => void) => {
-    if (actedReps.has(rep)) return;
-    setActedReps((prev) => new Set(prev).add(rep));
-    ids.forEach((id) => fn?.(id));
-    onDismiss?.(rep);
+  const runAction = (questionId: string | undefined, fn?: (id: string) => void) => {
+    if (!questionId || actedQuestionIds.has(questionId)) return;
+    setActedQuestionIds((prev) => new Set(prev).add(questionId));
+    fn?.(questionId);
+  };
+
+  const runRepresentativeAction = (
+    questionId: string | undefined,
+    relatedQuestionIds: string[],
+    fn?: (id: string) => void
+  ) => {
+    if (!questionId || actedQuestionIds.has(questionId)) return;
+    setActedQuestionIds((prev) => {
+      const next = new Set(prev);
+      relatedQuestionIds.forEach((id) => next.add(id));
+      return next;
+    });
+    fn?.(questionId);
+  };
+
+  const questionsFor = (cluster: QuestionCluster): ClusterDisplayQuestion[] => {
+    if (Array.isArray(cluster.questions) && cluster.questions.length > 0) {
+      return cluster.questions.map((question) => ({
+        id: question.id,
+        content: question.content,
+        slide: question.slide,
+        ts: question.ts,
+      }));
+    }
+
+    return cluster.questionIds.map((id, index) => ({
+      id,
+      content: index === 0 ? cluster.representative : (cluster.samples[index] ?? ""),
+      slide: cluster.slides[index] ?? cluster.slides[0] ?? 1,
+    }));
   };
 
   if (clusters.length === 0) {
@@ -84,28 +119,39 @@ const ClusterQuestionList = ({
     <LiveBox>
       <QuestionContainer>
         {clusters.map((cluster) => {
+          const key = cluster.clusterId ?? cluster.representative;
+          const questions = questionsFor(cluster);
+          const representativeId = cluster.representativeQuestionId ?? questions[0]?.id;
+          const representativeQuestion =
+            questions.find((question) => question.id === representativeId) ?? questions[0];
+          const representativeText = representativeQuestion?.content ?? cluster.representative;
+          const representativeSlide = representativeQuestion?.slide ?? cluster.slides[0] ?? 1;
+          const representativeTime =
+            formatTimestamp(representativeQuestion?.ts) || timeFor(representativeText);
+          const subQuestions = questions.filter((question) => question.id !== representativeId);
+          const relatedQuestionIds = questions.map((question) => question.id);
           const isGroup = cluster.count > 1;
-          const expanded = isGroup && isExpanded(cluster.representative);
-          const acted = actedReps.has(cluster.representative);
+          const expanded = isGroup && isExpanded(key);
+          const representativeActed = representativeId
+            ? actedQuestionIds.has(representativeId)
+            : false;
 
           if (!isGroup) {
             return (
-              <ClusterItem key={cluster.representative}>
+              <ClusterItem key={key}>
                 <QuestionHeader>
                   <SlideTag as="div" $active={false} style={{ cursor: "default" }}>
-                    슬라이드 {cluster.slides[0] ?? 1}
+                    슬라이드 {representativeSlide}
                   </SlideTag>
-                  {timeFor(cluster.representative) && (
-                    <Time>{timeFor(cluster.representative)}</Time>
-                  )}
+                  {representativeTime && <Time>{representativeTime}</Time>}
                   <ActionGroup>
                     <ActionButton
                       type="button"
                       $variant="delete"
                       aria-label="질문 삭제"
-                      disabled={acted}
+                      disabled={representativeActed}
                       onClick={() =>
-                        runAction(cluster.representative, cluster.questionIds, onDelete)
+                        runRepresentativeAction(representativeId, relatedQuestionIds, onDelete)
                       }
                     >
                       삭제
@@ -114,32 +160,34 @@ const ClusterQuestionList = ({
                       type="button"
                       $variant="complete"
                       aria-label="질문 완료"
-                      disabled={acted}
+                      disabled={representativeActed}
                       onClick={() =>
-                        runAction(cluster.representative, cluster.questionIds, onComplete)
+                        runRepresentativeAction(representativeId, relatedQuestionIds, onComplete)
                       }
                     >
                       완료
                     </ActionButton>
                   </ActionGroup>
                 </QuestionHeader>
-                <Content>{cluster.representative}</Content>
+                <Content>{representativeText}</Content>
               </ClusterItem>
             );
           }
 
           return (
-            <ClusterItem key={cluster.representative}>
+            <ClusterItem key={key}>
               <QuestionHeader>
                 <GroupTag>비슷한 질문들</GroupTag>
-                {timeFor(cluster.representative) && <Time>{timeFor(cluster.representative)}</Time>}
+                {representativeTime && <Time>{representativeTime}</Time>}
                 <ActionGroup>
                   <ActionButton
                     type="button"
                     $variant="delete"
                     aria-label="질문 삭제"
-                    disabled={acted}
-                    onClick={() => runAction(cluster.representative, cluster.questionIds, onDelete)}
+                    disabled={representativeActed}
+                    onClick={() =>
+                      runRepresentativeAction(representativeId, relatedQuestionIds, onDelete)
+                    }
                   >
                     삭제
                   </ActionButton>
@@ -147,9 +195,9 @@ const ClusterQuestionList = ({
                     type="button"
                     $variant="complete"
                     aria-label="질문 완료"
-                    disabled={acted}
+                    disabled={representativeActed}
                     onClick={() =>
-                      runAction(cluster.representative, cluster.questionIds, onComplete)
+                      runRepresentativeAction(representativeId, relatedQuestionIds, onComplete)
                     }
                   >
                     완료
@@ -157,50 +205,51 @@ const ClusterQuestionList = ({
                 </ActionGroup>
               </QuestionHeader>
 
-              <Content>{cluster.representative}</Content>
+              <Content>{representativeText}</Content>
 
               {expanded &&
-                cluster.samples.map((sample, i) => (
-                  <SubQuestion key={`${cluster.representative}-${i}`}>
-                    <QuestionHeader>
-                      <SlideTag as="div" $active={false} style={{ cursor: "default" }}>
-                        슬라이드 {cluster.slides[i] ?? cluster.slides[0] ?? 1}
-                      </SlideTag>
-                      {timeFor(sample) && <Time>{timeFor(sample)}</Time>}
-                      <ActionGroup>
-                        <ActionButton
-                          type="button"
-                          $variant="delete"
-                          aria-label="질문 삭제"
-                          disabled={acted}
-                          onClick={() =>
-                            runAction(cluster.representative, cluster.questionIds, onDelete)
-                          }
-                        >
-                          삭제
-                        </ActionButton>
-                        <ActionButton
-                          type="button"
-                          $variant="complete"
-                          aria-label="질문 완료"
-                          disabled={acted}
-                          onClick={() =>
-                            runAction(cluster.representative, cluster.questionIds, onComplete)
-                          }
-                        >
-                          완료
-                        </ActionButton>
-                      </ActionGroup>
-                    </QuestionHeader>
-                    <Content>{sample}</Content>
-                  </SubQuestion>
-                ))}
+                subQuestions.map((question) => {
+                  const acted = actedQuestionIds.has(question.id);
+                  const timestamp = formatTimestamp(question.ts) || timeFor(question.content);
+
+                  return (
+                    <SubQuestion key={question.id}>
+                      <QuestionHeader>
+                        <SlideTag as="div" $active={false} style={{ cursor: "default" }}>
+                          슬라이드 {question.slide}
+                        </SlideTag>
+                        {timestamp && <Time>{timestamp}</Time>}
+                        <ActionGroup>
+                          <ActionButton
+                            type="button"
+                            $variant="delete"
+                            aria-label="질문 삭제"
+                            disabled={acted}
+                            onClick={() => runAction(question.id, onDelete)}
+                          >
+                            삭제
+                          </ActionButton>
+                          <ActionButton
+                            type="button"
+                            $variant="complete"
+                            aria-label="질문 완료"
+                            disabled={acted}
+                            onClick={() => runAction(question.id, onComplete)}
+                          >
+                            완료
+                          </ActionButton>
+                        </ActionGroup>
+                      </QuestionHeader>
+                      <Content>{question.content}</Content>
+                    </SubQuestion>
+                  );
+                })}
 
               <ClusterToggle
                 type="button"
                 $expanded={expanded}
                 aria-label={`${expanded ? "접기" : "펼치기"} — 질문 ${cluster.count}개`}
-                onClick={() => toggleExpand(cluster.representative)}
+                onClick={() => toggleExpand(key)}
               >
                 {expanded ? "숨기기" : `질문 ${cluster.count}개`}
                 <ChevronIcon up={expanded} />
