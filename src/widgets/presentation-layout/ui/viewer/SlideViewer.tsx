@@ -48,6 +48,7 @@ const SlideViewer = ({
   // Figma 개편으로 청중 분포 범례는 기본 숨김 (컴포넌트는 보존, 필요 시 prop 으로 재노출)
   showAudienceLegend = false,
   showUnlockToast = false,
+  afterSlideContent = null,
 }: any) => {
   const { prev, current, next } = audienceStats;
   const total = Math.max(prev + current + next, 1);
@@ -137,6 +138,8 @@ const SlideViewer = ({
         highlight={focusHighlight}
         testId="presenter-slide-surface"
       />
+
+      {afterSlideContent}
 
       {/* 🔹 실시간 피드백 창 */}
       {showFeedback && (

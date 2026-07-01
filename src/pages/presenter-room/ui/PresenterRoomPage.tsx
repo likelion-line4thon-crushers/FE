@@ -16,6 +16,7 @@ import { QuestionScrollArea } from "./QuestionList.styles";
 import websocketService from "@/shared/api/websocket";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
+import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
 import { WebSocketService } from "@/shared/api/websocket";
 import { useSlideLoader } from "@/entities/slide";
 import { selectUnclusteredQuestions } from "@/entities/question";
@@ -125,6 +126,12 @@ const PresenterRoomPage = () => {
     applySlideReady,
   } = useSlideLoader({ roomId, deckId, totalPages });
   const { timer } = useTimer({ roomId });
+  const { notesByPage } = usePresenterSlideNotes({
+    roomId,
+    deckId,
+    presenterToken,
+    editable: false,
+  });
 
   const audienceCapacity = locationState.count ?? storedRoomData.count ?? 50;
 
@@ -274,6 +281,8 @@ const PresenterRoomPage = () => {
   });
 
   const currentReactionStamps = reactionStamps[String(currentSlide)] || [];
+  const currentSlidePage = currentSlide + 1;
+  const currentSlideNotes = notesByPage[currentSlidePage] ?? "";
 
   // 🔹 새로고침 시 스티커 로드 (커스텀 훅 사용)
   useStickerLoader({
@@ -348,6 +357,17 @@ const PresenterRoomPage = () => {
   // 🔹 방향키로 슬라이드 이동
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName;
+      if (
+        target?.isContentEditable ||
+        tagName === "INPUT" ||
+        tagName === "TEXTAREA" ||
+        tagName === "SELECT"
+      ) {
+        return;
+      }
+
       if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         // 이전 슬라이드
         changeSlide(currentSlide - 1);
@@ -449,6 +469,12 @@ const PresenterRoomPage = () => {
         showFeedback={quickSettings.feedback}
         feedbackContent={feedbackContent}
         showUnlockToast={showUnlockToast}
+        afterSlideContent={
+          <SlideNotesPanel
+            notes={currentSlideNotes}
+            readOnly
+          />
+        }
       />
 
       {/* 🔹 우측: 빠른 설정 + 실시간 질문 */}

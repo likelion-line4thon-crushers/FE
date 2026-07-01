@@ -29,6 +29,11 @@ interface SlideMetaItem {
   url: string;
 }
 
+export interface SlideNoteItem {
+  page: number;
+  notes: string;
+}
+
 // 새로고침 복원용 일괄 조회. N+1 호출 없이 한 번에 presigned URL 배열을 받는다.
 // BE SlidesMetaResponse 실제 형태가 `pages` 혹은 `items` 로 다를 수 있어 둘 다 시도.
 export async function fetchSlidesMeta(
@@ -45,6 +50,105 @@ export async function fetchSlidesMeta(
     .slice()
     .sort((a, b) => a.page - b.page)
     .map((i) => i.url);
+}
+
+export async function fetchSlideNotes({
+  roomId,
+  deckId,
+  presenterToken,
+  signal,
+}: {
+  roomId: string;
+  deckId: string;
+  presenterToken: string;
+  signal?: AbortSignal;
+}): Promise<SlideNoteItem[]> {
+  if (!roomId || !deckId || !presenterToken) return [];
+
+  const response = await api.get(`/api/presentations/${roomId}/${deckId}/notes`, {
+    signal,
+    headers: {
+      Authorization: `Bearer ${presenterToken}`,
+    },
+  });
+  const payload = response.data?.data ?? {};
+  const notes = Array.isArray(payload.notes) ? payload.notes : [];
+  return notes
+    .map((item: any) => ({
+      page: Number(item.page),
+      notes: typeof item.notes === "string" ? item.notes : "",
+    }))
+    .filter((item: SlideNoteItem) => Number.isFinite(item.page) && item.page > 0 && item.notes);
+}
+
+export async function saveSlideNote({
+  roomId,
+  deckId,
+  page,
+  notes,
+  presenterToken,
+  signal,
+}: {
+  roomId: string;
+  deckId: string;
+  page: number;
+  notes: string;
+  presenterToken: string;
+  signal?: AbortSignal;
+}): Promise<SlideNoteItem> {
+  if (!roomId || !deckId || !presenterToken) {
+    throw new Error("Presenter note save requires room, deck, and presenter token");
+  }
+
+  const response = await api.put(
+    `/api/presentations/${roomId}/${deckId}/notes/${page}`,
+    { notes },
+    {
+      signal,
+      headers: {
+        Authorization: `Bearer ${presenterToken}`,
+      },
+    }
+  );
+  const payload = response.data?.data ?? {};
+  return {
+    page: Number(payload.page) || page,
+    notes: typeof payload.notes === "string" ? payload.notes : "",
+  };
+}
+
+export function saveSlideNoteKeepalive({
+  roomId,
+  deckId,
+  page,
+  notes,
+  presenterToken,
+}: {
+  roomId: string;
+  deckId: string;
+  page: number;
+  notes: string;
+  presenterToken: string;
+}): boolean {
+  if (!roomId || !deckId || !presenterToken) return false;
+
+  const path = `/api/presentations/${roomId}/${deckId}/notes/${page}`;
+  const baseUrl = api.defaults.baseURL;
+  const url = baseUrl ? new URL(path, baseUrl).toString() : path;
+
+  fetch(url, {
+    method: "PUT",
+    keepalive: true,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${presenterToken}`,
+    },
+    body: JSON.stringify({ notes }),
+  }).catch(() => {
+    // The page may be unloading; failed keepalive writes cannot be surfaced reliably.
+  });
+
+  return true;
 }
 
 // * Coerces backend field names (frontCount/currentCount/backCount) to our domain model

@@ -32,7 +32,9 @@ const PresenterRoomGate = () => {
   const decidedRoomRef = useRef<string | null>(null);
 
   const locationState = (location.state as any) || {};
-  const hasUploadState = Boolean(locationState.roomData || locationState.pdfFile);
+  const hasUploadState = Boolean(
+    locationState.roomData || locationState.pdfFile || locationState.presentationFile
+  );
 
   // 첫 렌더에 동기적으로 결정 가능한 값. null 이면 백엔드 조회가 필요하다.
   // ⚠️ 시작 마커를 업로드 상태보다 먼저 본다. location.state(roomData)는 history.state 에

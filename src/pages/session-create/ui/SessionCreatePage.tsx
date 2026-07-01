@@ -8,6 +8,7 @@ import { PresentationLayout, SlideViewer, SettingsPanel } from "@/widgets/presen
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
 import { useQuickSettingsStorage } from "@/entities/session";
 import { canStartSessionAtom } from "@/entities/room";
+import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
 import { storageKeys } from "@/shared/config/storage-keys";
 import { useChunkedPdfUpload } from "../model/useChunkedPdfUpload";
 import { usePdfStream } from "../model/usePdfStream";
@@ -22,7 +23,8 @@ const PresentationPrepPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { roomId: roomIdParam } = useParams();
-  const { pdfFile } = location.state || {};
+  const { presentationFile, pdfFile } = location.state || {};
+  const sourceFile = presentationFile || pdfFile;
   const initialRoomData = resolvePresenterRoomData(roomIdParam, location.state);
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -211,7 +213,7 @@ const PresentationPrepPage = () => {
   //     (BE 는 subscribe 시점 이전 이벤트를 버퍼링 후 flush 해주므로 안전.)
   //  3) meta 도 실패·pdfId 도 없으면 레거시 per-page API 로 마지막 폴백.
   useEffect(() => {
-    if (pdfFile) return;
+    if (sourceFile) return;
     if (!roomData?.roomId || !roomData?.deckId) return;
     if (restoredSlides !== null) return;
 
@@ -263,7 +265,7 @@ const PresentationPrepPage = () => {
 
     restore();
   }, [
-    pdfFile,
+    sourceFile,
     roomData?.roomId,
     roomData?.deckId,
     roomData?.totalPages,
@@ -274,13 +276,13 @@ const PresentationPrepPage = () => {
   // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
   useEffect(() => {
     if (hasInitializedRef.current) return;
-    // pdfFile 이 없는 경우(= 새로고침 복원)만 기존 roomData 로 skip. pdfFile 이 있으면
+    // sourceFile 이 없는 경우(= 새로고침 복원)만 기존 roomData 로 skip. sourceFile 이 있으면
     // stale roomData 가 있더라도 신규 업로드가 우선.
-    if (!pdfFile && roomData?.roomId) {
+    if (!sourceFile && roomData?.roomId) {
       hasInitializedRef.current = true;
       return;
     }
-    if (!pdfFile) {
+    if (!sourceFile) {
       navigate("/");
       return;
     }
@@ -303,7 +305,7 @@ const PresentationPrepPage = () => {
         // BE 는 totalPages >= 1 을 요구하므로 placeholder 로 1 을 보낸다.
         // 실제 총 페이지는 업로드 조립 완료 응답(ready.totalPages) 에서 확정된다.
         const room = await createRoom(1);
-        const ready = await uploadPdf(pdfFile, room.roomId, room.deckId);
+        const ready = await uploadPdf(sourceFile, room.roomId, room.deckId);
 
         const nextRoomData = {
           ...room,
@@ -332,15 +334,15 @@ const PresentationPrepPage = () => {
           });
         }
       } catch (err) {
-        log.error("PDF 업로드/스트림 준비 실패:", err);
+        log.error("발표 자료 업로드/스트림 준비 실패:", err);
         hasInitializedRef.current = false;
-        setFatalMessage("PDF 업로드에 실패했습니다. 다시 시도해주세요.");
+        setFatalMessage("발표 자료 업로드에 실패했습니다. 다시 시도해주세요.");
       }
     };
 
     run();
   }, [
-    pdfFile,
+    sourceFile,
     roomData?.roomId,
     roomIdParam,
     navigate,
@@ -392,8 +394,28 @@ const PresentationPrepPage = () => {
     return streamedSlides.map((s) => s ?? "");
   }, [restoredSlides, streamedSlides, totalPages]);
 
+  const currentSlidePage = currentSlide + 1;
+  const { notesByPage, updateSlideNote, flushSlideNote } = usePresenterSlideNotes({
+    roomId,
+    deckId: roomData?.deckId || null,
+    presenterToken,
+    editable: true,
+  });
+  const currentSlideNotes = notesByPage[currentSlidePage] ?? "";
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent | globalThis.KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName;
+      if (
+        target?.isContentEditable ||
+        tagName === "INPUT" ||
+        tagName === "TEXTAREA" ||
+        tagName === "SELECT"
+      ) {
+        return;
+      }
+
       if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         setCurrentSlide((prev) => Math.max(0, prev - 1));
       } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -417,7 +439,7 @@ const PresentationPrepPage = () => {
   if (totalPages === 0 && !restoredSlides) {
     const msg =
       uploadProgress.total > 0
-        ? `PDF 업로드 중... (${uploadProgress.sent}/${uploadProgress.total})`
+        ? `발표 자료 업로드 중... (${uploadProgress.sent}/${uploadProgress.total})`
         : "세션 자료 준비 중...";
     return <SessionLoadingOverlay message={msg} />;
   }
@@ -437,6 +459,13 @@ const PresentationPrepPage = () => {
         currentSlide={currentSlide}
         setCurrentSlide={setCurrentSlide}
         mode="prepare"
+        afterSlideContent={
+          <SlideNotesPanel
+            notes={currentSlideNotes}
+            onChange={(notes) => updateSlideNote(currentSlidePage, notes)}
+            onBlur={() => flushSlideNote(currentSlidePage)}
+          />
+        }
       />
       <SettingsPanel
         quickSettings={quickSettings}

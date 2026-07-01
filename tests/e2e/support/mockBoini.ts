@@ -12,6 +12,8 @@ export type BoiniScenario = {
   wsBaseUrl: string;
   fileName: string;
   pdfId: string;
+  sessionStatus: "waiting" | "live" | "ended";
+  slideNotes: Array<{ page: number; notes: string }>;
 };
 
 type InstallApiMocksOptions = {
@@ -52,6 +54,11 @@ export const defaultScenario: BoiniScenario = {
   wsBaseUrl: "http://127.0.0.1:5174",
   fileName: "demo.pdf",
   pdfId: "pdf-test-1",
+  sessionStatus: "live",
+  slideNotes: [
+    { page: 1, notes: "첫 번째 슬라이드 발표자 노트" },
+    { page: 2, notes: "두 번째 슬라이드 발표자 노트" },
+  ],
 };
 
 const resolveScenario = (scenario?: Partial<BoiniScenario>): BoiniScenario => ({
@@ -171,15 +178,31 @@ export const installApiMocks = async (
   }: InstallApiMocksOptions = {}
 ) => {
   const resolvedScenario = resolveScenario(scenario);
+  let currentSlideNotes = [...resolvedScenario.slideNotes];
 
   await context.route("**/*", async (route) => {
     const url = route.request().url();
     const method = route.request().method();
-    const { roomId, deckId, code, audienceId, audienceToken, totalPages, wsBaseUrl, pdfId } =
+    const {
+      roomId,
+      deckId,
+      code,
+      audienceId,
+      audienceToken,
+      totalPages,
+      wsBaseUrl,
+      pdfId,
+      sessionStatus,
+    } =
       resolvedScenario;
 
     if (url.includes(`/api/rooms/${roomId}/session/start`) && method === "POST") {
       await route.fulfill({ json: { data: { started: true } } });
+      return;
+    }
+
+    if (url.includes(`/api/rooms/${roomId}/session/status`) && method === "GET") {
+      await route.fulfill({ json: { data: { roomId, status: sessionStatus } } });
       return;
     }
 
@@ -311,6 +334,42 @@ export const installApiMocks = async (
       return;
     }
 
+    if (url.includes(`/api/presentations/${roomId}/${deckId}/notes`) && method === "GET") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            roomId,
+            deckId,
+            notes: currentSlideNotes,
+          },
+        },
+      });
+      return;
+    }
+
+    if (url.includes(`/api/presentations/${roomId}/${deckId}/notes/`) && method === "PUT") {
+      const match = url.match(/notes\/(\d+)/);
+      const page = match ? Number(match[1]) : 1;
+      const body = route.request().postDataJSON?.() ?? {};
+      const notes = typeof body.notes === "string" ? body.notes.trim() : "";
+      currentSlideNotes = currentSlideNotes.filter((item) => item.page !== page);
+      if (notes) {
+        currentSlideNotes.push({ page, notes });
+        currentSlideNotes.sort((a, b) => a.page - b.page);
+      }
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            page,
+            notes,
+          },
+        },
+      });
+      return;
+    }
+
     if (url.endsWith("/api/upload/chunk") && method === "POST") {
       await route.fulfill({
         status: 201,
@@ -389,6 +448,7 @@ export const seedPresenterSession = async (
           canStartSession: true,
         })
       );
+      sessionStorage.setItem(`boini_session_started_${nextScenario.roomId}`, "true");
 
       if (nextQuickSettings) {
         sessionStorage.setItem(nextQuickSettingsKey, JSON.stringify(nextQuickSettings));
@@ -509,13 +569,16 @@ export const destinations = {
 
 export const openPresenterPrepare = async (page: Page, scenario?: Partial<BoiniScenario>) => {
   const resolvedScenario = resolveScenario(scenario);
-  await page.goto(`/rooms/${resolvedScenario.roomId}/prepare`);
+  await page.evaluate((roomId) => {
+    sessionStorage.removeItem(`boini_session_started_${roomId}`);
+  }, resolvedScenario.roomId);
+  await page.goto(`/rooms/${resolvedScenario.roomId}`);
   return resolvedScenario;
 };
 
 export const openPresenterLive = async (page: Page, scenario?: Partial<BoiniScenario>) => {
   const resolvedScenario = resolveScenario(scenario);
-  await page.goto(`/rooms/${resolvedScenario.roomId}/present`);
+  await page.goto(`/rooms/${resolvedScenario.roomId}`);
   return resolvedScenario;
 };
 
