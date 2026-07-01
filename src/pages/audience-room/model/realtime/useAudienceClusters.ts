@@ -3,6 +3,8 @@ import websocketService from "@/shared/api/websocket";
 import type { QuestionCluster } from "@/entities/question";
 import { fetchCurrentClusters } from "@/shared/api/question";
 
+const clusterKey = (cluster: QuestionCluster) => cluster.clusterId ?? cluster.representative;
+
 const useAudienceClusters = ({
   roomId,
   isWsReady,
@@ -22,7 +24,7 @@ const useAudienceClusters = ({
     setClusters(incoming);
 
     setExpandedReps((prev) => {
-      const incomingReps = new Set(incoming.map((c) => c.representative));
+      const incomingReps = new Set(incoming.map(clusterKey));
       const next = new Set<string>();
       for (const rep of prev) {
         if (incomingReps.has(rep)) next.add(rep);

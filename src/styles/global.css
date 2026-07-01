@@ -17,7 +17,7 @@ body {
 
 #root {
   display: grid;
-  grid-template-rows: 5.2vh 1fr; /* 헤더 + 나머지 */
+  grid-template-rows: auto minmax(0, 1fr); /* 헤더 + 나머지 */
   height: 100vh;
   overflow: hidden;
 }
@@ -33,5 +33,6 @@ body {
 .page {
   grid-row: 2;
   overflow: hidden;
-  height: 100%; /* ✅ 남은 영역 자동 채움 */
+  min-height: 0;
+  height: 100%;
 }

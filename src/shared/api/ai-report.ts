@@ -19,6 +19,30 @@ export async function fetchTopQuestionsReport(roomId: string) {
   return response?.data?.data ?? null;
 }
 
+// * 청중 질문 관리 API 응답 단건 (Spring 백엔드 CreateQuestionResponse)
+export interface QuestionItemResponse {
+  id: string;
+  roomId: string;
+  slide: number;
+  audienceId: string;
+  content: string;
+  ts: number;
+}
+
+// * 답변 완료 처리된 질문 목록 (ts 오름차순)
+export async function fetchCompletedQuestions(roomId: string): Promise<QuestionItemResponse[]> {
+  if (!roomId) throw new Error("roomId is required");
+  const response = await api.get(`/api/questions/rooms/${roomId}/completed`);
+  return response?.data?.data ?? [];
+}
+
+// * 미답변(활성) 질문 목록 - 백엔드 목록 조회는 completed/deleted를 제외하므로 미답변과 동일
+export async function fetchUnansweredQuestions(roomId: string): Promise<QuestionItemResponse[]> {
+  if (!roomId) throw new Error("roomId is required");
+  const response = await api.get(`/api/questions/rooms/${roomId}`);
+  return response?.data?.data ?? [];
+}
+
 export async function fetchMostRevisitSlide(roomId: string) {
   if (!roomId) throw new Error("roomId is required");
   const response = await api.get(`/api/aiReport/${roomId}/mostRevisit`);

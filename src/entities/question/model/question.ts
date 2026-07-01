@@ -61,8 +61,17 @@ export function buildQuestionTopics(roomId: string): string[] {
 }
 
 export interface QuestionCluster {
+  clusterId?: string;
+  representativeQuestionId?: string;
   representative: string;
   count: number;
+  questions?: Array<{
+    id: string;
+    content: string;
+    slide: number;
+    ts: number;
+    status?: string;
+  }>;
   questionIds: string[];
   slides: number[];
   samples: string[];

@@ -3,6 +3,15 @@ import { ActionButton, ActionGroup } from "./QuestionList.styles";
 
 export { ActionButton, ActionGroup };
 
+/* 클러스터 카드: 대표 질문 + 세부 질문 + 토글을 12px 간격으로 쌓는다 */
+export const ClusterItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+`;
+
 export const GroupTag = styled.div`
   background: #e74d07;
   color: #fff;
@@ -15,7 +24,17 @@ export const GroupTag = styled.div`
   white-space: nowrap;
 `;
 
-export const ExpandToggle = styled.button`
+/* 펼쳤을 때 들여쓰기되는 세부 질문 행 */
+export const SubQuestion = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  padding-left: 16px;
+  box-sizing: border-box;
+`;
+
+export const ClusterToggle = styled.button<{ $expanded?: boolean }>`
   background: none;
   border: none;
   cursor: pointer;
@@ -23,6 +42,7 @@ export const ExpandToggle = styled.button`
   align-items: center;
   gap: 2px;
   padding: 0;
+  padding-left: ${({ $expanded }) => ($expanded ? "16px" : "0")};
   font-size: 14px;
   font-weight: 500;
   color: #303030;
@@ -30,18 +50,10 @@ export const ExpandToggle = styled.button`
   line-height: 1.45;
 `;
 
-export const SampleItem = styled.div`
-  padding: 0.55vh 0.63vw;
-  background: #f4f4f4;
-  border-radius: 0.3vw;
-  font-size: 12px;
-  color: #444;
-  line-height: 1.4;
-`;
-
-export const SamplesWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 4px;
+export const Chevron = styled.span<{ $up?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(${({ $up }) => ($up ? "180deg" : "0deg")});
+  transition: transform 0.2s ease;
 `;

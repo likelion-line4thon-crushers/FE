@@ -10,6 +10,7 @@ import {
   AudienceCountWrapper,
   AudienceIcon,
   AudienceNum,
+  AudienceCap,
   QuickTogglesGrid,
   ToggleBox,
   ToggleLabel,
@@ -193,7 +194,8 @@ const AudienceCount = ({
       <AudienceIcon src={AudienceSVG} alt="청중 아이콘" />
       <span>청중 수</span>
       <AudienceNum>
-        {formattedAudienceCount}/{audienceCapacity}
+        {formattedAudienceCount}
+        <AudienceCap>/{audienceCapacity}</AudienceCap>
       </AudienceNum>
     </AudienceCountWrapper>
   );

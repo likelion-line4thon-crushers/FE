@@ -12,6 +12,7 @@ import QuestionList from "./QuestionList";
 import ClusterQuestionList from "./ClusterQuestionList";
 import CompletedQuestionList from "./CompletedQuestionList";
 import QuestionTabs from "./QuestionTabs";
+import { QuestionScrollArea } from "./QuestionList.styles";
 import websocketService from "@/shared/api/websocket";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
@@ -294,7 +295,7 @@ const PresenterRoomPage = () => {
     subscribe: Boolean(roomId && isPresenterWsReady),
   });
 
-  const { clusters, toggleExpand, isExpanded, dismissCluster } = usePresenterClusters({
+  const { clusters, toggleExpand, isExpanded } = usePresenterClusters({
     roomId,
     isPresenterWsReady,
   });
@@ -303,6 +304,16 @@ const PresenterRoomPage = () => {
     () => selectUnclusteredQuestions(presenterQuestions, clusters),
     [presenterQuestions, clusters]
   );
+
+  // Clusters carry no timestamp; look each question's ts up by its content so
+  // the cluster rows can show the same time as the flat question list.
+  const questionTsByContent = useMemo(() => {
+    const map = new Map<string, number>();
+    presenterQuestions.forEach((question) => {
+      if (question?.content != null) map.set(question.content, question.ts);
+    });
+    return map;
+  }, [presenterQuestions]);
 
   const [questionTab, setQuestionTab] = useState<"unanswered" | "completed">("unanswered");
 
@@ -444,7 +455,6 @@ const PresenterRoomPage = () => {
       <PanelWrapper>
         {/* === 빠른 설정 섹션 === */}
         <Section>
-          <Title>빠른 설정</Title>
           <AudienceCount
             roomId={roomId}
             audienceCapacity={audienceCapacity}
@@ -474,37 +484,39 @@ const PresenterRoomPage = () => {
         <QuestionSection>
           <Title>실시간 질문</Title>
           <QuestionTabs value={questionTab} onChange={setQuestionTab} />
-          {questionTab === "completed" ? (
-            <CompletedQuestionList
-              questions={completedQuestions}
-              loading={completedLoading}
-              error={completedError}
-            />
-          ) : (
-            <>
-              {clusters.length > 0 && (
-                <ClusterQuestionList
-                  clusters={clusters}
-                  isExpanded={isExpanded}
-                  toggleExpand={toggleExpand}
-                  onComplete={completeQuestion}
-                  onDelete={deleteQuestion}
-                  onDismiss={dismissCluster}
-                />
-              )}
-              {(clusters.length === 0 || unclusteredQuestions.length > 0) && (
-                <QuestionList
-                  questions={clusters.length > 0 ? unclusteredQuestions : presenterQuestions}
-                  loading={questionsLoading}
-                  error={questionsError}
-                  currentSlide={currentSlide}
-                  onSelectSlide={handleSelectQuestionSlide}
-                  onComplete={completeQuestion}
-                  onDelete={deleteQuestion}
-                />
-              )}
-            </>
-          )}
+          <QuestionScrollArea>
+            {questionTab === "completed" ? (
+              <CompletedQuestionList
+                questions={completedQuestions}
+                loading={completedLoading}
+                error={completedError}
+              />
+            ) : (
+              <>
+                {clusters.length > 0 && (
+                  <ClusterQuestionList
+                    clusters={clusters}
+                    isExpanded={isExpanded}
+                    toggleExpand={toggleExpand}
+                    onComplete={completeQuestion}
+                    onDelete={deleteQuestion}
+                    tsByContent={questionTsByContent}
+                  />
+                )}
+                {(clusters.length === 0 || unclusteredQuestions.length > 0) && (
+                  <QuestionList
+                    questions={clusters.length > 0 ? unclusteredQuestions : presenterQuestions}
+                    loading={questionsLoading}
+                    error={questionsError}
+                    currentSlide={currentSlide}
+                    onSelectSlide={handleSelectQuestionSlide}
+                    onComplete={completeQuestion}
+                    onDelete={deleteQuestion}
+                  />
+                )}
+              </>
+            )}
+          </QuestionScrollArea>
           {!quickSettings.question && questionTab === "unanswered" && (
             <LockButtonWrapper>
               <LiveLockButton />
@@ -518,9 +530,10 @@ const PresenterRoomPage = () => {
 
 export default PresenterRoomPage;
 
-// 실시간 질문 섹션 스타일
+// 실시간 질문 섹션 스타일 — 패널 하단까지 차오르도록 flex:1
 const QuestionSection = styled(Section)`
   position: relative;
+  flex: 1;
   min-height: 40vh;
 `;
 

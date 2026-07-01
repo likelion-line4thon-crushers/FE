@@ -23,6 +23,8 @@ const saveClusters = (roomId: string, clusters: QuestionCluster[]) => {
   }
 };
 
+const clusterKey = (cluster: QuestionCluster) => cluster.clusterId ?? cluster.representative;
+
 const usePresenterClusters = ({
   roomId,
   isPresenterWsReady,
@@ -50,20 +52,20 @@ const usePresenterClusters = ({
     hasReceivedLiveUpdate.current = true;
 
     // Fix 1: filter out dismissed clusters so a racing WS message can't resurrect them
-    const filtered = incoming.filter((c) => !dismissedRepsRef.current.has(c.representative));
+    const filtered = incoming.filter((c) => !dismissedRepsRef.current.has(clusterKey(c)));
 
     // Prune the dismissed set against the raw incoming list — once the server stops
     // sending a representative it's no longer suppressed, allowing genuine future
     // clusters with the same text to appear.
     dismissedRepsRef.current = new Set(
-      [...dismissedRepsRef.current].filter((rep) => incoming.some((c) => c.representative === rep))
+      [...dismissedRepsRef.current].filter((rep) => incoming.some((c) => clusterKey(c) === rep))
     );
 
     setClusters(filtered);
 
     // Preserve expand state — match by representative string, not index
     setExpandedReps((prev) => {
-      const filteredReps = new Set(filtered.map((c) => c.representative));
+      const filteredReps = new Set(filtered.map(clusterKey));
       const next = new Set<string>();
       for (const rep of prev) {
         if (filteredReps.has(rep)) next.add(rep);
@@ -128,7 +130,7 @@ const usePresenterClusters = ({
   const dismissCluster = useCallback((representative: string) => {
     // Fix 1: record dismissal before touching state so the ref is set atomically
     dismissedRepsRef.current.add(representative);
-    setClusters((prev) => prev.filter((c) => c.representative !== representative));
+    setClusters((prev) => prev.filter((c) => clusterKey(c) !== representative));
     setExpandedReps((prev) => {
       const next = new Set(prev);
       next.delete(representative);

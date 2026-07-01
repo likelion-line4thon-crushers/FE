@@ -13,6 +13,7 @@ export const ToggleRowLabel = styled.span`
   color: #5c5c5c;
   font-size: clamp(13px, 0.85vw, 16px);
   font-weight: 600;
+  line-height: 24px;
   letter-spacing: -0.4px;
   transition: color 0.2s ease;
 `;
@@ -24,11 +25,12 @@ export const ToggleRow = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 0.6vw;
-  min-height: 52px;
-  padding: 1.4vh 0.8vw;
-  border-radius: 1vw;
+  min-height: clamp(50px, 5.56vh, 60px);
+  padding: 0 clamp(12px, 0.78vw, 15px);
+  border-radius: clamp(16px, 1.04vw, 20px);
   border: 0.05vw solid #eaeaea;
   background: #fafafa;
+  box-sizing: border-box;
   transition:
     background 0.2s ease,
     border-color 0.2s ease;
@@ -49,6 +51,7 @@ export const ToggleRow = styled.div`
 
 /* 카드용 ToggleInput 의 margin/align 을 리셋해 행 안에서 우측 정렬 */
 export const RowToggleInput = styled(ToggleInput)`
-  margin: 0;
+  margin: 0 !important;
+  align-self: center;
   flex-shrink: 0;
 `;

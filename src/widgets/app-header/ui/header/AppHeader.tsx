@@ -13,17 +13,14 @@ import { SessionWarningModal } from "@/shared/ui/session-warning-modal";
 import { useHeaderRoomData, useHeaderSessionAction, resolveShareJoinUrl } from "../../model";
 
 const HeaderWrapper = styled.header`
-  width: 100vw;
-  height: 5.2vh;
+  width: 100%;
   display: flex;
   align-items: center;
   background: #fff;
   border-bottom: 0.05vw solid #e6e6e6;
-  position: fixed;
-  top: 0;
-  left: 0;
+  position: relative;
   z-index: 1000;
-  padding: 0 1vw;
+  padding: clamp(9px, 1.11vh, 12px) clamp(20px, 1.67vw, 32px);
   box-sizing: border-box;
 `;
 
@@ -86,8 +83,7 @@ const LiveBadge = styled.div`
 const RightActions = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 0.63vw;
-  margin-right: 1vw;
+  gap: clamp(12px, 0.83vw, 16px);
 `;
 
 interface AppHeaderProps {

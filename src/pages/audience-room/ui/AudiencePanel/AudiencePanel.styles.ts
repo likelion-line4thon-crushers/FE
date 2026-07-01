@@ -62,6 +62,7 @@ export const QuestionScrollArea = styled.div<{ $isWaiting?: boolean }>`
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  gap: 16px;
   align-items: center;
   justify-content: ${(props) => (props.$isWaiting ? "center" : "flex-start")};
   text-align: center;
@@ -86,31 +87,20 @@ export const QuestionScrollArea = styled.div<{ $isWaiting?: boolean }>`
 `;
 
 export const QuestionItem = styled.div<{ $active?: boolean }>`
-  margin-bottom: 0.9vh;
-  padding: 1.11vh 0.63vw;
-  background: ${(props) => (props.$active ? "#f1f1f1" : "#fff")};
-  border-radius: 0.51vw;
-  border: 1px solid ${(props: any) => (props.$active ? "#eaeaea" : "transparent")};
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   width: 100%;
   box-sizing: border-box;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
 `;
 
 export const SlideLabel = styled.button<{ $active?: boolean }>`
   display: inline-flex;
-  padding: 0.19vh 0.42vw;
+  padding: 2px 8px;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  border-radius: 0.21vw;
+  border-radius: 4px;
   background: #5c5c5c;
-  min-width: 3.07vw;
   border: none;
   color: #fff;
   font-size: 10px;
@@ -118,8 +108,8 @@ export const SlideLabel = styled.button<{ $active?: boolean }>`
   font-weight: 600;
   line-height: 16px;
   letter-spacing: -0.25px;
-  margin-right: 0.42vw;
   cursor: pointer;
+  white-space: nowrap;
   transition:
     background 0.2s ease,
     transform 0.2s ease;
@@ -137,13 +127,12 @@ export const Timestamp = styled.span`
   font-weight: 400;
   line-height: 18px;
   letter-spacing: -0.3px;
-  margin-left: 0.42vw;
 `;
 
 export const HeaderRow = styled.div`
   display: flex;
   align-items: center;
-  margin-bottom: 0.74vh;
+  gap: 7px;
 `;
 
 export const QuestionContent = styled.div`
@@ -159,7 +148,6 @@ export const QuestionText = styled.div`
   font-weight: 400;
   line-height: 18px;
   letter-spacing: -0.3px;
-  margin-top: 0.37vh;
   text-align: left;
 `;
 
@@ -208,17 +196,17 @@ export const QuestionInputContainer = styled.div<{ $isInputting?: boolean; $disa
   display: flex;
   width: 100%;
   max-width: 100%;
-  height: 4vh;
-  min-height: 4vh;
+  height: 48px;
+  min-height: 48px;
   padding: 0;
-  margin-top: 0.74vh;
+  margin-top: 16px;
   justify-content: ${(props) => (props.$isInputting ? "center" : "space-between")};
   align-items: center;
   gap: 0.2vw;
 
   background: #ffffff;
   border: 1px solid #eaeaea;
-  border-radius: 0.42vw;
+  border-radius: 8px;
   transition: all 0.3s ease;
   flex-shrink: 0;
   box-sizing: border-box;

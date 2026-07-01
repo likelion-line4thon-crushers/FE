@@ -3,15 +3,16 @@ import styled from "styled-components";
 import playIcon from "@/shared/assets/images/play.svg";
 
 export const Sidebar = styled.div`
-  width: 8vw;
-  height: 94vh;
+  width: 10.05vw;
+  height: 100%;
   flex-shrink: 0;
   border: 0.05vw solid #eaeaea;
   background: #f5f5f5;
-  padding: 1.7vh 1.7vw;
+  padding: clamp(22px, 2.87vh, 31px) clamp(20px, 1.61vw, 31px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
   scrollbar-width: none;
   -ms-overflow-style: none;
   &::-webkit-scrollbar {
@@ -22,16 +23,17 @@ export const Sidebar = styled.div`
 export const SlideList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 1vh;
+  gap: clamp(10px, 1.11vh, 12px);
 `;
 
 export const SlideThumb = styled.div<{ $active?: boolean; $waiting?: boolean; $locked?: boolean }>`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  width: 6.7vw; /* 129px */
-  height: 6.2vh; /* 67px */
-  padding: 0.4vh 0.5vw;
+  width: 100%;
+  aspect-ratio: 129 / 67;
+  padding: clamp(2px, 0.28vh, 3px) clamp(4px, 0.26vw, 5px);
+  box-sizing: border-box;
   border: ${(p) =>
     p.$waiting
       ? "0.05vw solid #ddd"
@@ -74,7 +76,7 @@ export const SlideThumb = styled.div<{ $active?: boolean; $waiting?: boolean; $l
 `;
 
 export const SlideImage = styled.img`
-  width: 5.5vw;
+  width: 81.4%;
   height: 100%;
   object-fit: cover;
   border-radius: 0.1vw;
@@ -92,7 +94,7 @@ export const SlideIndex = styled.div<{ $active?: boolean }>`
 `;
 
 export const SlidePlaceholder = styled.div`
-  width: 5.5vw;
+  width: 81.4%;
   height: 100%;
   border-radius: 0.1vw;
   border: 0.05vw solid #eee;

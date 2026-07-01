@@ -2,14 +2,15 @@ import styled from "styled-components";
 
 /* 전체 패널 */
 export const PanelWrapper = styled.aside`
-  width: 17vw;
-  height: 100vh;
+  width: 17.03vw;
+  height: 100%;
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  border-radius: 0.6vw;
+  flex-shrink: 0;
+  border-left: 1px solid #efefef;
   box-shadow: 0 0.05vw 0.2vw rgba(0, 0, 0, 0.08);
-  overflow-y: auto;
+  overflow: hidden;
 `;
 
 /* 구역 */
@@ -21,9 +22,9 @@ export const Section = styled.section`
 
 /* 상단 제목바 */
 export const Title = styled.h2`
-  height: 3vh;
+  min-height: clamp(32px, 3.52vh, 38px);
   margin: 0;
-  padding: 0.7vh 0.55vw;
+  padding: 0 clamp(12px, 1.15vw, 23px);
   font-size: clamp(12px, 0.8vw, 15px);
   font-weight: 600;
   color: #303030;
@@ -31,33 +32,44 @@ export const Title = styled.h2`
   background: #f9f9f9;
   display: flex;
   align-items: center;
+  box-sizing: border-box;
 `;
 
 /* 청중 수 영역 */
 export const AudienceCountWrapper = styled.div`
   display: flex;
   align-items: center;
-  padding: 1.2vh 0.8vw;
+  min-height: clamp(47px, 5.19vh, 56px);
+  padding: 0 clamp(12px, 0.78vw, 15px);
   gap: 0.4vw;
   color: #5c5c5c;
   font-size: clamp(13px, 0.9vw, 16px);
   font-weight: 600;
-  border-radius: 1vw;
+  line-height: 24px;
+  letter-spacing: -0.4px;
+  border-radius: clamp(16px, 1.04vw, 20px);
   border: 0.05vw solid #eaeaea;
   background: #fafafa;
-  margin: 1vh 0.6vw;
+  margin: clamp(23px, 2.65vh, 27px) 0.6vw clamp(9px, 1vh, 11px);
+  box-sizing: border-box;
 `;
 
 export const AudienceIcon = styled.img`
-  width: 1.2vw;
-  height: 1.2vw;
+  width: clamp(20px, 1.25vw, 24px);
+  height: clamp(20px, 1.25vw, 24px);
   object-fit: contain;
 `;
 
 export const AudienceNum = styled.span`
   margin-left: auto;
-  font-weight: 600;
-  color: #555;
+  font-weight: 500;
+  color: #5c5c5c;
+`;
+
+/* 정원(/50)은 흐린 회색으로 (Figma) */
+export const AudienceCap = styled.span`
+  font-weight: 500;
+  color: #999;
 `;
 
 /* 빠른 설정 토글 그리드 */
@@ -108,9 +120,14 @@ export const ToggleBox = styled.div`
 `;
 
 export const ToggleInput = styled.input.attrs({ type: "checkbox" })`
+  --toggle-width: clamp(43px, 2.71vw, 52px);
+  --toggle-height: clamp(23px, 2.59vh, 28px);
+  --toggle-thumb: clamp(20px, 2.22vh, 24px);
+  --toggle-offset: calc((var(--toggle-height) - var(--toggle-thumb)) / 2);
+
   appearance: none;
-  width: 2.7vw;
-  height: 2.6vh;
+  width: var(--toggle-width);
+  height: var(--toggle-height);
   margin-top: 2.8vh;
   border-radius: 100px;
   background: #ededed;
@@ -126,16 +143,18 @@ export const ToggleInput = styled.input.attrs({ type: "checkbox" })`
   &::after {
     content: "";
     position: absolute;
-    top: 0.2vh;
-    left: 0.2vw;
-    width: 1.2vw;
-    height: 2.2vh;
+    top: var(--toggle-offset);
+    left: var(--toggle-offset);
+    width: var(--toggle-thumb);
+    height: var(--toggle-thumb);
     background: #fff;
     border-radius: 100px;
     transition: transform 0.25s ease;
   }
 
   &:checked::after {
-    transform: translateX(1.2vw);
+    transform: translateX(
+      calc(var(--toggle-width) - var(--toggle-thumb) - (var(--toggle-offset) * 2))
+    );
   }
 `;
