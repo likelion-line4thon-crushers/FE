@@ -10,6 +10,15 @@ import StarCheckedIcon from "@/shared/assets/images/star_checked.svg";
 import { submitFeedback } from "@/shared/api/feedback";
 import { getOriginalSlideUrl } from "@/shared/api/presentation";
 import { resolveRatingSessionContext } from "../model/resolveRatingSessionContext";
+import { useRatingPdfDownload } from "../model/useRatingPdfDownload";
+import {
+  DownloadCheckbox,
+  DownloadOption,
+  DownloadOptionDescription,
+  DownloadOptionError,
+  DownloadOptionLabel,
+  DownloadOptionText,
+} from "./RatingPage.styles";
 
 const RatingPage = () => {
   const { code } = useParams();
@@ -18,6 +27,8 @@ const RatingPage = () => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSubmittedFeedback, setHasSubmittedFeedback] = useState(false);
+  const [wantsSlideDownload, setWantsSlideDownload] = useState(false);
   const [firstSlideUrl, setFirstSlideUrl] = useState<string | null>(null);
   const [loadingSlide, setLoadingSlide] = useState(false);
   const [identityWarningDismissed, setIdentityWarningDismissed] = useState(false);
@@ -39,6 +50,30 @@ const RatingPage = () => {
     const context = resolveRatingSessionContext(code, location.state);
     return context;
   }, [location.state, code]);
+
+  const {
+    availability: pdfDownloadAvailability,
+    loading: pdfDownloadAvailabilityLoading,
+    downloading: pdfDownloading,
+    error: pdfDownloadError,
+    refreshAvailability,
+    downloadSlides,
+  } = useRatingPdfDownload({
+    roomId,
+    audienceId,
+    enabled: hasIdentity,
+  });
+
+  const trimmedComment = comment.trim();
+  const isPdfDownloadAllowed = Boolean(pdfDownloadAvailability?.enabled);
+  const isSubmitDisabled =
+    !rating || !trimmedComment || isSubmitting || pdfDownloading || !hasIdentity;
+
+  useEffect(() => {
+    if (!isPdfDownloadAllowed) {
+      setWantsSlideDownload(false);
+    }
+  }, [isPdfDownloadAllowed]);
 
   // 첫 번째 슬라이드 로드
   useEffect(() => {
@@ -64,29 +99,49 @@ const RatingPage = () => {
 
   // 제출 핸들러
   const handleSubmit = async () => {
-    if (!rating || !roomId || !audienceId) {
-      log.warn("제출 불가: rating, roomId, audienceId 필요");
+    if (!rating || !trimmedComment || !roomId || !audienceId) {
+      log.warn("제출 불가: rating, comment, roomId, audienceId 필요");
+      if (!trimmedComment) {
+        alert("후기를 입력해주세요.");
+      }
       return;
     }
 
     setIsSubmitting(true);
+    let failedStep: "feedback" | "download" = "feedback";
     try {
-      const result = await submitFeedback({
-        roomId,
-        audienceId,
-        rating,
-        comment: comment.trim(),
-      });
+      if (!hasSubmittedFeedback) {
+        const result = await submitFeedback({
+          roomId,
+          audienceId,
+          rating,
+          comment: trimmedComment,
+        });
 
-      log.log("피드백 제출 성공:", result);
+        log.log("피드백 제출 성공:", result);
+        setHasSubmittedFeedback(true);
+      }
+
+      if (wantsSlideDownload) {
+        const nextAvailability = await refreshAvailability();
+        if (!nextAvailability?.sessionEnded || !nextAvailability?.canDownload) {
+          alert("슬라이드 다운로드가 아직 허용되지 않았습니다. 잠시 후 다시 시도해주세요.");
+          return;
+        }
+
+        failedStep = "download";
+        await downloadSlides();
+      }
 
       clearAudienceSession();
-
-      // 메인페이지로 이동
       navigate("/", { replace: true });
     } catch (error) {
-      log.error("피드백 제출 실패:", error);
-      alert("피드백 제출에 실패했습니다. 다시 시도해주세요.");
+      log.error("평가 제출 또는 다운로드 실패:", error);
+      alert(
+        failedStep === "download"
+          ? "슬라이드 다운로드에 실패했습니다. 다시 시도해주세요."
+          : "피드백 제출에 실패했습니다. 다시 시도해주세요."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -192,8 +247,36 @@ const RatingPage = () => {
 
         {/* 하단 버튼 영역 */}
         <ButtonRow>
-          <SubmitButton disabled={!rating || isSubmitting || !hasIdentity} onClick={handleSubmit}>
-            {isSubmitting ? "제출 중..." : "제출"}
+          {isPdfDownloadAllowed && (
+            <DownloadOption $disabled={!hasIdentity}>
+              <DownloadCheckbox
+                type="checkbox"
+                checked={wantsSlideDownload}
+                disabled={
+                  pdfDownloadAvailabilityLoading ||
+                  isSubmitting ||
+                  pdfDownloading ||
+                  !hasIdentity
+                }
+                onChange={(event) => setWantsSlideDownload(event.target.checked)}
+              />
+              <DownloadOptionText>
+                <DownloadOptionLabel>슬라이드를 다운로드할게요</DownloadOptionLabel>
+                <DownloadOptionDescription>
+                  별점과 후기를 제출하면 슬라이드가 다운로드됩니다.
+                </DownloadOptionDescription>
+                {pdfDownloadError && <DownloadOptionError>{pdfDownloadError}</DownloadOptionError>}
+              </DownloadOptionText>
+            </DownloadOption>
+          )}
+          <SubmitButton disabled={isSubmitDisabled} onClick={handleSubmit}>
+            {isSubmitting || pdfDownloading
+              ? wantsSlideDownload
+                ? "제출 및 다운로드 중..."
+                : "제출 중..."
+              : hasSubmittedFeedback && wantsSlideDownload
+                ? "다운로드 다시 시도"
+                : "제출"}
           </SubmitButton>
           <SkipButton onClick={handleSkip}>건너뛰기</SkipButton>
         </ButtonRow>

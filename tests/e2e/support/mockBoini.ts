@@ -13,6 +13,7 @@ export type BoiniScenario = {
   fileName: string;
   pdfId: string;
   sessionStatus: "waiting" | "live" | "ended";
+  pdfDownloadEnabled: boolean;
   slideNotes: Array<{ page: number; notes: string }>;
 };
 
@@ -55,6 +56,7 @@ export const defaultScenario: BoiniScenario = {
   fileName: "demo.pdf",
   pdfId: "pdf-test-1",
   sessionStatus: "live",
+  pdfDownloadEnabled: true,
   slideNotes: [
     { page: 1, notes: "첫 번째 슬라이드 발표자 노트" },
     { page: 2, notes: "두 번째 슬라이드 발표자 노트" },
@@ -179,6 +181,7 @@ export const installApiMocks = async (
 ) => {
   const resolvedScenario = resolveScenario(scenario);
   let currentSlideNotes = [...resolvedScenario.slideNotes];
+  const submittedFeedbackAudienceIds = new Set<string>();
 
   await context.route("**/*", async (route) => {
     const url = route.request().url();
@@ -193,8 +196,8 @@ export const installApiMocks = async (
       wsBaseUrl,
       pdfId,
       sessionStatus,
-    } =
-      resolvedScenario;
+      pdfDownloadEnabled,
+    } = resolvedScenario;
 
     if (url.includes(`/api/rooms/${roomId}/session/start`) && method === "POST") {
       await route.fulfill({ json: { data: { started: true } } });
@@ -203,6 +206,52 @@ export const installApiMocks = async (
 
     if (url.includes(`/api/rooms/${roomId}/session/status`) && method === "GET") {
       await route.fulfill({ json: { data: { roomId, status: sessionStatus } } });
+      return;
+    }
+
+    if (url.includes(`/api/rooms/${roomId}/pdf-download-policy`) && method === "PATCH") {
+      const body = route.request().postDataJSON?.() ?? {};
+      await route.fulfill({ json: { data: { enabled: Boolean(body.enabled) } } });
+      return;
+    }
+
+    if (url.includes(`/api/rooms/${roomId}/pdf-download/availability`) && method === "GET") {
+      const requestUrl = new URL(url);
+      const requestedAudienceId = requestUrl.searchParams.get("audienceId") ?? "";
+      const hasSubmittedFeedback = submittedFeedbackAudienceIds.has(requestedAudienceId);
+      await route.fulfill({
+        json: {
+          data: {
+            enabled: pdfDownloadEnabled,
+            submittedFeedback: hasSubmittedFeedback,
+            sessionEnded: true,
+            canDownload: pdfDownloadEnabled && hasSubmittedFeedback,
+          },
+        },
+      });
+      return;
+    }
+
+    if (url.includes(`/api/rooms/${roomId}/pdf-download`) && method === "GET") {
+      const requestUrl = new URL(url);
+      const requestedAudienceId = requestUrl.searchParams.get("audienceId") ?? "";
+      if (!pdfDownloadEnabled || !submittedFeedbackAudienceIds.has(requestedAudienceId)) {
+        await route.fulfill({
+          status: 403,
+          json: { message: "PDF download is not available" },
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/pdf",
+        headers: {
+          "content-disposition": 'attachment; filename="demo.pdf"',
+          "access-control-expose-headers": "content-disposition",
+        },
+        body: "%PDF-1.4\n% mock pdf\n",
+      });
       return;
     }
 
@@ -268,6 +317,13 @@ export const installApiMocks = async (
     }
 
     if (url.includes(`/api/feedbacks/rooms/${roomId}/feedbacks`) && method === "POST") {
+      const body = route.request().postDataJSON?.() ?? {};
+      const submittedAudienceId = String(body.audienceId ?? "");
+      const submittedComment = String(body.comment ?? "").trim();
+      const submittedRating = Number(body.rating);
+      if (submittedAudienceId && submittedComment && submittedRating >= 1 && submittedRating <= 5) {
+        submittedFeedbackAudienceIds.add(submittedAudienceId);
+      }
       await route.fulfill({ json: { data: { saved: true } } });
       return;
     }
@@ -446,6 +502,7 @@ export const seedPresenterSession = async (
           fileName: nextScenario.fileName,
           pdfId: nextScenario.pdfId,
           canStartSession: true,
+          pdfDownloadEnabled: nextScenario.pdfDownloadEnabled,
         })
       );
       sessionStorage.setItem(`boini_session_started_${nextScenario.roomId}`, "true");

@@ -7,6 +7,7 @@ import {
   ToggleText,
   ReactionButton,
   TooltipHoverArea,
+  FollowTooltipArea,
   Tooltip,
   TooltipRight,
   SingleToggleInput,
@@ -113,13 +114,13 @@ const SlideViewer = ({
             disabled={isWaiting}
             aria-label="발표자와 함께 보기"
           />
-          <TooltipHoverArea>
+          <FollowTooltipArea>
             <TooltipRight>발표자와 함께 보기</TooltipRight>
             <RightContainer>
               <ToggleText>발표자와 함께 보기</ToggleText>
               <img src={TipIcon} alt="tip" style={{ width: 30, height: 50 }} />
             </RightContainer>
-          </TooltipHoverArea>
+          </FollowTooltipArea>
         </ToggleContainer>
 
         {!isWaiting && (

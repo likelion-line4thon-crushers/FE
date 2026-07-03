@@ -88,6 +88,8 @@ export const FocusBar = styled.div<{ $isFullscreen?: boolean; $controlsVisible?:
 
 export const SingleToggleInput = styled(ToggleInput)`
   margin: 0;
+  position: relative;
+  z-index: 1;
 `;
 
 /* 슬라이드 본문 */
@@ -345,6 +347,10 @@ export const TooltipHoverArea = styled(TooltipWrapper)`
   &:hover ${TooltipRight} {
     opacity: 1;
   }
+`;
+
+export const FollowTooltipArea = styled(TooltipHoverArea)`
+  pointer-events: none;
 `;
 
 export const WaitingState = styled.div`

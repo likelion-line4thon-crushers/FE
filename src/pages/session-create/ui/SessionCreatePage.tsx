@@ -12,10 +12,12 @@ import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
 import { storageKeys } from "@/shared/config/storage-keys";
 import { useChunkedPdfUpload } from "../model/useChunkedPdfUpload";
 import { usePdfStream } from "../model/usePdfStream";
+import { usePdfDownloadPolicy } from "../model/usePdfDownloadPolicy";
 import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
 import { createRoom } from "@/shared/api/room";
 import { fetchSlidesMeta, fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import websocketService from "@/shared/api/websocket";
+import PdfDownloadPolicyControl from "./PdfDownloadPolicyControl";
 
 const log = createLogger("session-create");
 
@@ -37,6 +39,16 @@ const PresentationPrepPage = () => {
 
   const [quickSettings, setQuickSettings] = useQuickSettingsStorage(quickSettingsStorageKey) as any;
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
+  const {
+    enabled: pdfDownloadEnabled,
+    saving: pdfDownloadPolicySaving,
+    error: pdfDownloadPolicyError,
+    setPolicyEnabled: setPdfDownloadPolicyEnabled,
+  } = usePdfDownloadPolicy({
+    roomId,
+    initialEnabled:
+      typeof roomData?.pdfDownloadEnabled === "boolean" ? roomData.pdfDownloadEnabled : undefined,
+  });
 
   const hasInitializedRef = useRef(false);
   const pendingQuickSettingsRef = useRef<any>({
@@ -144,6 +156,25 @@ const PresentationPrepPage = () => {
       }
     },
     [roomId, setQuickSettings]
+  );
+
+  const handlePdfDownloadPolicyChange = useCallback(
+    async (enabled: boolean) => {
+      const savedEnabled = await setPdfDownloadPolicyEnabled(enabled);
+      if (typeof savedEnabled !== "boolean") return;
+
+      setRoomData((prev: any) => {
+        if (!prev || prev.pdfDownloadEnabled === savedEnabled) return prev;
+        const next = { ...prev, pdfDownloadEnabled: savedEnabled };
+        try {
+          sessionStorage.setItem("boini_room", JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+        return next;
+      });
+    },
+    [setPdfDownloadPolicyEnabled]
   );
 
   useEffect(() => {
@@ -314,6 +345,7 @@ const PresentationPrepPage = () => {
           pdfId: ready.pdfId,
           fileName: ready.fileName,
           canStartSession: false,
+          pdfDownloadEnabled: false,
         };
 
         setRoomData(nextRoomData);
@@ -474,6 +506,16 @@ const PresentationPrepPage = () => {
         roomId={roomId}
         audienceCapacity={roomData?.count ?? 50}
         isWsReady={isPresenterWsReady}
+        prepSettingsContent={
+          <PdfDownloadPolicyControl
+            enabled={pdfDownloadEnabled}
+            saving={pdfDownloadPolicySaving}
+            error={pdfDownloadPolicyError}
+            onChange={(enabled) => {
+              void handlePdfDownloadPolicyChange(enabled);
+            }}
+          />
+        }
       />
     </PresentationLayout>
   );

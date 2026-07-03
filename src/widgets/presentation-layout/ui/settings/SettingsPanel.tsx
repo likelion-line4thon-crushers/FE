@@ -26,6 +26,7 @@ interface SettingsPanelProps {
   roomId?: string | null;
   audienceCapacity?: number;
   isWsReady?: boolean;
+  prepSettingsContent?: React.ReactNode;
 }
 
 interface AudienceCountPayload {
@@ -54,6 +55,7 @@ const SettingsPanel = ({
   roomId,
   audienceCapacity = 50,
   isWsReady = false,
+  prepSettingsContent = null,
 }: SettingsPanelProps) => (
   <PanelWrapper>
     <QuickSettingsSection
@@ -63,6 +65,7 @@ const SettingsPanel = ({
       roomId={roomId}
       audienceCapacity={audienceCapacity}
       isWsReady={isWsReady}
+      prepSettingsContent={prepSettingsContent}
     />
     <LiveQuestionSection quickSettings={quickSettings} />
   </PanelWrapper>
@@ -75,6 +78,7 @@ const QuickSettingsSection = ({
   roomId,
   audienceCapacity,
   isWsReady,
+  prepSettingsContent,
 }: SettingsPanelProps) => (
   <Section>
     <Title>빠른 설정</Title>
@@ -105,6 +109,7 @@ const QuickSettingsSection = ({
         onChange={(event) => onUnlockChange?.(event.target.checked)}
       />
     </QuickTogglesGrid>
+    {prepSettingsContent}
   </Section>
 );
 
