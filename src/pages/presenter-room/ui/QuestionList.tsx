@@ -1,4 +1,5 @@
 import React from "react";
+import { getQuestionLikeCount } from "@/entities/question";
 import type { NormalizedQuestion } from "@/entities/question";
 import {
   LiveBox,
@@ -12,6 +13,9 @@ import {
   ErrorMessage,
   ActionButton,
   ActionGroup,
+  LikeAmount,
+  LikeBadge,
+  LikeIcon,
 } from "./QuestionList.styles";
 
 type QuestionListItem = NormalizedQuestion & {
@@ -40,6 +44,13 @@ const formatTimestamp = (ts: number | string | null | undefined) => {
     hour12: false,
   });
 };
+
+const QuestionLikeBadge = ({ count }: { count: number }) => (
+  <LikeBadge aria-label={`좋아요 ${count}개`} title={`좋아요 ${count}개`}>
+    <LikeIcon aria-hidden="true">👍</LikeIcon>
+    <LikeAmount>{count}</LikeAmount>
+  </LikeBadge>
+);
 
 const QuestionList = ({
   questions = [],
@@ -76,6 +87,7 @@ const QuestionList = ({
             const slideIndex =
               Number.isFinite(slideNumber) && slideNumber > 0 ? slideNumber - 1 : 0;
             const timestamp = question.time || formatTimestamp(question.ts ?? question.time);
+            const likeCount = getQuestionLikeCount(question);
 
             return (
               <QuestionItem
@@ -91,26 +103,27 @@ const QuestionList = ({
                     슬라이드 {slideNumber}
                   </SlideTag>
                   {timestamp && <Time>{timestamp}</Time>}
-                  <ActionGroup>
-                    <ActionButton
-                      type="button"
-                      $variant="delete"
-                      aria-label="질문 삭제"
-                      onClick={() => onDelete?.(question.id)}
-                    >
-                      삭제
-                    </ActionButton>
-                    <ActionButton
-                      type="button"
-                      $variant="complete"
-                      aria-label="질문 완료"
-                      onClick={() => onComplete?.(question.id)}
-                    >
-                      완료
-                    </ActionButton>
-                  </ActionGroup>
+                  <QuestionLikeBadge count={likeCount} />
                 </QuestionHeader>
                 <Content>{question.content ?? ""}</Content>
+                <ActionGroup>
+                  <ActionButton
+                    type="button"
+                    $variant="delete"
+                    aria-label="질문 삭제"
+                    onClick={() => onDelete?.(question.id)}
+                  >
+                    삭제
+                  </ActionButton>
+                  <ActionButton
+                    type="button"
+                    $variant="complete"
+                    aria-label="질문 완료"
+                    onClick={() => onComplete?.(question.id)}
+                  >
+                    완료
+                  </ActionButton>
+                </ActionGroup>
               </QuestionItem>
             );
           })}

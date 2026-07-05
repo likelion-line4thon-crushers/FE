@@ -13,6 +13,10 @@ import {
   SlideLabel,
   Timestamp,
   QuestionText,
+  LikeActionRow,
+  LikeButton,
+  LikeIcon,
+  LikeCount,
   Scrollbar,
   QuestionInputContainer,
   QuestionInput,
@@ -32,6 +36,8 @@ interface FormattedQuestion {
   slideNumber: number;
   timestampLabel: string;
   content: string;
+  likeCount: number;
+  likedByMe: boolean;
 }
 
 interface AudiencePanelProps {
@@ -43,6 +49,7 @@ interface AudiencePanelProps {
   questionsLoading?: boolean;
   questionsError?: unknown;
   onSubmitQuestion?: (content: string) => Promise<void>;
+  onToggleQuestionLike?: (questionId: string) => void;
   canSubmit?: boolean;
   isLocked?: boolean;
 }
@@ -80,6 +87,7 @@ const AudiencePanel = ({
   questionsLoading = false,
   questionsError = null,
   onSubmitQuestion,
+  onToggleQuestionLike,
   canSubmit = true,
   isLocked = false,
 }: AudiencePanelProps) => {
@@ -99,6 +107,8 @@ const AudiencePanel = ({
         slideNumber: normalizedSlide,
         timestampLabel: formatTimestamp(question.ts),
         content: question.content ?? "",
+        likeCount: Math.max(0, Number(question.likeCount) || 0),
+        likedByMe: Boolean(question.likedByMe),
       };
     })
     .filter((question): question is FormattedQuestion => question !== null);
@@ -143,6 +153,10 @@ const AudiencePanel = ({
     }
   };
 
+  const handleToggleQuestionLike = (questionId: string) => {
+    onToggleQuestionLike?.(questionId);
+  };
+
   const inputDisabled = isLocked || !canSubmit || isSubmitting;
   const showSubmitButton = isInputting && !inputDisabled;
   const showLoadingMessage = questionsLoading && formattedQuestions.length === 0;
@@ -173,7 +187,15 @@ const AudiencePanel = ({
                 )}
 
                 {formattedQuestions.map(
-                  ({ id, slideIndex, slideNumber, timestampLabel, content }) => (
+                  ({
+                    id,
+                    slideIndex,
+                    slideNumber,
+                    timestampLabel,
+                    content,
+                    likeCount,
+                    likedByMe,
+                  }) => (
                     <QuestionItem key={id} $active={slideIndex === currentSlide}>
                       <HeaderRow>
                         <SlideLabel
@@ -187,6 +209,18 @@ const AudiencePanel = ({
                       </HeaderRow>
 
                       <QuestionText>{content}</QuestionText>
+                      <LikeActionRow>
+                        <LikeButton
+                          type="button"
+                          $active={likedByMe}
+                          aria-label="질문 좋아요"
+                          aria-pressed={likedByMe}
+                          onClick={() => handleToggleQuestionLike(id)}
+                        >
+                          <LikeIcon aria-hidden="true">👍</LikeIcon>
+                          <LikeCount>{likeCount}</LikeCount>
+                        </LikeButton>
+                      </LikeActionRow>
                     </QuestionItem>
                   )
                 )}
