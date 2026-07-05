@@ -37,6 +37,11 @@ export const NotesTextarea = styled.textarea<{ $readOnly: boolean }>`
   box-sizing: border-box;
   cursor: ${({ $readOnly }) => ($readOnly ? "default" : "text")};
 
+  &::placeholder {
+    color: #b0b0b0;
+    font-weight: 500;
+  }
+
   &:focus {
     color: #303030;
   }
