@@ -92,6 +92,51 @@ export const SingleToggleInput = styled(ToggleInput)`
   z-index: 1;
 `;
 
+/* 슬라이드 + 하단 컨트롤을 묶어 16px 간격으로 붙여둔다 */
+export const SlideStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+`;
+
+/* 슬라이드 바로 아래 컨트롤 줄: 리액션 바(가운데) + 전체화면 버튼(오른쪽) */
+export const ControlsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+`;
+
+/* 리액션 스티커 바를 흐름 배치로 전환해 가운데 칸에 정렬 */
+export const ReactionSlot = styled.div`
+  grid-column: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  /* EmojiPanel(EmojiContainer)의 절대배치를 무력화하고, 이모지가 space-between 으로
+     퍼질 수 있도록 충분한 너비를 준다 */
+  > div {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    margin: 0;
+    width: clamp(320px, 34vw, 480px);
+    max-width: 100%;
+  }
+`;
+
+/* 오른쪽 끝 칸: 전체화면 버튼 */
+export const ControlsEnd = styled.div`
+  grid-column: 3;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+`;
+
 /* 슬라이드 본문 */
 export const SlideBox = styled.div<{ focusHighlight?: boolean; $isFullscreen?: boolean }>`
   background-color: white;
@@ -164,10 +209,6 @@ export const FullscreenButton = styled.button<{
   $isFullscreen?: boolean;
   $controlsVisible?: boolean;
 }>`
-  position: absolute;
-  right: 1.6vw;
-  bottom: 5.56vh;
-  z-index: 12;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -204,8 +245,10 @@ export const FullscreenButton = styled.button<{
   ${({ $isFullscreen }) =>
     $isFullscreen &&
     `
+      position: absolute;
       right: clamp(42px, 4.2vw, 80px);
       bottom: clamp(40px, 4.6vh, 50px);
+      z-index: 12;
       padding: clamp(18px, 1.1vw, 20px);
       border-width: 1px;
       background: rgba(250, 250, 250, 0.8);

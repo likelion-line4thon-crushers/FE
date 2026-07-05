@@ -4,7 +4,7 @@ export const PanelWrapper = styled.div`
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   width: 17vw;
-  height: 95%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   border: 1px solid #eaeaea;
@@ -270,17 +270,15 @@ export const QuestionInput = styled.textarea<{ $isInputting?: boolean }>`
   outline: none;
   background: transparent;
   font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.35px;
   color: #333;
   resize: none;
-  min-height: 1.85vh;
-  max-height: 4.7vh;
-  line-height: 4vh;
-  padding: 0 10px;
-  height: 100%;
+  line-height: 1.5;
+  padding: 12px;
   text-align: left;
   box-sizing: border-box;
   overflow: hidden;
-  vertical-align: middle;
 
   &::placeholder {
     color: #999;
@@ -288,16 +286,14 @@ export const QuestionInput = styled.textarea<{ $isInputting?: boolean }>`
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
-    line-height: 4vh;
+    line-height: 1.5;
     letter-spacing: -0.35px;
     text-align: left;
-
-    text-indent: 6px;
   }
 
   &:placeholder-shown {
     text-align: left;
-    line-height: 4vh;
+    line-height: 1.5;
   }
 
   &[disabled] {

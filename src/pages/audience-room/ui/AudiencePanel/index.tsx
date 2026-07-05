@@ -243,6 +243,7 @@ const AudiencePanel = ({
           {!isWaiting && !isLocked && (
             <QuestionInputContainer $isInputting={isInputting} $disabled={inputDisabled}>
               <QuestionInput
+                rows={1}
                 value={questionText}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyPress}
