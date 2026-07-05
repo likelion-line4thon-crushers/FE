@@ -29,7 +29,6 @@ import {
   usePresenterQuestions,
   usePresenterClusters,
   usePresenterCompletedQuestions,
-  useLiveFeedback,
   useAudienceStats,
   usePresenterWebSocket,
   useQuickSettings,
@@ -273,14 +272,6 @@ const PresenterRoomPage = () => {
     []
   );
 
-  // 🔹 실시간 피드백
-  const { feedbackContent } = useLiveFeedback({
-    roomId,
-    currentSlide,
-    isEnabled: quickSettings.feedback,
-    isPresenterWsReady,
-  });
-
   const presenterSocketService = useMemo(() => new WebSocketService(), []);
   const {
     stampsBySlide: reactionStamps,
@@ -510,8 +501,6 @@ const PresenterRoomPage = () => {
         onFocusClick={isPresenterWsReady ? handleFocusOn : undefined}
         focusHighlight={showFocusHighlight}
         timer={timer}
-        showFeedback={quickSettings.feedback}
-        feedbackContent={feedbackContent}
         showUnlockToast={showUnlockToast}
         afterSlideContent={<SlideNotesPanel notes={currentSlideNotes} readOnly />}
       />
