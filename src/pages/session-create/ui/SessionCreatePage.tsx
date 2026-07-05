@@ -17,7 +17,9 @@ import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
 import { createRoom } from "@/shared/api/room";
 import { fetchSlidesMeta, fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import websocketService from "@/shared/api/websocket";
+import { useBroadcastPublisher } from "@/shared/lib/broadcast";
 import PdfDownloadPolicyControl from "./PdfDownloadPolicyControl";
+import BroadcastScreenControl from "./BroadcastScreenControl";
 
 const log = createLogger("session-create");
 
@@ -426,6 +428,20 @@ const PresentationPrepPage = () => {
     return streamedSlides.map((s) => s ?? "");
   }, [restoredSlides, streamedSlides, totalPages]);
 
+  // 발표 화면(외부 디스플레이) 미러링 — 현재 슬라이드를 projector 창으로 브로드캐스트.
+  // projector 창에서의 클릭/키 입력은 nav 로 돌아와 발표자 슬라이드를 이동시킨다.
+  const { openScreen, isWindowManagementSupported } = useBroadcastPublisher({
+    roomId: roomId ? String(roomId) : null,
+    slides: displaySlides,
+    currentSlide,
+    onNavigate: (direction) =>
+      setCurrentSlide((prev) => {
+        const maxIndex = Math.max(displaySlides.length - 1, 0);
+        const next = direction === "next" ? prev + 1 : prev - 1;
+        return Math.min(Math.max(next, 0), maxIndex);
+      }),
+  });
+
   const currentSlidePage = currentSlide + 1;
   const { notesByPage, updateSlideNote, flushSlideNote } = usePresenterSlideNotes({
     roomId,
@@ -507,14 +523,21 @@ const PresentationPrepPage = () => {
         audienceCapacity={roomData?.count ?? 50}
         isWsReady={isPresenterWsReady}
         prepSettingsContent={
-          <PdfDownloadPolicyControl
-            enabled={pdfDownloadEnabled}
-            saving={pdfDownloadPolicySaving}
-            error={pdfDownloadPolicyError}
-            onChange={(enabled) => {
-              void handlePdfDownloadPolicyChange(enabled);
-            }}
-          />
+          <>
+            <PdfDownloadPolicyControl
+              enabled={pdfDownloadEnabled}
+              saving={pdfDownloadPolicySaving}
+              error={pdfDownloadPolicyError}
+              onChange={(enabled) => {
+                void handlePdfDownloadPolicyChange(enabled);
+              }}
+            />
+            <BroadcastScreenControl
+              onOpen={openScreen}
+              windowManagementSupported={isWindowManagementSupported}
+              disabled={!roomId}
+            />
+          </>
         }
       />
     </PresentationLayout>

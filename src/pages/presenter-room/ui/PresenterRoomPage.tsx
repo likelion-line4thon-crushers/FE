@@ -15,6 +15,7 @@ import QuestionTabs from "./QuestionTabs";
 import QuestionSortDropdown from "./QuestionSortDropdown";
 import { QuestionScrollArea } from "./QuestionList.styles";
 import websocketService from "@/shared/api/websocket";
+import { useBroadcastPublisher } from "@/shared/lib/broadcast";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
@@ -209,6 +210,16 @@ const PresenterRoomPage = () => {
     },
     [slideCount, roomId]
   );
+
+  // 🔹 발표 화면(외부 디스플레이) 미러링 — 세션 시작 후에도 projector 창과 계속 동기화.
+  //    projector 창의 클릭/키 입력(nav)은 여기서 슬라이드를 이동하고 WS 로 청중에게 전파된다.
+  useBroadcastPublisher({
+    roomId: roomId ? String(roomId) : null,
+    slides: slideUrls,
+    currentSlide,
+    onNavigate: (direction) =>
+      changeSlide(currentSlideRef.current + (direction === "next" ? 1 : -1)),
+  });
 
   // 🔹 WebSocket 연결 및 구독
   const { isPresenterWsReady } = usePresenterWebSocket({

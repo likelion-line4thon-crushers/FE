@@ -5,6 +5,7 @@ import { LandingPage } from "@/pages/landing";
 import { AudienceRoomPage } from "@/pages/audience-room";
 import { AiReportPage } from "@/pages/ai-report";
 import { RatingPage } from "@/pages/rating";
+import { BroadcastScreenPage } from "@/pages/broadcast-screen";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
       { path: "audience/:code/rating", element: <RatingPage /> },
     ],
   },
+
+  // * Projector view — bare fullscreen slide mirror on an external display.
+  //   Rendered outside App so no header/chrome appears on the giant screen.
+  { path: "rooms/:roomId/screen", element: <BroadcastScreenPage /> },
 ]);
 
 export default router;
