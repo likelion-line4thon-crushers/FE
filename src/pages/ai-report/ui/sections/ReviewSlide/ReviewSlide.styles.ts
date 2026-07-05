@@ -85,6 +85,60 @@ export const RatingScore = styled.div`
   }
 `;
 
+export const FeedbackListCardWrapper = styled.div`
+  position: relative;
+  width: 765px;
+  height: 650px;
+`;
+
+export const RefreshControls = styled.div`
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const RefreshCooldownText = styled.span`
+  color: #8a8a8a;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+`;
+
+export const RefreshButton = styled.button`
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d9d9d9;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #5c5c5c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: #e74d07;
+    color: #e74d07;
+    background: #fff7f3;
+  }
+
+  &:disabled {
+    color: #b5b5b5;
+    background: #f4f4f4;
+    cursor: not-allowed;
+  }
+`;
+
 export const SummaryBoxContainer = styled.div`
   display: flex;
   flex-direction: column;

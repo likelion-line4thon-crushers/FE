@@ -1,8 +1,6 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { createLogger } from "@/shared/lib/logger";
-
-const log = createLogger("ai-report");
 import {
   ReviewSlideContainer,
   TotalContainer,
@@ -12,16 +10,21 @@ import {
   RatingRow,
   RatingScore,
   SummaryBoxContainer,
+  FeedbackListCardWrapper,
+  RefreshControls,
+  RefreshCooldownText,
+  RefreshButton,
   CenterHeader,
   SmallDivider,
 } from "./ReviewSlide.styles";
 import { AITitle, ContentBox } from "../../summary";
 import SatisfyImage from "@/shared/assets/images/AI/Satisfy.png";
 import StarImage from "@/shared/assets/images/AI/Star.png";
-import RectangleImage from "@/shared/assets/images/AI/Rectangle.png";
 import GrayFaceImage from "@/shared/assets/images/AI/reviewslide_face.png";
 import { fetchFeedbackReport } from "@/shared/api/ai-report";
 import { loadStoredRoomData, computeRoomInfo } from "../../../model/room-info";
+
+const log = createLogger("ai-report");
 
 interface FeedbackReport {
   averageRating?: number;
@@ -29,12 +32,21 @@ interface FeedbackReport {
   feedbacks?: Array<{ comment?: string | null }>;
 }
 
+const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const MANUAL_REFRESH_COOLDOWN_MS = 60 * 1000;
+
 const ReviewSlide = () => {
   const location = useLocation();
   const [feedbackData, setFeedbackData] = useState<FeedbackReport | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
-  const isFirstLoadRef = useRef(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [requestInFlight, setRequestInFlight] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [nextManualRefreshAt, setNextManualRefreshAt] = useState<number | null>(null);
+  const [cooldownNow, setCooldownNow] = useState(() => Date.now());
+  const mountedRef = useRef(true);
+  const feedbackRequestIdRef = useRef(0);
+  const pendingFeedbackRequestsRef = useRef(0);
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
 
@@ -46,63 +58,158 @@ const ReviewSlide = () => {
   const { roomId } = roomInfo;
 
   useEffect(() => {
-    let cancelled = false;
-    let intervalId = null;
+    mountedRef.current = true;
 
-    if (!roomId) {
-      setFeedbackData(null);
-      setError(new Error("roomId를 확인할 수 없습니다."));
-      setLoading(false);
-      isFirstLoadRef.current = true;
-      return undefined;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const cooldownRemainingSeconds = useMemo(() => {
+    if (!nextManualRefreshAt) {
+      return 0;
     }
 
-    isFirstLoadRef.current = true;
+    return Math.max(0, Math.ceil((nextManualRefreshAt - cooldownNow) / 1000));
+  }, [cooldownNow, nextManualRefreshAt]);
 
-    const loadFeedback = async () => {
-      const isFirstLoad = isFirstLoadRef.current;
-      if (isFirstLoad) {
-        setLoading(true);
-        isFirstLoadRef.current = false;
+  const loadFeedback = useCallback(
+    async (mode: "initial" | "auto" | "manual") => {
+      if (!roomId) {
+        feedbackRequestIdRef.current += 1;
+        setFeedbackData(null);
+        setError(new Error("roomId를 확인할 수 없습니다."));
+        setLoading(false);
+        setRefreshing(false);
+        setRequestInFlight(false);
+        return;
       }
-      setError(null);
+
+      const requestId = feedbackRequestIdRef.current + 1;
+      feedbackRequestIdRef.current = requestId;
+      const canCommit = () => mountedRef.current && feedbackRequestIdRef.current === requestId;
+      const isInitialLoad = mode === "initial";
+      const isManualRefresh = mode === "manual";
+      pendingFeedbackRequestsRef.current += 1;
+      setRequestInFlight(true);
+
+      if (isInitialLoad) {
+        setLoading(true);
+      }
+      if (isManualRefresh) {
+        setRefreshing(true);
+      }
 
       try {
         const data = await fetchFeedbackReport(roomId);
-        if (!cancelled) {
+        if (canCommit()) {
           setFeedbackData(data);
+          setError(null);
         }
       } catch (err) {
-        if (!cancelled) {
-          if (isFirstLoad) {
-            setFeedbackData(null);
-            setError(err as any);
-          } else {
-            log.warn("후기 업데이트 실패 (기존 데이터 유지):", err);
-          }
+        if (!canCommit()) {
+          return;
+        }
+
+        if (isInitialLoad) {
+          setFeedbackData(null);
+          setError(err);
+        } else {
+          log.warn("후기 업데이트 실패 (기존 데이터 유지):", err);
         }
       } finally {
-        if (!cancelled && isFirstLoad) {
+        pendingFeedbackRequestsRef.current = Math.max(0, pendingFeedbackRequestsRef.current - 1);
+        if (pendingFeedbackRequestsRef.current === 0 && mountedRef.current) {
+          setRequestInFlight(false);
+        }
+
+        if (!canCommit()) {
+          if (isManualRefresh && mountedRef.current) {
+            setRefreshing(false);
+          }
+          return;
+        }
+
+        if (isInitialLoad) {
           setLoading(false);
         }
+        if (isManualRefresh) {
+          setRefreshing(false);
+        }
       }
-    };
+    },
+    [roomId]
+  );
 
-    loadFeedback();
+  useEffect(() => {
+    if (!roomId) {
+      feedbackRequestIdRef.current += 1;
+      setFeedbackData(null);
+      setError(new Error("roomId를 확인할 수 없습니다."));
+      setLoading(false);
+      setRefreshing(false);
+      setRequestInFlight(false);
+      return undefined;
+    }
 
-    intervalId = setInterval(() => {
-      if (!cancelled) {
-        loadFeedback();
+    setNextManualRefreshAt(null);
+    loadFeedback("initial");
+
+    const intervalId = window.setInterval(() => {
+      if (pendingFeedbackRequestsRef.current === 0) {
+        loadFeedback("auto");
       }
-    }, 5000);
+    }, AUTO_REFRESH_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
-      if (intervalId) {
-        clearInterval(intervalId);
+      window.clearInterval(intervalId);
+    };
+  }, [loadFeedback, roomId]);
+
+  useEffect(() => {
+    if (!nextManualRefreshAt) {
+      return undefined;
+    }
+
+    if (nextManualRefreshAt <= Date.now()) {
+      setNextManualRefreshAt(null);
+      return undefined;
+    }
+
+    const updateCooldownNow = () => {
+      const now = Date.now();
+      setCooldownNow(now);
+      if (now >= nextManualRefreshAt) {
+        setNextManualRefreshAt(null);
       }
     };
-  }, [roomId]);
+
+    updateCooldownNow();
+    const intervalId = window.setInterval(() => {
+      updateCooldownNow();
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [nextManualRefreshAt]);
+
+  const handleManualRefresh = useCallback(() => {
+    if (
+      !roomId ||
+      loading ||
+      refreshing ||
+      requestInFlight ||
+      cooldownRemainingSeconds > 0
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    setCooldownNow(now);
+    setNextManualRefreshAt(now + MANUAL_REFRESH_COOLDOWN_MS);
+    loadFeedback("manual");
+  }, [cooldownRemainingSeconds, loadFeedback, loading, refreshing, requestInFlight, roomId]);
 
   const averageRating = useMemo(() => {
     if (loading || error) {
@@ -140,6 +247,19 @@ const ReviewSlide = () => {
       .join("\n");
   }, [feedbackData, loading, error]);
 
+  const refreshButtonLabel = useMemo(() => {
+    if (requestInFlight) {
+      return "청중 후기 새로고침 중";
+    }
+    if (cooldownRemainingSeconds > 0) {
+      return `청중 후기 새로고침 대기 ${cooldownRemainingSeconds}초`;
+    }
+    return "청중 후기 새로고침";
+  }, [cooldownRemainingSeconds, requestInFlight]);
+
+  const isRefreshDisabled =
+    loading || refreshing || requestInFlight || cooldownRemainingSeconds > 0 || !roomId;
+
   return (
     <ReviewSlideContainer>
       <AITitle title="청중의 한마디" description="청중이 세션에 대해 남긴 후기와 의견입니다." />
@@ -171,25 +291,41 @@ const ReviewSlide = () => {
           </ContentBox>
         </LeftBoxContainer>
         <RightBoxContainer>
-          <ContentBox
-            title="청중 후기 및 의견 모음"
-            variant="text"
-            width="765px"
-            height="650px"
-            content={feedbackListContent}
-            titleStyle={{
-              color: "#434343",
-              fontSize: "20px",
-              fontWeight: "600",
-              fontStyle: "normal",
-            }}
-            contentStyle={{
-              color: "#5C5C5C",
-              fontSize: "19px",
-              fontWeight: "400",
-              fontStyle: "normal",
-            }}
-          />
+          <FeedbackListCardWrapper>
+            <ContentBox
+              title="청중 후기 및 의견 모음"
+              variant="text"
+              width="765px"
+              height="650px"
+              content={feedbackListContent}
+              titleStyle={{
+                color: "#434343",
+                fontSize: "20px",
+                fontWeight: "600",
+                fontStyle: "normal",
+              }}
+              contentStyle={{
+                color: "#5C5C5C",
+                fontSize: "19px",
+                fontWeight: "400",
+                fontStyle: "normal",
+              }}
+            />
+            <RefreshControls>
+              {cooldownRemainingSeconds > 0 && (
+                <RefreshCooldownText>{cooldownRemainingSeconds}초 후 가능</RefreshCooldownText>
+              )}
+              <RefreshButton
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={isRefreshDisabled}
+                aria-label={refreshButtonLabel}
+                title={refreshButtonLabel}
+              >
+                ↻
+              </RefreshButton>
+            </RefreshControls>
+          </FeedbackListCardWrapper>
         </RightBoxContainer>
       </TotalContainer>
     </ReviewSlideContainer>
