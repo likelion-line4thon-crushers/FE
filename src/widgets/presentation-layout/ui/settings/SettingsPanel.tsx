@@ -13,6 +13,7 @@ import {
   AudienceCap,
   QuickTogglesGrid,
   ToggleBox,
+  ToggleText,
   ToggleLabel,
   ToggleDescription,
   ToggleInput,
@@ -95,12 +96,6 @@ const QuickSettingsSection = ({
         description="청중이 실시간으로 질문을 남길 수 있습니다."
         checked={quickSettings.question}
         onChange={(event) => onOptionChange?.("question", event.target.checked)}
-      />
-      <QuickSettingToggle
-        label="실시간 피드백"
-        description="수집된 청중의 반응을 실시간으로 분석합니다."
-        checked={quickSettings.feedback}
-        onChange={(event) => onOptionChange?.("feedback", event.target.checked)}
       />
       <QuickSettingToggle
         label="다음 슬라이드 공개"
@@ -214,8 +209,10 @@ const QuickSettingToggle = ({
   disabled = false,
 }: QuickSettingToggleProps) => (
   <ToggleBox>
-    <ToggleLabel>{label}</ToggleLabel>
-    <ToggleDescription>{description}</ToggleDescription>
+    <ToggleText>
+      <ToggleLabel>{label}</ToggleLabel>
+      <ToggleDescription>{description}</ToggleDescription>
+    </ToggleText>
     <ToggleInput
       type="checkbox"
       checked={checked}

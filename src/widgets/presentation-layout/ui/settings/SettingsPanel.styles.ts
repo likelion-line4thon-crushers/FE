@@ -72,18 +72,21 @@ export const AudienceCap = styled.span`
   color: #999;
 `;
 
-/* 빠른 설정 토글 그리드 */
+/* 빠른 설정 토글 리스트 (그리드 → 세로 스택, 가로형 스위치) */
 export const QuickTogglesGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4vw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vh;
   padding: 0 0.6vw 1vh;
 `;
 
 export const ToggleLabel = styled.div`
   color: #5c5c5c;
-  font-size: clamp(11px, 0.75vw, 14px);
+  font-size: clamp(13px, 0.85vw, 16px);
   font-weight: 600;
+  line-height: 24px;
+  letter-spacing: -0.4px;
+  transition: color 0.2s ease;
 `;
 
 export const ToggleDescription = styled.p`
@@ -91,21 +94,37 @@ export const ToggleDescription = styled.p`
   color: #838383;
   font-size: clamp(9px, 0.6vw, 11px);
   font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: -0.3px;
+  transition: color 0.2s ease;
 `;
 
-/* 토글 박스 */
-export const ToggleBox = styled.div`
-  border-radius: 1vw;
-  border: 0.05vw solid #eaeaea;
-  background: #fafafa;
-  padding: 1.5vh 0.8vw;
+/* 라벨 + 설명을 세로로 묶는 텍스트 열 */
+export const ToggleText = styled.div`
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 0.1vh;
-  transition: all 0.2s ease;
+  gap: 0.2vh;
+  min-width: 0;
+`;
 
-  &:hover {
+/* 토글 한 줄: 텍스트(좌) + 스위치(우) */
+export const ToggleBox = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6vw;
+  min-height: clamp(50px, 5.56vh, 60px);
+  padding: clamp(10px, 1vh, 14px) clamp(12px, 0.78vw, 15px);
+  border-radius: clamp(16px, 1.04vw, 20px);
+  border: 0.05vw solid #eaeaea;
+  background: #fafafa;
+  box-sizing: border-box;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+
+  &:not(:has(input:checked)):hover {
     background: #f5f5f5;
   }
 
@@ -114,8 +133,19 @@ export const ToggleBox = styled.div`
     border-color: #303030;
   }
 
-  &:has(input:checked) ${ToggleLabel}, &:has(input:checked) ${ToggleDescription} {
+  &:has(input:checked) ${ToggleLabel} {
     color: #ffffff;
+  }
+
+  &:has(input:checked) ${ToggleDescription} {
+    color: #d0d0d0;
+  }
+
+  /* 가로형 행에서는 스위치를 세로 중앙 정렬 (카드용 margin/align 리셋) */
+  & input[type="checkbox"] {
+    margin-top: 0;
+    align-self: center;
+    flex-shrink: 0;
   }
 `;
 

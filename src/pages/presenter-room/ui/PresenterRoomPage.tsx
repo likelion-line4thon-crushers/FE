@@ -40,7 +40,9 @@ import { PanelWrapper, Section, Title } from "@/widgets/presentation-layout";
 import {
   QuickTogglesList,
   ToggleRow,
+  ToggleRowText,
   ToggleRowLabel,
+  ToggleRowDescription,
   RowToggleInput,
 } from "./QuickSettings.styles";
 import styled from "styled-components";
@@ -527,7 +529,16 @@ const PresenterRoomPage = () => {
 
           <QuickTogglesList>
             <QuickSettingToggle
+              label="리액션 스티커"
+              description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
+              checked={quickSettings.sticker}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                handleOptionChange("sticker", event.target.checked)
+              }
+            />
+            <QuickSettingToggle
               label="실시간 질문"
+              description="청중이 실시간으로 질문을 남길 수 있습니다."
               checked={quickSettings.question}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 handleOptionChange("question", event.target.checked)
@@ -535,6 +546,7 @@ const PresenterRoomPage = () => {
             />
             <QuickSettingToggle
               label="다음 슬라이드 공개"
+              description="청중이 다음 슬라이드 화면들을 미리 볼 수 있습니다."
               checked={quickSettings.unlock}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 handleUnlockChange(event.target.checked)
@@ -737,20 +749,25 @@ const LockButtonWrapper = styled.div`
   }
 `;
 
-// 빠른 설정 토글 UI (라벨 + 토글 한 줄)
+// 빠른 설정 토글 UI (라벨 + 설명 + 토글 한 줄)
 const QuickSettingToggle = ({
   label,
+  description,
   checked,
   onChange,
   disabled,
 }: {
   label?: any;
+  description?: any;
   checked?: any;
   onChange?: any;
   disabled?: any;
 }) => (
   <ToggleRow>
-    <ToggleRowLabel>{label}</ToggleRowLabel>
+    <ToggleRowText>
+      <ToggleRowLabel>{label}</ToggleRowLabel>
+      {description ? <ToggleRowDescription>{description}</ToggleRowDescription> : null}
+    </ToggleRowText>
     <RowToggleInput
       type="checkbox"
       onChange={onChange}
