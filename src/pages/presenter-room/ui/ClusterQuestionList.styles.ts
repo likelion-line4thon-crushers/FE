@@ -12,6 +12,27 @@ export const ClusterItem = styled.div`
   box-sizing: border-box;
 `;
 
+export const ClusterQuestionFrame = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "question-header question-actions"
+    "question-content question-content";
+  column-gap: 8px;
+  row-gap: 5px;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+
+  @container (max-width: 320px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "question-header"
+      "question-content"
+      "question-actions";
+  }
+`;
+
 export const GroupTag = styled.div`
   background: #e74d07;
   color: #fff;
@@ -26,12 +47,25 @@ export const GroupTag = styled.div`
 
 /* 펼쳤을 때 들여쓰기되는 세부 질문 행 */
 export const SubQuestion = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "question-header question-actions"
+    "question-content question-content";
+  column-gap: 8px;
+  row-gap: 5px;
+  align-items: start;
   width: 100%;
   padding-left: 16px;
   box-sizing: border-box;
+
+  @container (max-width: 320px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "question-header"
+      "question-content"
+      "question-actions";
+  }
 `;
 
 export const ClusterToggle = styled.button<{ $expanded?: boolean }>`

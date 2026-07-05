@@ -3,13 +3,15 @@ import websocketService from "@/shared/api/websocket";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("audience-questions");
-import { fetchRoomQuestions } from "@/shared/api/question";
+import { fetchRoomQuestions, sendQuestionLike } from "@/shared/api/question";
 import {
   normalizeQuestion,
   sortQuestionsAsc,
   upsertQuestion,
   buildQuestionTopics,
   applyQuestionStatusEvent,
+  applyQuestionLikeEvent,
+  getQuestionLikeCount,
 } from "@/entities/question";
 import type { NormalizedQuestion } from "@/entities/question";
 
@@ -62,6 +64,11 @@ export const useAudienceQuestions = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const latestQuestionTsRef = useRef(0);
+  const questionsRef = useRef<NormalizedQuestion[]>([]);
+
+  useEffect(() => {
+    questionsRef.current = questions;
+  }, [questions]);
 
   const loadQuestions = useCallback(async () => {
     if (!roomId) {
@@ -73,7 +80,7 @@ export const useAudienceQuestions = ({
     setError(null);
 
     try {
-      const list = await fetchRoomQuestions(roomId);
+      const list = await fetchRoomQuestions(roomId, { audienceId });
       const normalized = list.map(normalizeQuestion).filter(isNormalizedQuestion);
       setQuestions(sortQuestionsAsc(normalized));
 
@@ -88,26 +95,79 @@ export const useAudienceQuestions = ({
     } finally {
       setLoading(false);
     }
-  }, [roomId]);
+  }, [roomId, audienceId]);
 
   useEffect(() => {
     loadQuestions();
   }, [loadQuestions]);
 
-  const handleIncomingQuestion = useCallback((payload: any) => {
-    if (payload?.type === "QUESTION_COMPLETED" || payload?.type === "QUESTION_DELETED") {
-      setQuestions((prev) => applyQuestionStatusEvent(prev, payload));
-      return;
-    }
+  const handleIncomingQuestion = useCallback(
+    (payload: any) => {
+      const payloadType = payload?.type ?? payload?.data?.type;
 
-    const raw = payload?.data ?? payload;
-    const normalized = normalizeQuestion(raw);
-    if (!normalized) return;
+      if (payloadType === "QUESTION_COMPLETED" || payloadType === "QUESTION_DELETED") {
+        setQuestions((prev) => applyQuestionStatusEvent(prev, payload));
+        return;
+      }
 
-    accumulateLatestTimestamp(latestQuestionTsRef, normalized);
+      if (
+        payloadType === "QUESTION_LIKE_UPDATED" ||
+        payloadType === "QUESTION_LIKED" ||
+        payloadType === "QUESTION_UNLIKED"
+      ) {
+        const raw = payload?.data ?? payload;
+        const isOwnLikeEvent = raw?.audienceId && raw.audienceId === audienceId;
+        const likePayload = isOwnLikeEvent
+          ? { ...raw, likedByMe: raw.liked }
+          : {
+              ...raw,
+              liked: undefined,
+              likedByMe: undefined,
+            };
+        setQuestions((prev) => applyQuestionLikeEvent(prev, likePayload));
+        return;
+      }
 
-    setQuestions((prev) => upsertQuestion(prev, normalized));
-  }, []);
+      const raw = payload?.data ?? payload;
+      const normalized = normalizeQuestion(raw);
+      if (!normalized) return;
+
+      accumulateLatestTimestamp(latestQuestionTsRef, normalized);
+
+      setQuestions((prev) => upsertQuestion(prev, normalized));
+    },
+    [audienceId]
+  );
+
+  const toggleQuestionLike = useCallback(
+    (questionId: string) => {
+      if (!roomId || !audienceId || !questionId) return;
+      if (!websocketService.getIsConnected()) return;
+
+      const currentQuestion = questionsRef.current.find((question) => question.id === questionId);
+      if (!currentQuestion) return;
+
+      const nextLiked = !Boolean(currentQuestion.likedByMe);
+      setQuestions((prev) =>
+        prev.map((question) =>
+          question.id === questionId
+            ? {
+                ...question,
+                likedByMe: nextLiked,
+                likeCount: Math.max(0, getQuestionLikeCount(question) + (nextLiked ? 1 : -1)),
+              }
+            : question
+        )
+      );
+
+      try {
+        sendQuestionLike({ roomId, questionId, audienceId, liked: nextLiked });
+      } catch (err) {
+        log.error("질문 좋아요 전송 실패:", err);
+      }
+    },
+    [roomId, audienceId]
+  );
 
   const submitQuestion = useCallback(
     async (content: string) => {
@@ -144,6 +204,7 @@ export const useAudienceQuestions = ({
     questionsLoading: loading,
     questionsError: error,
     submitQuestion,
+    toggleQuestionLike,
     handleIncomingQuestion,
     questionTopics,
   };

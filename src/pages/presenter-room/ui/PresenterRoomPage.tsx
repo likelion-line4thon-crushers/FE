@@ -12,6 +12,7 @@ import QuestionList from "./QuestionList";
 import ClusterQuestionList from "./ClusterQuestionList";
 import CompletedQuestionList from "./CompletedQuestionList";
 import QuestionTabs from "./QuestionTabs";
+import QuestionSortDropdown from "./QuestionSortDropdown";
 import { QuestionScrollArea } from "./QuestionList.styles";
 import websocketService from "@/shared/api/websocket";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
@@ -19,7 +20,8 @@ import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
 import { WebSocketService } from "@/shared/api/websocket";
 import { useSlideLoader } from "@/entities/slide";
-import { selectUnclusteredQuestions } from "@/entities/question";
+import { getQuestionLikeCount, selectUnclusteredQuestions } from "@/entities/question";
+import type { NormalizedQuestion, QuestionCluster, QuestionSortMode } from "@/entities/question";
 import {
   useTimer,
   usePresenterFocusHighlight,
@@ -314,6 +316,8 @@ const PresenterRoomPage = () => {
     [presenterQuestions, clusters]
   );
 
+  const [questionSortMode, setQuestionSortMode] = useState<QuestionSortMode>("latest");
+
   // Clusters carry no timestamp; look each question's ts up by its content so
   // the cluster rows can show the same time as the flat question list.
   const questionTsByContent = useMemo(() => {
@@ -323,6 +327,33 @@ const PresenterRoomPage = () => {
     });
     return map;
   }, [presenterQuestions]);
+
+  const questionById = useMemo(() => {
+    const map = new Map<string, NormalizedQuestion>();
+    presenterQuestions.forEach((question) => {
+      if (question?.id) map.set(question.id, question);
+    });
+    return map;
+  }, [presenterQuestions]);
+
+  const sortedQuestionRows = useMemo(
+    () =>
+      sortPresenterQuestionRows({
+        clusters,
+        questions: clusters.length > 0 ? unclusteredQuestions : presenterQuestions,
+        questionById,
+        sortMode: questionSortMode,
+        tsByContent: questionTsByContent,
+      }),
+    [
+      clusters,
+      presenterQuestions,
+      questionById,
+      questionSortMode,
+      questionTsByContent,
+      unclusteredQuestions,
+    ]
+  );
 
   const [questionTab, setQuestionTab] = useState<"unanswered" | "completed">("unanswered");
 
@@ -469,12 +500,7 @@ const PresenterRoomPage = () => {
         showFeedback={quickSettings.feedback}
         feedbackContent={feedbackContent}
         showUnlockToast={showUnlockToast}
-        afterSlideContent={
-          <SlideNotesPanel
-            notes={currentSlideNotes}
-            readOnly
-          />
-        }
+        afterSlideContent={<SlideNotesPanel notes={currentSlideNotes} readOnly />}
       />
 
       {/* 🔹 우측: 빠른 설정 + 실시간 질문 */}
@@ -508,7 +534,12 @@ const PresenterRoomPage = () => {
 
         {/* === 실시간 질문 섹션 === */}
         <QuestionSection>
-          <Title>실시간 질문</Title>
+          <QuestionHeaderBar>
+            <Title>실시간 질문</Title>
+            {questionTab === "unanswered" && (
+              <QuestionSortDropdown value={questionSortMode} onChange={setQuestionSortMode} />
+            )}
+          </QuestionHeaderBar>
           <QuestionTabs value={questionTab} onChange={setQuestionTab} />
           <QuestionScrollArea>
             {questionTab === "completed" ? (
@@ -519,19 +550,35 @@ const PresenterRoomPage = () => {
               />
             ) : (
               <>
-                {clusters.length > 0 && (
-                  <ClusterQuestionList
-                    clusters={clusters}
-                    isExpanded={isExpanded}
-                    toggleExpand={toggleExpand}
-                    onComplete={completeQuestion}
-                    onDelete={deleteQuestion}
-                    tsByContent={questionTsByContent}
-                  />
-                )}
-                {(clusters.length === 0 || unclusteredQuestions.length > 0) && (
+                {sortedQuestionRows.length > 0 ? (
+                  sortedQuestionRows.map((row) =>
+                    row.type === "cluster" ? (
+                      <ClusterQuestionList
+                        key={row.key}
+                        clusters={[row.cluster]}
+                        isExpanded={isExpanded}
+                        toggleExpand={toggleExpand}
+                        onComplete={completeQuestion}
+                        onDelete={deleteQuestion}
+                        tsByContent={questionTsByContent}
+                        questionById={questionById}
+                      />
+                    ) : (
+                      <QuestionList
+                        key={row.key}
+                        questions={[row.question]}
+                        loading={false}
+                        error={null}
+                        currentSlide={currentSlide}
+                        onSelectSlide={handleSelectQuestionSlide}
+                        onComplete={completeQuestion}
+                        onDelete={deleteQuestion}
+                      />
+                    )
+                  )
+                ) : (
                   <QuestionList
-                    questions={clusters.length > 0 ? unclusteredQuestions : presenterQuestions}
+                    questions={[]}
                     loading={questionsLoading}
                     error={questionsError}
                     currentSlide={currentSlide}
@@ -556,11 +603,114 @@ const PresenterRoomPage = () => {
 
 export default PresenterRoomPage;
 
+type PresenterQuestionRow =
+  | {
+      type: "cluster";
+      key: string;
+      cluster: QuestionCluster;
+      likeScore: number;
+      latestTs: number;
+    }
+  | {
+      type: "question";
+      key: string;
+      question: NormalizedQuestion;
+      likeScore: number;
+      latestTs: number;
+    };
+
+const clusterKey = (cluster: QuestionCluster) =>
+  cluster.clusterId ?? cluster.representativeQuestionId ?? cluster.representative;
+
+const clusterLikeScore = (
+  cluster: QuestionCluster,
+  questionById: Map<string, NormalizedQuestion>
+) => {
+  const scoreFromIds = cluster.questionIds.reduce(
+    (sum, questionId) => sum + getQuestionLikeCount(questionById.get(questionId) ?? null),
+    0
+  );
+  if (scoreFromIds > 0) return scoreFromIds;
+
+  return (
+    cluster.questions?.reduce((sum, question) => {
+      const likeCount = Number(question.likeCount);
+      return sum + (Number.isFinite(likeCount) ? Math.max(0, likeCount) : 0);
+    }, 0) ?? 0
+  );
+};
+
+const clusterLatestTs = (
+  cluster: QuestionCluster,
+  tsByContent: Map<string, number>,
+  questionById: Map<string, NormalizedQuestion>
+) => {
+  const questionTs =
+    cluster.questionIds
+      .map((questionId) => Number(questionById.get(questionId)?.ts))
+      .filter(Number.isFinite) ?? [];
+  cluster.questions?.forEach((question) => {
+    const ts = Number(question.ts);
+    if (Number.isFinite(ts)) questionTs.push(ts);
+  });
+  const representativeTs = Number(tsByContent.get(cluster.representative));
+  if (Number.isFinite(representativeTs)) questionTs.push(representativeTs);
+  return questionTs.length > 0 ? Math.max(...questionTs) : 0;
+};
+
+const sortPresenterQuestionRows = ({
+  clusters,
+  questions,
+  questionById,
+  sortMode,
+  tsByContent,
+}: {
+  clusters: QuestionCluster[];
+  questions: NormalizedQuestion[];
+  questionById: Map<string, NormalizedQuestion>;
+  sortMode: QuestionSortMode;
+  tsByContent: Map<string, number>;
+}) => {
+  const rows: PresenterQuestionRow[] = [
+    ...clusters.map((cluster) => ({
+      type: "cluster" as const,
+      key: `cluster-${clusterKey(cluster)}`,
+      cluster,
+      likeScore: clusterLikeScore(cluster, questionById),
+      latestTs: clusterLatestTs(cluster, tsByContent, questionById),
+    })),
+    ...questions.map((question) => ({
+      type: "question" as const,
+      key: `question-${question.id}`,
+      question,
+      likeScore: getQuestionLikeCount(question),
+      latestTs: Number(question.ts) || 0,
+    })),
+  ];
+
+  if (sortMode === "popular") {
+    return rows.sort((a, b) => {
+      const likeDiff = b.likeScore - a.likeScore;
+      if (likeDiff !== 0) return likeDiff;
+      return b.latestTs - a.latestTs;
+    });
+  }
+
+  return rows.sort((a, b) => b.latestTs - a.latestTs);
+};
+
 // 실시간 질문 섹션 스타일 — 패널 하단까지 차오르도록 flex:1
 const QuestionSection = styled(Section)`
   position: relative;
   flex: 1;
   min-height: 40vh;
+`;
+
+const QuestionHeaderBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 `;
 
 const LockButtonWrapper = styled.div`

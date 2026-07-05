@@ -1,5 +1,6 @@
 import React from "react";
-import type { QuestionCluster } from "@/entities/question";
+import { getQuestionLikeCount } from "@/entities/question";
+import type { NormalizedQuestion, QuestionCluster } from "@/entities/question";
 import {
   LiveBox,
   QuestionContainer,
@@ -8,11 +9,15 @@ import {
   Time,
   Content,
   StatusMessage,
+  LikeAmount,
+  LikeBadge,
+  LikeIcon,
 } from "./QuestionList.styles";
 import {
   ActionButton,
   ActionGroup,
   ClusterItem,
+  ClusterQuestionFrame,
   GroupTag,
   SubQuestion,
   ClusterToggle,
@@ -26,6 +31,7 @@ interface ClusterQuestionListProps {
   onComplete?: (questionId: string) => void;
   onDelete?: (questionId: string) => void;
   tsByContent?: Map<string, number>;
+  questionById?: Map<string, NormalizedQuestion>;
 }
 
 type ClusterDisplayQuestion = {
@@ -33,6 +39,7 @@ type ClusterDisplayQuestion = {
   content: string;
   slide: number;
   ts?: number;
+  likeCount?: number;
 };
 
 const formatTimestamp = (ts: number | null | undefined) => {
@@ -56,6 +63,13 @@ const ChevronIcon = ({ up }: { up: boolean }) => (
   </Chevron>
 );
 
+const QuestionLikeBadge = ({ count }: { count: number }) => (
+  <LikeBadge aria-label={`좋아요 ${count}개`} title={`좋아요 ${count}개`}>
+    <LikeIcon aria-hidden="true">👍</LikeIcon>
+    <LikeAmount>{count}</LikeAmount>
+  </LikeBadge>
+);
+
 const ClusterQuestionList = ({
   clusters,
   isExpanded,
@@ -63,6 +77,7 @@ const ClusterQuestionList = ({
   onComplete,
   onDelete,
   tsByContent,
+  questionById,
 }: ClusterQuestionListProps) => {
   const [actedQuestionIds, setActedQuestionIds] = React.useState<Set<string>>(new Set());
 
@@ -90,19 +105,30 @@ const ClusterQuestionList = ({
 
   const questionsFor = (cluster: QuestionCluster): ClusterDisplayQuestion[] => {
     if (Array.isArray(cluster.questions) && cluster.questions.length > 0) {
-      return cluster.questions.map((question) => ({
-        id: question.id,
-        content: question.content,
-        slide: question.slide,
-        ts: question.ts,
-      }));
+      return cluster.questions.map((question) => {
+        const liveQuestion = questionById?.get(question.id);
+        return {
+          id: question.id,
+          content: liveQuestion?.content ?? question.content,
+          slide: liveQuestion?.slide ?? question.slide,
+          ts: liveQuestion?.ts ?? question.ts,
+          likeCount: getQuestionLikeCount(liveQuestion ?? question),
+        };
+      });
     }
 
-    return cluster.questionIds.map((id, index) => ({
-      id,
-      content: index === 0 ? cluster.representative : (cluster.samples[index] ?? ""),
-      slide: cluster.slides[index] ?? cluster.slides[0] ?? 1,
-    }));
+    return cluster.questionIds.map((id, index) => {
+      const liveQuestion = questionById?.get(id);
+      const fallbackContent =
+        index === 0 ? cluster.representative : (cluster.samples[index] ?? "");
+      return {
+        id,
+        content: liveQuestion?.content ?? fallbackContent,
+        slide: liveQuestion?.slide ?? cluster.slides[index] ?? cluster.slides[0] ?? 1,
+        ts: liveQuestion?.ts,
+        likeCount: getQuestionLikeCount(liveQuestion ?? null),
+      };
+    });
   };
 
   if (clusters.length === 0) {
@@ -130,6 +156,13 @@ const ClusterQuestionList = ({
             formatTimestamp(representativeQuestion?.ts) || timeFor(representativeText);
           const subQuestions = questions.filter((question) => question.id !== representativeId);
           const relatedQuestionIds = questions.map((question) => question.id);
+          const summedLikeCount = questions.reduce(
+            (sum, question) => sum + getQuestionLikeCount(question),
+            0
+          );
+          const clusterLikeCount =
+            summedLikeCount > 0 ? summedLikeCount : getQuestionLikeCount(cluster);
+          const representativeLikeCount = getQuestionLikeCount(representativeQuestion ?? null);
           const isGroup = cluster.count > 1;
           const expanded = isGroup && isExpanded(key);
           const representativeActed = representativeId
@@ -139,11 +172,15 @@ const ClusterQuestionList = ({
           if (!isGroup) {
             return (
               <ClusterItem key={key}>
-                <QuestionHeader>
-                  <SlideTag as="div" $active={false} style={{ cursor: "default" }}>
-                    슬라이드 {representativeSlide}
-                  </SlideTag>
-                  {representativeTime && <Time>{representativeTime}</Time>}
+                <ClusterQuestionFrame>
+                  <QuestionHeader>
+                    <SlideTag as="div" $active={false} style={{ cursor: "default" }}>
+                      슬라이드 {representativeSlide}
+                    </SlideTag>
+                    {representativeTime && <Time>{representativeTime}</Time>}
+                    <QuestionLikeBadge count={representativeLikeCount} />
+                  </QuestionHeader>
+                  <Content>{representativeText}</Content>
                   <ActionGroup>
                     <ActionButton
                       type="button"
@@ -168,17 +205,20 @@ const ClusterQuestionList = ({
                       완료
                     </ActionButton>
                   </ActionGroup>
-                </QuestionHeader>
-                <Content>{representativeText}</Content>
+                </ClusterQuestionFrame>
               </ClusterItem>
             );
           }
 
           return (
             <ClusterItem key={key}>
-              <QuestionHeader>
-                <GroupTag>비슷한 질문들</GroupTag>
-                {representativeTime && <Time>{representativeTime}</Time>}
+              <ClusterQuestionFrame>
+                <QuestionHeader>
+                  <GroupTag>비슷한 질문들</GroupTag>
+                  {representativeTime && <Time>{representativeTime}</Time>}
+                  <QuestionLikeBadge count={clusterLikeCount} />
+                </QuestionHeader>
+                <Content>{representativeText}</Content>
                 <ActionGroup>
                   <ActionButton
                     type="button"
@@ -203,9 +243,7 @@ const ClusterQuestionList = ({
                     완료
                   </ActionButton>
                 </ActionGroup>
-              </QuestionHeader>
-
-              <Content>{representativeText}</Content>
+              </ClusterQuestionFrame>
 
               {expanded &&
                 subQuestions.map((question) => {
@@ -219,28 +257,29 @@ const ClusterQuestionList = ({
                           슬라이드 {question.slide}
                         </SlideTag>
                         {timestamp && <Time>{timestamp}</Time>}
-                        <ActionGroup>
-                          <ActionButton
-                            type="button"
-                            $variant="delete"
-                            aria-label="질문 삭제"
-                            disabled={acted}
-                            onClick={() => runAction(question.id, onDelete)}
-                          >
-                            삭제
-                          </ActionButton>
-                          <ActionButton
-                            type="button"
-                            $variant="complete"
-                            aria-label="질문 완료"
-                            disabled={acted}
-                            onClick={() => runAction(question.id, onComplete)}
-                          >
-                            완료
-                          </ActionButton>
-                        </ActionGroup>
+                        <QuestionLikeBadge count={getQuestionLikeCount(question)} />
                       </QuestionHeader>
                       <Content>{question.content}</Content>
+                      <ActionGroup>
+                        <ActionButton
+                          type="button"
+                          $variant="delete"
+                          aria-label="질문 삭제"
+                          disabled={acted}
+                          onClick={() => runAction(question.id, onDelete)}
+                        >
+                          삭제
+                        </ActionButton>
+                        <ActionButton
+                          type="button"
+                          $variant="complete"
+                          aria-label="질문 완료"
+                          disabled={acted}
+                          onClick={() => runAction(question.id, onComplete)}
+                        >
+                          완료
+                        </ActionButton>
+                      </ActionGroup>
                     </SubQuestion>
                   );
                 })}

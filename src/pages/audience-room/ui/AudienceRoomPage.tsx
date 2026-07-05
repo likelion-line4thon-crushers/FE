@@ -100,6 +100,7 @@ const AudienceRoomPage = () => {
     questionsLoading,
     questionsError,
     submitQuestion,
+    toggleQuestionLike,
     handleIncomingQuestion,
     questionTopics,
   } = useAudienceQuestions({ roomId, audienceId, currentSlide });
@@ -406,6 +407,7 @@ const AudienceRoomPage = () => {
           isWaiting={isQuestionListWaiting}
           waitingMessage={isQuestionListWaiting ? "질문을 불러오는 중입니다." : undefined}
           onSubmitQuestion={submitQuestion}
+          onToggleQuestionLike={toggleQuestionLike}
           canSubmit={isWebsocketReady && reactionsReady}
           isLocked={!quickSettings.question}
         />

@@ -14,6 +14,7 @@ import {
   upsertQuestion,
   buildQuestionTopics,
   applyQuestionStatusEvent,
+  applyQuestionLikeEvent,
 } from "@/entities/question";
 import type { NormalizedQuestion } from "@/entities/question";
 
@@ -79,9 +80,20 @@ const usePresenterQuestions = ({
   }, [roomId, enabled]);
 
   const handleIncomingQuestion = useCallback((payload: any) => {
+    const payloadType = payload?.type ?? payload?.data?.type;
+
     // Status events (QUESTION_COMPLETED / QUESTION_DELETED) arrive on the same channel
-    if (payload?.type === "QUESTION_COMPLETED" || payload?.type === "QUESTION_DELETED") {
+    if (payloadType === "QUESTION_COMPLETED" || payloadType === "QUESTION_DELETED") {
       setQuestions((prev) => applyQuestionStatusEvent(prev, payload));
+      return;
+    }
+
+    if (
+      payloadType === "QUESTION_LIKE_UPDATED" ||
+      payloadType === "QUESTION_LIKED" ||
+      payloadType === "QUESTION_UNLIKED"
+    ) {
+      setQuestions((prev) => applyQuestionLikeEvent(prev, payload));
       return;
     }
 
