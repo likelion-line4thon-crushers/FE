@@ -11,6 +11,7 @@ import {
   StartSessionButton,
   FeedbackQuestionButton,
 } from "./HeaderButtons";
+import { FeedbackQuestionModal } from "@/features/feedback-questions";
 import { leaveRoom } from "@/shared/api/room";
 import { canStartSessionAtom, presenterModeAtom } from "@/entities/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
@@ -112,6 +113,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const isPresenter = isPresenterRoom && presenterMode === "present";
 
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showFeedbackQuestionModal, setShowFeedbackQuestionModal] = useState(false);
   const [showPresenterStartWarning, setShowPresenterStartWarning] = useState(false);
   const [sessionStatus, setSessionStatus] = useState("waiting");
 
@@ -166,8 +168,9 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
     setShowShareModal(true);
   };
 
-  // TODO: 세션 후기 질문 작성 플로우 연결 (모달/페이지)는 추후 구현.
-  const handleFeedbackQuestionClick = () => {};
+  const handleFeedbackQuestionClick = () => {
+    setShowFeedbackQuestionModal(true);
+  };
 
   const handleStartSessionClick = () => {
     if (isPrep) {
@@ -266,6 +269,13 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
       {showShareModal && roomData && (
         <ShareModal roomData={roomData} onClose={() => setShowShareModal(false)} />
+      )}
+      {showFeedbackQuestionModal && (
+        <FeedbackQuestionModal
+          roomId={roomData?.roomId}
+          isOpen={showFeedbackQuestionModal}
+          onClose={() => setShowFeedbackQuestionModal(false)}
+        />
       )}
       {showPresenterStartWarning && (
         <SessionWarningModal
