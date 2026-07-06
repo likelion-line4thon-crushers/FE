@@ -122,7 +122,7 @@ const ReviewSlide = () => {
           setError(null);
         }
 
-        if (voice && !voice.hasQuestions) {
+        if (!voice || !voice.hasQuestions) {
           try {
             const data = await fetchFeedbackReport(roomId);
             if (canCommit()) {
