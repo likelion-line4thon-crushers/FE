@@ -88,3 +88,50 @@ export async function fetchFeedbackReport(roomId: string) {
     throw error;
   }
 }
+
+export type AudienceVoiceQuestion = {
+  questionId: number;
+  orderIndex: number;
+  questionText: string;
+  answers: string[];
+  summary: string;
+};
+
+export type AudienceVoiceReport = {
+  averageRating: number;
+  hasQuestions: boolean;
+  questions: AudienceVoiceQuestion[];
+};
+
+export async function fetchAudienceVoiceReport(
+  roomId: string
+): Promise<AudienceVoiceReport | null> {
+  if (!roomId) throw new Error("roomId is required");
+  try {
+    const response = await api.get(`/api/report/${roomId}/audience-voice`);
+    return response?.data?.data ?? null;
+  } catch (error: any) {
+    if (error?.response?.status === 400) {
+      log.warn("No audience-voice data available");
+      return null;
+    }
+    log.error("Failed to fetch audience-voice report", error);
+    throw error;
+  }
+}
+
+export async function downloadAudienceVoiceCsv(roomId: string): Promise<void> {
+  if (!roomId) throw new Error("roomId is required");
+  const response = await api.get(`/api/report/${roomId}/audience-voice/csv`, {
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "text/csv;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `audience-voice-${roomId}.csv`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+}
