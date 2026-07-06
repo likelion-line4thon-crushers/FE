@@ -259,12 +259,16 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
         {!isMain && (
           <Body>
-            {isAudienceView && sessionStatus !== "waiting" && (
-              <LiveBadge>
-                <img src={LiveIcon} alt="live" />
-                라이브 진행 중
-              </LiveBadge>
-            )}
+            {isAudienceView &&
+              sessionStatus !== "waiting" &&
+              (sessionStatus === "ended" || sessionStatus === "ENDED" ? (
+                <LiveBadge>종료된 세션</LiveBadge>
+              ) : (
+                <LiveBadge>
+                  <img src={LiveIcon} alt="live" />
+                  라이브 진행 중
+                </LiveBadge>
+              ))}
             {(isPrep || isPresenter) && <FileName>{fileName || "파일명 없음"}</FileName>}
           </Body>
         )}

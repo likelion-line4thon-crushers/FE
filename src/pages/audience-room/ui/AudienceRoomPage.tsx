@@ -23,6 +23,7 @@ import {
   audienceTokenAtom,
 } from "../model";
 import DelayAudience from "./DelayAudience";
+import SessionEndedAudience from "./SessionEndedAudience";
 import { roomIdAtom, deckIdAtom, totalPagesAtom, wsUrlAtom } from "@/entities/room";
 import { quickSettingsAtom, unlockSettingsAtom } from "@/entities/session";
 
@@ -175,6 +176,7 @@ const AudienceRoomPage = () => {
 
   const isQuestionListWaiting = questionsLoading && questions.length === 0;
   const isSessionWaiting = sessionStatus === "waiting";
+  const isSessionEnded = sessionStatus === "ended" || sessionStatus === "ENDED";
 
   useEffect(() => {
     if (hasShownAudienceJoinWarningRef.current) return;
@@ -309,6 +311,12 @@ const AudienceRoomPage = () => {
       await fullscreenElement.webkitRequestFullscreen();
     }
   };
+
+  // Audience opened the session URL after it already ended: same layout as the
+  // "live waiting" screen, only the message differs.
+  if (isSessionEnded) {
+    return <SessionEndedAudience placeholderCount={totalPages || 10} />;
+  }
 
   if (isSessionWaiting) {
     return (
