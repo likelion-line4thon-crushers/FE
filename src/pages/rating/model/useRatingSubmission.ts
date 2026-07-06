@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { submitFeedback } from "@/shared/api/feedback";
 import { submitFeedbackAnswers } from "@/shared/api/feedback-answers";
+import { markFeedbackSubmitted } from "./feedbackSubmissionMarker";
 
 export type SubmitPayload = {
   rating: number;
@@ -40,6 +41,9 @@ export function useRatingSubmission(
         if (payload.hasCustomQuestions) {
           await submitFeedbackAnswers(roomId, audienceId, audienceToken, payload.answers);
         }
+        // Remember this identity submitted, so a later revisit can warn that
+        // re-submitting will overwrite the existing feedback.
+        markFeedbackSubmitted(roomId, audienceId);
         return true;
       } catch {
         setError("제출에 실패했어요. 다시 시도해주세요.");
