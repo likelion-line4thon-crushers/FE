@@ -3,29 +3,42 @@ import type { ChangeEventHandler } from "react";
 import type { QuickSettings } from "@/entities/session";
 import websocketService from "@/shared/api/websocket";
 import AudienceSVG from "@/shared/assets/images/people.svg";
+import ChevronIcon from "@/shared/assets/images/chevron-down.svg";
 import {
   PanelWrapper,
   Section,
+  FillSection,
   Title,
+  SectionHeader,
+  SectionChevron,
+  CollapsibleBody,
+  CollapsibleInner,
+  PreviewFrame,
+  PreviewImage,
+  PreviewEmpty,
   AudienceCountWrapper,
+  AudienceChip,
   AudienceIcon,
   AudienceNum,
   AudienceCap,
   QuickTogglesGrid,
   ToggleBox,
+  ToggleText,
   ToggleLabel,
   ToggleDescription,
   ToggleInput,
 } from "./SettingsPanel.styles";
 import LiveWaitingBox from "./LiveWaitingBox";
 
+type SlideItem = string | null | { thumbnailUrl?: string };
+
 interface SettingsPanelProps {
   quickSettings: QuickSettings;
   onOptionChange?: (optionKey: keyof QuickSettings, value: boolean) => void;
   onUnlockChange?: (value: boolean) => void;
-  roomId?: string | null;
-  audienceCapacity?: number;
-  isWsReady?: boolean;
+  slides?: SlideItem[];
+  currentSlide?: number;
+  prepSettingsContent?: React.ReactNode;
 }
 
 interface AudienceCountPayload {
@@ -37,6 +50,7 @@ interface AudienceCountProps {
   audienceCapacity?: number;
   isWsReady?: boolean;
   initialAudienceCount?: number | null;
+  variant?: "panel" | "chip";
 }
 
 interface QuickSettingToggleProps {
@@ -47,45 +61,99 @@ interface QuickSettingToggleProps {
   disabled?: boolean;
 }
 
+interface CollapsibleSectionProps {
+  title: string;
+  defaultCollapsed?: boolean;
+  children: React.ReactNode;
+}
+
 const SettingsPanel = ({
   quickSettings,
   onOptionChange,
   onUnlockChange,
-  roomId,
-  audienceCapacity = 50,
-  isWsReady = false,
+  slides = [],
+  currentSlide = 0,
+  prepSettingsContent = null,
 }: SettingsPanelProps) => (
   <PanelWrapper>
-    <QuickSettingsSection
+    <NextSlidePreview slides={slides} currentSlide={currentSlide} />
+    <SessionSettingsSection
       quickSettings={quickSettings}
       onOptionChange={onOptionChange}
       onUnlockChange={onUnlockChange}
-      roomId={roomId}
-      audienceCapacity={audienceCapacity}
-      isWsReady={isWsReady}
+      prepSettingsContent={prepSettingsContent}
     />
     <LiveQuestionSection quickSettings={quickSettings} />
   </PanelWrapper>
 );
 
-const QuickSettingsSection = ({
+/* 접기/펼치기 가능한 섹션 셸 (prep/live 공용) */
+const CollapsibleSection = ({
+  title,
+  defaultCollapsed = false,
+  children,
+}: CollapsibleSectionProps) => {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
+  return (
+    <Section>
+      <SectionHeader
+        type="button"
+        onClick={() => setCollapsed((prev) => !prev)}
+        aria-expanded={!collapsed}
+      >
+        {title}
+        <SectionChevron src={ChevronIcon} alt="" aria-hidden="true" $collapsed={collapsed} />
+      </SectionHeader>
+      <CollapsibleBody $collapsed={collapsed} aria-hidden={collapsed}>
+        {/* inert: 접힌 상태에서 내부 컨트롤을 탭 순서/접근성 트리에서 제거 */}
+        <CollapsibleInner inert={collapsed}>{children}</CollapsibleInner>
+      </CollapsibleBody>
+    </Section>
+  );
+};
+
+const resolveSlideSrc = (slide: SlideItem): string | null => {
+  if (!slide) return null;
+  if (typeof slide === "string") return slide || null;
+  return slide.thumbnailUrl || null;
+};
+
+/* 다음 슬라이드 미리보기 (prep/live 공용) */
+const NextSlidePreview = ({
+  slides = [],
+  currentSlide = 0,
+}: {
+  slides?: SlideItem[];
+  currentSlide?: number;
+}) => {
+  const nextSrc = resolveSlideSrc(slides[currentSlide + 1]);
+  const hasNext = currentSlide + 1 < slides.length;
+
+  return (
+    <CollapsibleSection title="다음 슬라이드 미리보기">
+      <PreviewFrame>
+        {nextSrc ? (
+          <PreviewImage src={nextSrc} alt="다음 슬라이드 미리보기" />
+        ) : (
+          <PreviewEmpty>{hasNext ? "불러오는 중..." : "마지막 슬라이드입니다"}</PreviewEmpty>
+        )}
+      </PreviewFrame>
+    </CollapsibleSection>
+  );
+};
+
+const SessionSettingsSection = ({
   quickSettings = { sticker: true, question: true, feedback: true, unlock: true },
   onOptionChange = () => {},
   onUnlockChange = () => {},
-  roomId,
-  audienceCapacity,
-  isWsReady,
-}: SettingsPanelProps) => (
-  <Section>
-    <Title>빠른 설정</Title>
-    <AudienceCount roomId={roomId} audienceCapacity={audienceCapacity} isWsReady={isWsReady} />
+  prepSettingsContent,
+}: Pick<
+  SettingsPanelProps,
+  "quickSettings" | "onOptionChange" | "onUnlockChange" | "prepSettingsContent"
+>) => (
+  <CollapsibleSection title="세션 설정">
     <QuickTogglesGrid>
-      <QuickSettingToggle
-        label="리액션 스티커"
-        description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
-        checked={quickSettings.sticker}
-        onChange={(event) => onOptionChange?.("sticker", event.target.checked)}
-      />
       <QuickSettingToggle
         label="실시간 질문"
         description="청중이 실시간으로 질문을 남길 수 있습니다."
@@ -93,19 +161,20 @@ const QuickSettingsSection = ({
         onChange={(event) => onOptionChange?.("question", event.target.checked)}
       />
       <QuickSettingToggle
-        label="실시간 피드백"
-        description="수집된 청중의 반응을 실시간으로 분석합니다."
-        checked={quickSettings.feedback}
-        onChange={(event) => onOptionChange?.("feedback", event.target.checked)}
+        label="리액션 스티커"
+        description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
+        checked={quickSettings.sticker}
+        onChange={(event) => onOptionChange?.("sticker", event.target.checked)}
       />
       <QuickSettingToggle
-        label="다음 슬라이드 공개"
+        label="다음 구간 슬라이드 공개하기"
         description="청중이 다음 슬라이드 화면들을 미리 볼 수 있습니다."
         checked={quickSettings.unlock}
         onChange={(event) => onUnlockChange?.(event.target.checked)}
       />
+      {prepSettingsContent}
     </QuickTogglesGrid>
-  </Section>
+  </CollapsibleSection>
 );
 
 const AudienceCount = ({
@@ -113,6 +182,7 @@ const AudienceCount = ({
   audienceCapacity = 50,
   isWsReady = false,
   initialAudienceCount = null,
+  variant = "panel",
 }: AudienceCountProps) => {
   const storageKey = useMemo(() => {
     if (!roomId) return null;
@@ -189,15 +259,17 @@ const AudienceCount = ({
     return String(normalized).padStart(2, "0");
   }, [audienceCount, audienceCapacity]);
 
+  const Wrapper = variant === "chip" ? AudienceChip : AudienceCountWrapper;
+
   return (
-    <AudienceCountWrapper>
+    <Wrapper>
       <AudienceIcon src={AudienceSVG} alt="청중 아이콘" />
       <span>청중 수</span>
       <AudienceNum>
         {formattedAudienceCount}
         <AudienceCap>/{audienceCapacity}</AudienceCap>
       </AudienceNum>
-    </AudienceCountWrapper>
+    </Wrapper>
   );
 };
 
@@ -209,8 +281,10 @@ const QuickSettingToggle = ({
   disabled = false,
 }: QuickSettingToggleProps) => (
   <ToggleBox>
-    <ToggleLabel>{label}</ToggleLabel>
-    <ToggleDescription>{description}</ToggleDescription>
+    <ToggleText>
+      <ToggleLabel>{label}</ToggleLabel>
+      <ToggleDescription>{description}</ToggleDescription>
+    </ToggleText>
     <ToggleInput
       type="checkbox"
       checked={checked}
@@ -226,11 +300,11 @@ const LiveQuestionSection = ({
 }: {
   quickSettings?: QuickSettings;
 }) => (
-  <Section>
+  <FillSection>
     <Title>실시간 질문</Title>
     <LiveWaitingBox isQuestionEnabled={quickSettings.question} />
-  </Section>
+  </FillSection>
 );
 
 export default SettingsPanel;
-export { QuickSettingToggle, AudienceCount };
+export { QuickSettingToggle, AudienceCount, CollapsibleSection, NextSlidePreview };

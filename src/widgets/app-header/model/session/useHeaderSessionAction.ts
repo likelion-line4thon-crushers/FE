@@ -4,6 +4,7 @@ import { useSetAtom } from "jotai";
 import { presenterModeAtom } from "@/entities/room";
 import { startSession, closeSession } from "@/shared/api/room";
 import { sessionStartMarker } from "@/shared/config/storage-keys";
+import { SESSION_BEFORE_START_EVENT } from "@/shared/config/session-events";
 import {
   fetchTopSlideReport,
   fetchTopQuestionsReport,
@@ -13,6 +14,12 @@ import websocketService from "@/shared/api/websocket";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("header");
+
+const flushBeforeSessionStart = async () => {
+  const detail: { promises: Promise<unknown>[] } = { promises: [] };
+  window.dispatchEvent(new CustomEvent(SESSION_BEFORE_START_EVENT, { detail }));
+  await Promise.allSettled(detail.promises);
+};
 
 interface UseHeaderSessionActionParams {
   roomData: any;
@@ -65,6 +72,7 @@ export const useHeaderSessionAction = ({
       }
 
       try {
+        await flushBeforeSessionStart();
         await startSession(roomData.roomId);
         // 새로고침 시에도 발표 화면으로 복원되도록 시작 마커를 저장.
         sessionStartMarker.set(roomData.roomId);

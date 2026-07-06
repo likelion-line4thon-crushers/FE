@@ -7,9 +7,14 @@ const log = createLogger("rating");
 import Emoji3 from "@/shared/assets/images/emoji3.svg";
 import StarIcon from "@/shared/assets/images/star.svg";
 import StarCheckedIcon from "@/shared/assets/images/star_checked.svg";
-import { submitFeedback } from "@/shared/api/feedback";
 import { getOriginalSlideUrl } from "@/shared/api/presentation";
 import { resolveRatingSessionContext } from "../model/resolveRatingSessionContext";
+import { useRatingPdfDownload } from "../model/useRatingPdfDownload";
+import { useAudienceFeedbackForm } from "../model/useAudienceFeedbackForm";
+import { useRatingSubmission } from "../model/useRatingSubmission";
+import { QuestionAnswerList } from "./QuestionAnswerList";
+import { DownloadPopover } from "./DownloadPopover";
+import { RatingActionButtons } from "./RatingActionButtons";
 
 const RatingPage = () => {
   const { code } = useParams();
@@ -17,16 +22,13 @@ const RatingPage = () => {
   const location = useLocation();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [popoverDismissed, setPopoverDismissed] = useState(false);
   const [firstSlideUrl, setFirstSlideUrl] = useState<string | null>(null);
   const [loadingSlide, setLoadingSlide] = useState(false);
   const [identityWarningDismissed, setIdentityWarningDismissed] = useState(false);
 
   const clearAudienceSession = () => {
-    if (!code) {
-      return;
-    }
-
+    if (!code) return;
     try {
       sessionStorage.removeItem(`boini_audience_${code}`);
     } catch (error) {
@@ -34,18 +36,38 @@ const RatingPage = () => {
     }
   };
 
-  // * roomId, audienceId, deckId: route state → audience sessionStorage only
-  const { roomId, audienceId, deckId, hasIdentity } = useMemo(() => {
-    const context = resolveRatingSessionContext(code, location.state);
-    return context;
-  }, [location.state, code]);
+  const { roomId, audienceId, deckId, hasIdentity } = useMemo(
+    () => resolveRatingSessionContext(code, location.state),
+    [location.state, code]
+  );
+
+  const {
+    questions,
+    loading: loadingQuestions,
+    error: questionsError,
+    answers,
+    setAnswer,
+    hasCustomQuestions,
+    allAnswered,
+    buildAnswerList,
+  } = useAudienceFeedbackForm(roomId);
+
+  const {
+    availability: pdfDownloadAvailability,
+    downloading: pdfDownloading,
+    error: pdfDownloadError,
+    refreshAvailability,
+    downloadSlides,
+  } = useRatingPdfDownload({ roomId, audienceId, enabled: hasIdentity });
+
+  const { submit, submitting, error: submitError } = useRatingSubmission(roomId, audienceId);
+
+  const isDownloadEnabled = Boolean(pdfDownloadAvailability?.enabled);
+  const isComplete = rating > 0 && (hasCustomQuestions ? allAnswered : comment.trim().length > 0);
 
   // 첫 번째 슬라이드 로드
   useEffect(() => {
-    if (!roomId || !deckId) {
-      return;
-    }
-
+    if (!roomId || !deckId) return;
     const loadFirstSlide = async () => {
       setLoadingSlide(true);
       try {
@@ -58,47 +80,62 @@ const RatingPage = () => {
         setLoadingSlide(false);
       }
     };
-
     loadFirstSlide();
   }, [roomId, deckId]);
 
-  // 제출 핸들러
+  const buildPayload = () => ({
+    rating,
+    hasCustomQuestions,
+    answers: buildAnswerList(),
+    comment,
+  });
+
   const handleSubmit = async () => {
-    if (!rating || !roomId || !audienceId) {
-      log.warn("제출 불가: rating, roomId, audienceId 필요");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const result = await submitFeedback({
-        roomId,
-        audienceId,
-        rating,
-        comment: comment.trim(),
-      });
-
-      log.log("피드백 제출 성공:", result);
-
+    if (!isComplete) return;
+    const ok = await submit(buildPayload());
+    if (ok) {
       clearAudienceSession();
-
-      // 메인페이지로 이동
       navigate("/", { replace: true });
-    } catch (error) {
-      log.error("피드백 제출 실패:", error);
-      alert("피드백 제출에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  // 건너뛰기 핸들러
+  const handleDownload = async () => {
+    if (!isComplete) return;
+    const ok = await submit(buildPayload());
+    if (!ok) return;
+    const nextAvailability = await refreshAvailability();
+    if (!nextAvailability?.sessionEnded || !nextAvailability?.canDownload) {
+      alert("슬라이드 다운로드가 아직 허용되지 않았습니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    try {
+      await downloadSlides();
+      clearAudienceSession();
+      navigate("/", { replace: true });
+    } catch (error) {
+      log.error("슬라이드 다운로드 실패:", error);
+      alert("슬라이드 다운로드에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
   const handleSkip = () => {
     clearAudienceSession();
     navigate("/", { replace: true });
   };
 
   const showIdentityWarning = !hasIdentity && !identityWarningDismissed;
+  const showPopover = isDownloadEnabled && !popoverDismissed;
+
+  const identityWarning = showIdentityWarning ? (
+    <IdentityNotice role="status">
+      평가 세션 정보를 찾을 수 없습니다. 청중 입장 후 받은 링크나 방 상태로 다시 열어주세요.
+      <IdentityNoticeActions>
+        <DismissButton type="button" onClick={() => setIdentityWarningDismissed(true)}>
+          닫기
+        </DismissButton>
+      </IdentityNoticeActions>
+    </IdentityNotice>
+  ) : null;
 
   return (
     <MainLayout>
@@ -107,10 +144,10 @@ const RatingPage = () => {
         <SideInner />
       </Side>
 
-      {/* 중앙 영역 */}
+      {/* 중앙 영역: 좌측(썸네일 + 별점) / 우측(후기, 전체 높이) */}
       <CenterGrid>
-        {/* 왼쪽 상단 - 발표자료 첫 번째 슬라이드 */}
-        <Box>
+        {/* 좌측 상단 - 발표자료 첫 번째 슬라이드 */}
+        <ThumbnailBox>
           {loadingSlide ? (
             <div style={{ color: "#999", fontSize: "0.9vw" }}>로딩 중...</div>
           ) : firstSlideUrl ? (
@@ -118,21 +155,10 @@ const RatingPage = () => {
           ) : (
             <img src="https://via.placeholder.com/400x200.png?text=발표+썸네일" alt="썸네일" />
           )}
-        </Box>
+        </ThumbnailBox>
 
-        {/* 오른쪽 상단 - 감사 메시지 */}
-        <Box>
-          <ThanksText>
-            <img src={Emoji3} alt="감사 로고" />
-            <div>
-              세션에 참여해주셔서 감사합니다! <br />
-              함께해서 즐거웠어요 :)
-            </div>
-          </ThanksText>
-        </Box>
-
-        {/* 왼쪽 하단 - 별점 */}
-        <Box>
+        {/* 좌측 하단 - 별점 */}
+        <StarRatingBox>
           <RatingBox>
             <RatingTitle>오늘의 세션, 잘 보였나요?</RatingTitle>
             <Stars>
@@ -147,13 +173,7 @@ const RatingPage = () => {
             </Stars>
             {rating > 0 && (
               <RatingText>
-                <RatingScore>
-                  {rating === 1 && "1점"}
-                  {rating === 2 && "2점"}
-                  {rating === 3 && "3점"}
-                  {rating === 4 && "4점"}
-                  {rating === 5 && "5점"}
-                </RatingScore>
+                <RatingScore>{`${rating}점`}</RatingScore>
                 <RatingDescription>
                   {rating === 1 && "(별로에요)"}
                   {rating === 2 && "(그저 그래요)"}
@@ -164,39 +184,72 @@ const RatingPage = () => {
               </RatingText>
             )}
           </RatingBox>
-        </Box>
+        </StarRatingBox>
 
-        {/* 오른쪽 하단 - 후기 입력 */}
-        <Box>
-          <FeedbackBox>
-            <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
-            {showIdentityWarning && (
-              <IdentityNotice role="status">
-                평가 세션 정보를 찾을 수 없습니다. 청중 입장 후 받은 링크나 방 상태로 다시
-                열어주세요.
-                <IdentityNoticeActions>
-                  <DismissButton type="button" onClick={() => setIdentityWarningDismissed(true)}>
-                    닫기
-                  </DismissButton>
-                </IdentityNoticeActions>
-              </IdentityNotice>
-            )}
-            <TextArea
-              placeholder="여러분의 한 마디가 세션 진행자에게 큰 도움이 됩니다 :)"
-              value={comment}
-              disabled={!hasIdentity}
-              onChange={(e) => setComment(e.target.value)}
-            />
-          </FeedbackBox>
-        </Box>
+        {/* 우측 - 후기 입력.
+            발표자가 질문을 작성한 경우: 질문 답변 폼(전체 높이).
+            질문이 없는 경우: 원본 디자인(감사 메시지 + 단일 후기 입력). */}
+        {loadingQuestions ? (
+          <QuestionsBox>
+            <div style={{ color: "#999", fontSize: "0.9vw" }}>질문 불러오는 중...</div>
+          </QuestionsBox>
+        ) : hasCustomQuestions ? (
+          <QuestionsBox>
+            <FeedbackBox>
+              <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
+              {questionsError && <ErrorNote role="alert">{questionsError}</ErrorNote>}
+              {identityWarning}
+              <QuestionAnswerList
+                questions={questions}
+                answers={answers}
+                onAnswerChange={setAnswer}
+                disabled={!hasIdentity}
+              />
+            </FeedbackBox>
+          </QuestionsBox>
+        ) : (
+          <>
+            <ThanksBox>
+              <ThanksText>
+                <img src={Emoji3} alt="감사 로고" />
+                <div>
+                  세션에 참여해주셔서 감사합니다! <br />
+                  함께해서 즐거웠어요 :)
+                </div>
+              </ThanksText>
+            </ThanksBox>
+            <CommentBox>
+              <FeedbackBox>
+                <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
+                {questionsError && <ErrorNote role="alert">{questionsError}</ErrorNote>}
+                {identityWarning}
+                <CommentTextArea
+                  placeholder="여러분의 한 마디가 세션 진행자에게 큰 도움이 됩니다 :)"
+                  value={comment}
+                  disabled={!hasIdentity}
+                  maxLength={2000}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+              </FeedbackBox>
+            </CommentBox>
+          </>
+        )}
 
         {/* 하단 버튼 영역 */}
-        <ButtonRow>
-          <SubmitButton disabled={!rating || isSubmitting || !hasIdentity} onClick={handleSubmit}>
-            {isSubmitting ? "제출 중..." : "제출"}
-          </SubmitButton>
-          <SkipButton onClick={handleSkip}>건너뛰기</SkipButton>
-        </ButtonRow>
+        <ButtonArea>
+          {showPopover && <DownloadPopover onClose={() => setPopoverDismissed(true)} />}
+          {(submitError || pdfDownloadError) && (
+            <ErrorNote role="alert">{submitError || pdfDownloadError}</ErrorNote>
+          )}
+          <RatingActionButtons
+            showDownload={isDownloadEnabled}
+            isComplete={isComplete && hasIdentity}
+            submitting={submitting || pdfDownloading}
+            onSubmit={handleSubmit}
+            onDownload={handleDownload}
+            onSkip={handleSkip}
+          />
+        </ButtonArea>
       </CenterGrid>
 
       {/* 우측 빗금 */}
@@ -251,11 +304,13 @@ const SideInner = styled.div`
   );
 `;
 
-/* 중앙 2×2 그리드 */
+/* 중앙 그리드: 좌측 2행(썸네일/별점) x 우측 1행(후기, 전체 높이) */
 const CenterGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1.4fr;
-  grid-template-rows: 1fr 1fr auto;
+  /* minmax(0, 1fr) lets the question row shrink below its content so the inner
+     list scrolls instead of expanding the grid past the viewport. */
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 1vw;
   width: 100%;
   height: 100%;
@@ -264,7 +319,7 @@ const CenterGrid = styled.div`
   box-sizing: border-box;
   border-left: 0.1vw solid #eaeaea;
   border-right: 0.1vw solid #eaeaea;
-  overflow-y: auto;
+  overflow: hidden;
 `;
 
 /* 각 박스 */
@@ -285,27 +340,77 @@ const Box = styled.div`
   }
 `;
 
-/* 감사 메시지 */
+/* 좌측 상단 - 썸네일 */
+const ThumbnailBox = styled(Box)`
+  grid-column: 1;
+  grid-row: 1;
+`;
+
+/* 좌측 하단 - 별점 */
+const StarRatingBox = styled(Box)`
+  grid-column: 1;
+  grid-row: 2;
+`;
+
+/* 우측 - 후기 (좌측 두 행 전체 높이) — 발표자 질문이 있을 때 */
+const QuestionsBox = styled(Box)`
+  grid-column: 2;
+  grid-row: 1 / 3;
+  justify-content: flex-start;
+  align-items: center;
+  overflow: hidden;
+`;
+
+/* 원본 디자인(질문 없음) - 우측 상단 감사 메시지 */
+const ThanksBox = styled(Box)`
+  grid-column: 2;
+  grid-row: 1;
+`;
+
+/* 원본 디자인(질문 없음) - 우측 하단 단일 후기 입력 */
+const CommentBox = styled(Box)`
+  grid-column: 2;
+  grid-row: 2;
+`;
+
 const ThanksText = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0vw;
   text-align: left;
 
   img {
-    width: 15vw;
+    width: 12vw;
     height: auto;
-    padding: 0;
-    margin-right: -3vw;
-    margin-left: -4vw;
+    margin-right: -2vw;
+    margin-left: -3vw;
   }
 
   div {
-    font-size: 1.5vw;
+    font-size: 1.3vw;
     font-weight: 400;
     color: #333;
     line-height: 1.5;
+  }
+`;
+
+const CommentTextArea = styled.textarea`
+  width: 100%;
+  flex: 1 1 0;
+  min-height: 10vh;
+  resize: none;
+  border: 0.1vw solid #eaeaea;
+  border-radius: 0.6vw;
+  padding: 1vh 1vw;
+  font-size: clamp(12px, 0.9vw, 15px);
+  background: #fff;
+  outline: none;
+  &:focus {
+    border-color: #e8541e;
+  }
+  &::placeholder {
+    color: #b5b5b5;
+    opacity: 0.8;
   }
 `;
 
@@ -360,9 +465,13 @@ const RatingDescription = styled.span`
 /* 후기 입력 */
 const FeedbackBox = styled.div`
   width: 85%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   gap: 1vh;
+  padding: 2vh 0;
+  box-sizing: border-box;
+  min-height: 0;
 `;
 
 const FeedbackTitle = styled.div`
@@ -398,52 +507,18 @@ const DismissButton = styled.button`
   cursor: pointer;
 `;
 
-const TextArea = styled.textarea`
-  width: 100%;
-  min-height: 12vh;
-  resize: none;
-  border: 0.1vw solid #eaeaea;
-  border-radius: 0.6vw;
-  padding: 1vh 1vw;
-  font-size: clamp(12px, 0.9vw, 15px);
-  background: #fff;
-  outline: none;
-  &:focus {
-    border-color: #e8541e;
-  }
-
-  &::placeholder {
-    color: #b5b5b5;
-    font-weight: 400;
-    opacity: 0.8; /* 흐릿한 효과 */
-    font-size: clamp(12px, 0.9vw, 15px);
-  }
-`;
-
 /* 버튼 영역 */
-const ButtonRow = styled.div`
+const ButtonArea = styled.div`
   grid-column: 1 / 3;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  gap: 1vw;
+  gap: 1vh;
   margin-top: 1vh;
 `;
 
-const SubmitButton = styled.button`
-  background-color: ${(props) => (props.disabled ? "#ccc" : "#e8541e")};
-  color: white;
-  border: none;
-  border-radius: 1.2vw;
-  padding: 1.2vh 2.4vw;
-  font-size: clamp(12px, 0.9vw, 16px);
-  cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
-  transition: background 0.2s ease;
-`;
-
-const SkipButton = styled(SubmitButton)`
-  background: #fff;
-  color: #555;
-  text-decoration: underline;
+const ErrorNote = styled.p`
+  color: #e8541e;
+  font-size: clamp(12px, 0.85vw, 14px);
+  margin: 0;
 `;

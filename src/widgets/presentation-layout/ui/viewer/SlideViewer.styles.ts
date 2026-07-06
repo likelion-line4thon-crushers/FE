@@ -254,6 +254,15 @@ export const ReactionButton = styled.button`
   }
 `;
 
+/* 발표 화면(외부 디스플레이) 리액션 노출 토글 — 라인 아이콘을 여백과 함께 중앙 배치 */
+export const BroadcastToggleButton = styled(ReactionButton)`
+  img {
+    width: 58%;
+    height: 58%;
+    object-fit: contain;
+  }
+`;
+
 /* 툴팁 */
 export const TooltipWrapper = styled.div`
   position: relative;

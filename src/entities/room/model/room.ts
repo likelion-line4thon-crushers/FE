@@ -14,6 +14,7 @@ export interface RoomData {
   qrPngBase64?: string;
   pdfId?: string;
   canStartSession?: boolean;
+  pdfDownloadEnabled?: boolean;
 }
 
 // ! Backend returns inconsistent field names (deckID vs deckId)

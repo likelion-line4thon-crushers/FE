@@ -4,10 +4,18 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import { useSetAtom } from "jotai";
 import { createLogger } from "@/shared/lib/logger";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
-import { PresentationLayout, SlideViewer, SettingsPanel } from "@/widgets/presentation-layout";
+import {
+  PresentationLayout,
+  SlideViewer,
+  SettingsPanel,
+  AudienceCount,
+  PdfDownloadPolicyControl,
+  BroadcastScreenControl,
+} from "@/widgets/presentation-layout";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
-import { useQuickSettingsStorage } from "@/entities/session";
+import { useQuickSettingsStorage, usePdfDownloadPolicy } from "@/entities/session";
 import { canStartSessionAtom } from "@/entities/room";
+import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
 import { storageKeys } from "@/shared/config/storage-keys";
 import { useChunkedPdfUpload } from "../model/useChunkedPdfUpload";
 import { usePdfStream } from "../model/usePdfStream";
@@ -15,6 +23,7 @@ import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
 import { createRoom } from "@/shared/api/room";
 import { fetchSlidesMeta, fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import websocketService from "@/shared/api/websocket";
+import { useBroadcastPublisher } from "@/shared/lib/broadcast";
 
 const log = createLogger("session-create");
 
@@ -22,7 +31,8 @@ const PresentationPrepPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { roomId: roomIdParam } = useParams();
-  const { pdfFile } = location.state || {};
+  const { presentationFile, pdfFile } = location.state || {};
+  const sourceFile = presentationFile || pdfFile;
   const initialRoomData = resolvePresenterRoomData(roomIdParam, location.state);
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -35,6 +45,16 @@ const PresentationPrepPage = () => {
 
   const [quickSettings, setQuickSettings] = useQuickSettingsStorage(quickSettingsStorageKey) as any;
   const [isPresenterWsReady, setIsPresenterWsReady] = useState(false);
+  const {
+    enabled: pdfDownloadEnabled,
+    saving: pdfDownloadPolicySaving,
+    error: pdfDownloadPolicyError,
+    setPolicyEnabled: setPdfDownloadPolicyEnabled,
+  } = usePdfDownloadPolicy({
+    roomId,
+    initialEnabled:
+      typeof roomData?.pdfDownloadEnabled === "boolean" ? roomData.pdfDownloadEnabled : undefined,
+  });
 
   const hasInitializedRef = useRef(false);
   const pendingQuickSettingsRef = useRef<any>({
@@ -144,6 +164,25 @@ const PresentationPrepPage = () => {
     [roomId, setQuickSettings]
   );
 
+  const handlePdfDownloadPolicyChange = useCallback(
+    async (enabled: boolean) => {
+      const savedEnabled = await setPdfDownloadPolicyEnabled(enabled);
+      if (typeof savedEnabled !== "boolean") return;
+
+      setRoomData((prev: any) => {
+        if (!prev || prev.pdfDownloadEnabled === savedEnabled) return prev;
+        const next = { ...prev, pdfDownloadEnabled: savedEnabled };
+        try {
+          sessionStorage.setItem("boini_room", JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+        return next;
+      });
+    },
+    [setPdfDownloadPolicyEnabled]
+  );
+
   useEffect(() => {
     if (!roomId || !presenterToken || !presenterWsUrl) {
       return undefined;
@@ -211,7 +250,7 @@ const PresentationPrepPage = () => {
   //     (BE 는 subscribe 시점 이전 이벤트를 버퍼링 후 flush 해주므로 안전.)
   //  3) meta 도 실패·pdfId 도 없으면 레거시 per-page API 로 마지막 폴백.
   useEffect(() => {
-    if (pdfFile) return;
+    if (sourceFile) return;
     if (!roomData?.roomId || !roomData?.deckId) return;
     if (restoredSlides !== null) return;
 
@@ -263,7 +302,7 @@ const PresentationPrepPage = () => {
 
     restore();
   }, [
-    pdfFile,
+    sourceFile,
     roomData?.roomId,
     roomData?.deckId,
     roomData?.totalPages,
@@ -274,13 +313,13 @@ const PresentationPrepPage = () => {
   // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
   useEffect(() => {
     if (hasInitializedRef.current) return;
-    // pdfFile 이 없는 경우(= 새로고침 복원)만 기존 roomData 로 skip. pdfFile 이 있으면
+    // sourceFile 이 없는 경우(= 새로고침 복원)만 기존 roomData 로 skip. sourceFile 이 있으면
     // stale roomData 가 있더라도 신규 업로드가 우선.
-    if (!pdfFile && roomData?.roomId) {
+    if (!sourceFile && roomData?.roomId) {
       hasInitializedRef.current = true;
       return;
     }
-    if (!pdfFile) {
+    if (!sourceFile) {
       navigate("/");
       return;
     }
@@ -303,7 +342,7 @@ const PresentationPrepPage = () => {
         // BE 는 totalPages >= 1 을 요구하므로 placeholder 로 1 을 보낸다.
         // 실제 총 페이지는 업로드 조립 완료 응답(ready.totalPages) 에서 확정된다.
         const room = await createRoom(1);
-        const ready = await uploadPdf(pdfFile, room.roomId, room.deckId);
+        const ready = await uploadPdf(sourceFile, room.roomId, room.deckId);
 
         const nextRoomData = {
           ...room,
@@ -312,6 +351,7 @@ const PresentationPrepPage = () => {
           pdfId: ready.pdfId,
           fileName: ready.fileName,
           canStartSession: false,
+          pdfDownloadEnabled: false,
         };
 
         setRoomData(nextRoomData);
@@ -332,15 +372,15 @@ const PresentationPrepPage = () => {
           });
         }
       } catch (err) {
-        log.error("PDF 업로드/스트림 준비 실패:", err);
+        log.error("발표 자료 업로드/스트림 준비 실패:", err);
         hasInitializedRef.current = false;
-        setFatalMessage("PDF 업로드에 실패했습니다. 다시 시도해주세요.");
+        setFatalMessage("발표 자료 업로드에 실패했습니다. 다시 시도해주세요.");
       }
     };
 
     run();
   }, [
-    pdfFile,
+    sourceFile,
     roomData?.roomId,
     roomIdParam,
     navigate,
@@ -392,8 +432,42 @@ const PresentationPrepPage = () => {
     return streamedSlides.map((s) => s ?? "");
   }, [restoredSlides, streamedSlides, totalPages]);
 
+  // 발표 화면(외부 디스플레이) 미러링 — 현재 슬라이드를 projector 창으로 브로드캐스트.
+  // projector 창에서의 클릭/키 입력은 nav 로 돌아와 발표자 슬라이드를 이동시킨다.
+  const { openScreen, isWindowManagementSupported } = useBroadcastPublisher({
+    roomId: roomId ? String(roomId) : null,
+    slides: displaySlides,
+    currentSlide,
+    onNavigate: (direction) =>
+      setCurrentSlide((prev) => {
+        const maxIndex = Math.max(displaySlides.length - 1, 0);
+        const next = direction === "next" ? prev + 1 : prev - 1;
+        return Math.min(Math.max(next, 0), maxIndex);
+      }),
+  });
+
+  const currentSlidePage = currentSlide + 1;
+  const { notesByPage, updateSlideNote, flushSlideNote } = usePresenterSlideNotes({
+    roomId,
+    deckId: roomData?.deckId || null,
+    presenterToken,
+    editable: true,
+  });
+  const currentSlideNotes = notesByPage[currentSlidePage] ?? "";
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent | globalThis.KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName;
+      if (
+        target?.isContentEditable ||
+        tagName === "INPUT" ||
+        tagName === "TEXTAREA" ||
+        tagName === "SELECT"
+      ) {
+        return;
+      }
+
       if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
         setCurrentSlide((prev) => Math.max(0, prev - 1));
       } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -417,7 +491,7 @@ const PresentationPrepPage = () => {
   if (totalPages === 0 && !restoredSlides) {
     const msg =
       uploadProgress.total > 0
-        ? `PDF 업로드 중... (${uploadProgress.sent}/${uploadProgress.total})`
+        ? `발표 자료 업로드 중... (${uploadProgress.sent}/${uploadProgress.total})`
         : "세션 자료 준비 중...";
     return <SessionLoadingOverlay message={msg} />;
   }
@@ -437,14 +511,45 @@ const PresentationPrepPage = () => {
         currentSlide={currentSlide}
         setCurrentSlide={setCurrentSlide}
         mode="prepare"
+        audienceCountSlot={
+          <AudienceCount
+            variant="chip"
+            roomId={roomId}
+            audienceCapacity={roomData?.count ?? 50}
+            isWsReady={isPresenterWsReady}
+          />
+        }
+        afterSlideContent={
+          <SlideNotesPanel
+            notes={currentSlideNotes}
+            onChange={(notes) => updateSlideNote(currentSlidePage, notes)}
+            onBlur={() => flushSlideNote(currentSlidePage)}
+          />
+        }
       />
       <SettingsPanel
         quickSettings={quickSettings}
         onOptionChange={handleOptionChange}
         onUnlockChange={handleUnlockChange}
-        roomId={roomId}
-        audienceCapacity={roomData?.count ?? 50}
-        isWsReady={isPresenterWsReady}
+        slides={displaySlides}
+        currentSlide={currentSlide}
+        prepSettingsContent={
+          <>
+            <PdfDownloadPolicyControl
+              enabled={pdfDownloadEnabled}
+              saving={pdfDownloadPolicySaving}
+              error={pdfDownloadPolicyError}
+              onChange={(enabled) => {
+                void handlePdfDownloadPolicyChange(enabled);
+              }}
+            />
+            <BroadcastScreenControl
+              onOpen={openScreen}
+              windowManagementSupported={isWindowManagementSupported}
+              disabled={!roomId}
+            />
+          </>
+        }
       />
     </PresentationLayout>
   );

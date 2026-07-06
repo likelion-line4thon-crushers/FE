@@ -30,7 +30,7 @@ test.describe("Live presenter and audience interactions", () => {
 
     await seedPresenterSession(presenterPage);
     const scenario = await openPresenterLive(presenterPage);
-    await expect(presenterPage.getByText("빠른 설정")).toBeVisible();
+    await expect(presenterPage.getByText("청중 수")).toBeVisible();
 
     await clearSentMessages(presenterPage);
     await presenterPage.keyboard.press("ArrowRight");
@@ -158,6 +158,9 @@ test.describe("Live presenter and audience interactions", () => {
     await expect(audiencePage).toHaveURL(/\/audience\/ABCD\/rating$/);
 
     await audiencePage.getByAltText("5 star").click();
+    await audiencePage
+      .getByPlaceholder("여러분의 한 마디가 세션 진행자에게 큰 도움이 됩니다 :)")
+      .fill("좋은 발표였습니다.");
     await audiencePage.getByRole("button", { name: "제출" }).click();
     await expect(audiencePage).toHaveURL(/\/$/);
 

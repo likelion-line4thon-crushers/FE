@@ -3,6 +3,8 @@ import styled from "styled-components";
 import ShareIconDefault from "@/shared/assets/images/share.png";
 import PlayIconDefault from "@/shared/assets/images/play2.svg";
 import ExitIconDefault from "@/shared/assets/images/getout.png";
+import FilesIconDefault from "@/shared/assets/images/files.svg";
+import DownloadCsvIconDefault from "@/shared/assets/images/AI/download-csv.svg";
 
 const BasePillButton = styled.button`
   display: inline-flex;
@@ -122,6 +124,30 @@ export const ShareButton = ({
   children = "공유하기",
   iconSrc = ShareIconDefault,
   iconAlt = typeof children === "string" ? children : "공유하기",
+  ref,
+  ...props
+}: ButtonProps) => (
+  <BasePillButton ref={ref} {...props}>
+    {renderContent(iconSrc, iconAlt, children)}
+  </BasePillButton>
+);
+
+export const FeedbackQuestionButton = ({
+  children = "세션 후기 질문 작성",
+  iconSrc = FilesIconDefault,
+  iconAlt = typeof children === "string" ? children : "세션 후기 질문 작성",
+  ref,
+  ...props
+}: ButtonProps) => (
+  <BasePillButton ref={ref} {...props}>
+    {renderContent(iconSrc, iconAlt, children)}
+  </BasePillButton>
+);
+
+export const CsvDownloadButton = ({
+  children = "CSV 파일 다운로드",
+  iconSrc = DownloadCsvIconDefault,
+  iconAlt = typeof children === "string" ? children : "CSV 파일 다운로드",
   ref,
   ...props
 }: ButtonProps) => (

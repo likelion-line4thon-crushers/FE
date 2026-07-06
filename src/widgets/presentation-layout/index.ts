@@ -6,6 +6,8 @@ export {
   LiveStatusText,
   LiveWaitingBox,
   AudienceCount,
+  CollapsibleSection,
+  NextSlidePreview,
   HighlightedSlideStyles,
 } from "./ui";
 export * from "./ui";

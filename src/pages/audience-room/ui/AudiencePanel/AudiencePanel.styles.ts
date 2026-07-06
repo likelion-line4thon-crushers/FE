@@ -4,7 +4,7 @@ export const PanelWrapper = styled.div`
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   width: 17vw;
-  height: 95%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   border: 1px solid #eaeaea;
@@ -151,6 +151,56 @@ export const QuestionText = styled.div`
   text-align: left;
 `;
 
+export const LikeActionRow = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+`;
+
+export const LikeButton = styled.button<{ $active?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  border: 1px solid ${({ $active }) => ($active ? "#ff8400" : "#cbccc9")};
+  background: ${({ $active }) => ($active ? "#ff8400" : "#ffffff")};
+  color: #111111;
+  box-shadow: ${({ $active }) => ($active ? "0 2px 6px rgba(0, 0, 0, 0.1)" : "none")};
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? "#ff8400" : "#e7e8e5")};
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #303030;
+    outline-offset: 2px;
+  }
+`;
+
+export const LikeIcon = styled.span`
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 13px;
+`;
+
+export const LikeCount = styled.span`
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 13px;
+`;
+
 export const Scrollbar = styled.div`
   width: 0.31vw;
   background: #e0e0e0;
@@ -220,17 +270,15 @@ export const QuestionInput = styled.textarea<{ $isInputting?: boolean }>`
   outline: none;
   background: transparent;
   font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.35px;
   color: #333;
   resize: none;
-  min-height: 1.85vh;
-  max-height: 4.7vh;
-  line-height: 4vh;
-  padding: 0 10px;
-  height: 100%;
+  line-height: 1.5;
+  padding: 12px;
   text-align: left;
   box-sizing: border-box;
   overflow: hidden;
-  vertical-align: middle;
 
   &::placeholder {
     color: #999;
@@ -238,16 +286,14 @@ export const QuestionInput = styled.textarea<{ $isInputting?: boolean }>`
     font-size: 14px;
     font-style: normal;
     font-weight: 400;
-    line-height: 4vh;
+    line-height: 1.5;
     letter-spacing: -0.35px;
     text-align: left;
-
-    text-indent: 6px;
   }
 
   &:placeholder-shown {
     text-align: left;
-    line-height: 4vh;
+    line-height: 1.5;
   }
 
   &[disabled] {

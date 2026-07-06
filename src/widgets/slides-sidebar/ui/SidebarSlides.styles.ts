@@ -44,7 +44,7 @@ export const SlideThumb = styled.div<{ $active?: boolean; $waiting?: boolean; $l
           : "0.05vw solid #ddd"};
   border-radius: 0.2vw;
   background: ${(p) => (p.$waiting ? "#fff" : p.$locked ? "#fff" : p.$active ? "#303030" : "#fff")};
-  cursor: ${(p) => (p.$waiting || p.$locked ? "default" : "pointer")};
+  cursor: ${(p) => (p.$locked ? "not-allowed" : p.$waiting ? "default" : "pointer")};
   transition: 0.25s ease;
   box-shadow: ${(p) =>
     p.$active && !p.$waiting && !p.$locked ? "0 0.2vh 0.5vh rgba(0,0,0,0.1)" : "none"};

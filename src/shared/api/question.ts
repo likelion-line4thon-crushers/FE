@@ -1,9 +1,12 @@
 import api from "./api";
 import type { QuestionCluster } from "@/entities/question";
+import websocketService from "./websocket";
+import { v4 as uuidv4 } from "uuid";
 
 interface FetchQuestionsOptions {
   fromTs?: number;
   slide?: number;
+  audienceId?: string | null;
 }
 
 export async function fetchRoomQuestions(roomId: string, options: FetchQuestionsOptions = {}) {
@@ -15,6 +18,9 @@ export async function fetchRoomQuestions(roomId: string, options: FetchQuestions
   }
   if (options.slide != null && !Number.isNaN(options.slide)) {
     searchParams.set("slide", String(options.slide));
+  }
+  if (options.audienceId) {
+    searchParams.set("audienceId", options.audienceId);
   }
 
   const query = searchParams.toString();
@@ -48,4 +54,26 @@ export async function fetchCurrentClusters(roomId: string): Promise<QuestionClus
   } catch {
     return [];
   }
+}
+
+export function sendQuestionLike({
+  roomId,
+  questionId,
+  audienceId,
+  liked,
+}: {
+  roomId: string;
+  questionId: string;
+  audienceId: string;
+  liked: boolean;
+}) {
+  websocketService.send(
+    `/app/p/${roomId}/question.like`,
+    {
+      questionId,
+      audienceId,
+      liked,
+    },
+    { "Idempotency-Key": uuidv4() }
+  );
 }

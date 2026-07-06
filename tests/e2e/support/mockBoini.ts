@@ -12,6 +12,9 @@ export type BoiniScenario = {
   wsBaseUrl: string;
   fileName: string;
   pdfId: string;
+  sessionStatus: "waiting" | "live" | "ended";
+  pdfDownloadEnabled: boolean;
+  slideNotes: Array<{ page: number; notes: string }>;
 };
 
 type InstallApiMocksOptions = {
@@ -52,6 +55,12 @@ export const defaultScenario: BoiniScenario = {
   wsBaseUrl: "http://127.0.0.1:5174",
   fileName: "demo.pdf",
   pdfId: "pdf-test-1",
+  sessionStatus: "live",
+  pdfDownloadEnabled: true,
+  slideNotes: [
+    { page: 1, notes: "첫 번째 슬라이드 발표자 노트" },
+    { page: 2, notes: "두 번째 슬라이드 발표자 노트" },
+  ],
 };
 
 const resolveScenario = (scenario?: Partial<BoiniScenario>): BoiniScenario => ({
@@ -171,15 +180,78 @@ export const installApiMocks = async (
   }: InstallApiMocksOptions = {}
 ) => {
   const resolvedScenario = resolveScenario(scenario);
+  let currentSlideNotes = [...resolvedScenario.slideNotes];
+  const submittedFeedbackAudienceIds = new Set<string>();
 
   await context.route("**/*", async (route) => {
     const url = route.request().url();
     const method = route.request().method();
-    const { roomId, deckId, code, audienceId, audienceToken, totalPages, wsBaseUrl, pdfId } =
-      resolvedScenario;
+    const {
+      roomId,
+      deckId,
+      code,
+      audienceId,
+      audienceToken,
+      totalPages,
+      wsBaseUrl,
+      pdfId,
+      sessionStatus,
+      pdfDownloadEnabled,
+    } = resolvedScenario;
 
     if (url.includes(`/api/rooms/${roomId}/session/start`) && method === "POST") {
       await route.fulfill({ json: { data: { started: true } } });
+      return;
+    }
+
+    if (url.includes(`/api/rooms/${roomId}/session/status`) && method === "GET") {
+      await route.fulfill({ json: { data: { roomId, status: sessionStatus } } });
+      return;
+    }
+
+    if (url.includes(`/api/rooms/${roomId}/pdf-download-policy`) && method === "PATCH") {
+      const body = route.request().postDataJSON?.() ?? {};
+      await route.fulfill({ json: { data: { enabled: Boolean(body.enabled) } } });
+      return;
+    }
+
+    if (url.includes(`/api/rooms/${roomId}/pdf-download/availability`) && method === "GET") {
+      const requestUrl = new URL(url);
+      const requestedAudienceId = requestUrl.searchParams.get("audienceId") ?? "";
+      const hasSubmittedFeedback = submittedFeedbackAudienceIds.has(requestedAudienceId);
+      await route.fulfill({
+        json: {
+          data: {
+            enabled: pdfDownloadEnabled,
+            submittedFeedback: hasSubmittedFeedback,
+            sessionEnded: true,
+            canDownload: pdfDownloadEnabled && hasSubmittedFeedback,
+          },
+        },
+      });
+      return;
+    }
+
+    if (url.includes(`/api/rooms/${roomId}/pdf-download`) && method === "GET") {
+      const requestUrl = new URL(url);
+      const requestedAudienceId = requestUrl.searchParams.get("audienceId") ?? "";
+      if (!pdfDownloadEnabled || !submittedFeedbackAudienceIds.has(requestedAudienceId)) {
+        await route.fulfill({
+          status: 403,
+          json: { message: "PDF download is not available" },
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/pdf",
+        headers: {
+          "content-disposition": 'attachment; filename="demo.pdf"',
+          "access-control-expose-headers": "content-disposition",
+        },
+        body: "%PDF-1.4\n% mock pdf\n",
+      });
       return;
     }
 
@@ -245,6 +317,13 @@ export const installApiMocks = async (
     }
 
     if (url.includes(`/api/feedbacks/rooms/${roomId}/feedbacks`) && method === "POST") {
+      const body = route.request().postDataJSON?.() ?? {};
+      const submittedAudienceId = String(body.audienceId ?? "");
+      const submittedComment = String(body.comment ?? "").trim();
+      const submittedRating = Number(body.rating);
+      if (submittedAudienceId && submittedComment && submittedRating >= 1 && submittedRating <= 5) {
+        submittedFeedbackAudienceIds.add(submittedAudienceId);
+      }
       await route.fulfill({ json: { data: { saved: true } } });
       return;
     }
@@ -308,6 +387,42 @@ export const installApiMocks = async (
         url: svgDataUrl(`Slide ${i + 1}`),
       }));
       await route.fulfill({ json: { success: true, data: { pages } } });
+      return;
+    }
+
+    if (url.includes(`/api/presentations/${roomId}/${deckId}/notes`) && method === "GET") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            roomId,
+            deckId,
+            notes: currentSlideNotes,
+          },
+        },
+      });
+      return;
+    }
+
+    if (url.includes(`/api/presentations/${roomId}/${deckId}/notes/`) && method === "PUT") {
+      const match = url.match(/notes\/(\d+)/);
+      const page = match ? Number(match[1]) : 1;
+      const body = route.request().postDataJSON?.() ?? {};
+      const notes = typeof body.notes === "string" ? body.notes.trim() : "";
+      currentSlideNotes = currentSlideNotes.filter((item) => item.page !== page);
+      if (notes) {
+        currentSlideNotes.push({ page, notes });
+        currentSlideNotes.sort((a, b) => a.page - b.page);
+      }
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            page,
+            notes,
+          },
+        },
+      });
       return;
     }
 
@@ -387,8 +502,10 @@ export const seedPresenterSession = async (
           fileName: nextScenario.fileName,
           pdfId: nextScenario.pdfId,
           canStartSession: true,
+          pdfDownloadEnabled: nextScenario.pdfDownloadEnabled,
         })
       );
+      sessionStorage.setItem(`boini_session_started_${nextScenario.roomId}`, "true");
 
       if (nextQuickSettings) {
         sessionStorage.setItem(nextQuickSettingsKey, JSON.stringify(nextQuickSettings));
@@ -509,13 +626,16 @@ export const destinations = {
 
 export const openPresenterPrepare = async (page: Page, scenario?: Partial<BoiniScenario>) => {
   const resolvedScenario = resolveScenario(scenario);
-  await page.goto(`/rooms/${resolvedScenario.roomId}/prepare`);
+  await page.evaluate((roomId) => {
+    sessionStorage.removeItem(`boini_session_started_${roomId}`);
+  }, resolvedScenario.roomId);
+  await page.goto(`/rooms/${resolvedScenario.roomId}`);
   return resolvedScenario;
 };
 
 export const openPresenterLive = async (page: Page, scenario?: Partial<BoiniScenario>) => {
   const resolvedScenario = resolveScenario(scenario);
-  await page.goto(`/rooms/${resolvedScenario.roomId}/present`);
+  await page.goto(`/rooms/${resolvedScenario.roomId}`);
   return resolvedScenario;
 };
 

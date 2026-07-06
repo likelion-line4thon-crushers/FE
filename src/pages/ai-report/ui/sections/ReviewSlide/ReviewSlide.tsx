@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
+import { useSetAtom } from "jotai";
+import { audienceVoiceCsvEnabledAtom } from "@/entities/room";
 import { createLogger } from "@/shared/lib/logger";
-
-const log = createLogger("ai-report");
 import {
   ReviewSlideContainer,
   TotalContainer,
@@ -12,16 +12,27 @@ import {
   RatingRow,
   RatingScore,
   SummaryBoxContainer,
+  FeedbackListCardWrapper,
   CenterHeader,
   SmallDivider,
+  SectionHeaderRow,
+  SectionTitleWrap,
+  QuestionsContainer,
 } from "./ReviewSlide.styles";
 import { AITitle, ContentBox } from "../../summary";
 import SatisfyImage from "@/shared/assets/images/AI/Satisfy.png";
 import StarImage from "@/shared/assets/images/AI/Star.png";
-import RectangleImage from "@/shared/assets/images/AI/Rectangle.png";
 import GrayFaceImage from "@/shared/assets/images/AI/reviewslide_face.png";
-import { fetchFeedbackReport } from "@/shared/api/ai-report";
+import {
+  fetchFeedbackReport,
+  fetchAudienceVoiceReport,
+  type AudienceVoiceReport,
+} from "@/shared/api/ai-report";
 import { loadStoredRoomData, computeRoomInfo } from "../../../model/room-info";
+import { SatisfactionCard } from "./SatisfactionCard";
+import { QuestionVoiceCard } from "./QuestionVoiceCard";
+
+const log = createLogger("ai-report");
 
 interface FeedbackReport {
   averageRating?: number;
@@ -29,12 +40,18 @@ interface FeedbackReport {
   feedbacks?: Array<{ comment?: string | null }>;
 }
 
+// 60초마다 청중 답변을 폴링한다. (요약은 서버에서 새 답변이 있을 때만 재생성)
+const POLL_INTERVAL_MS = 60 * 1000;
+
 const ReviewSlide = () => {
   const location = useLocation();
   const [feedbackData, setFeedbackData] = useState<FeedbackReport | null>(null);
+  const [voiceData, setVoiceData] = useState<AudienceVoiceReport | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
-  const isFirstLoadRef = useRef(true);
+  const [error, setError] = useState<unknown>(null);
+  const mountedRef = useRef(true);
+  const requestIdRef = useRef(0);
+  const pendingRequestsRef = useRef(0);
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
 
@@ -46,61 +63,103 @@ const ReviewSlide = () => {
   const { roomId } = roomInfo;
 
   useEffect(() => {
-    let cancelled = false;
-    let intervalId = null;
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-    if (!roomId) {
-      setFeedbackData(null);
-      setError(new Error("roomId를 확인할 수 없습니다."));
-      setLoading(false);
-      isFirstLoadRef.current = true;
-      return undefined;
-    }
-
-    isFirstLoadRef.current = true;
-
-    const loadFeedback = async () => {
-      const isFirstLoad = isFirstLoadRef.current;
-      if (isFirstLoad) {
-        setLoading(true);
-        isFirstLoadRef.current = false;
+  const loadFeedback = useCallback(
+    async (mode: "initial" | "poll") => {
+      if (!roomId) {
+        requestIdRef.current += 1;
+        setVoiceData(null);
+        setFeedbackData(null);
+        setError(new Error("roomId를 확인할 수 없습니다."));
+        setLoading(false);
+        return;
       }
-      setError(null);
+
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+      const canCommit = () => mountedRef.current && requestIdRef.current === requestId;
+      const isInitialLoad = mode === "initial";
+      pendingRequestsRef.current += 1;
+
+      if (isInitialLoad) {
+        setLoading(true);
+      }
 
       try {
-        const data = await fetchFeedbackReport(roomId);
-        if (!cancelled) {
-          setFeedbackData(data);
+        const voice = await fetchAudienceVoiceReport(roomId);
+        if (canCommit()) {
+          setVoiceData(voice);
+          setError(null);
         }
-      } catch (err) {
-        if (!cancelled) {
-          if (isFirstLoad) {
-            setFeedbackData(null);
-            setError(err as any);
-          } else {
-            log.warn("후기 업데이트 실패 (기존 데이터 유지):", err);
+
+        if (!voice || !voice.hasQuestions) {
+          try {
+            const data = await fetchFeedbackReport(roomId);
+            if (canCommit()) {
+              setFeedbackData(data);
+            }
+          } catch (feedbackErr) {
+            if (!canCommit()) {
+              return;
+            }
+            if (isInitialLoad) {
+              setFeedbackData(null);
+              setError(feedbackErr);
+            } else {
+              log.warn("후기 업데이트 실패 (기존 데이터 유지):", feedbackErr);
+            }
           }
         }
+      } catch (err) {
+        if (!canCommit()) {
+          return;
+        }
+        if (isInitialLoad) {
+          setVoiceData(null);
+          setError(err);
+        } else {
+          log.warn("청중의 목소리 업데이트 실패 (기존 데이터 유지):", err);
+        }
       } finally {
-        if (!cancelled && isFirstLoad) {
+        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
+        if (canCommit() && isInitialLoad) {
           setLoading(false);
         }
       }
-    };
+    },
+    [roomId]
+  );
 
-    loadFeedback();
+  // 인터벌이 loadFeedback 정체성 변화로 재생성되지 않도록 ref로 최신 함수를 참조한다.
+  const loadFeedbackRef = useRef(loadFeedback);
+  useEffect(() => {
+    loadFeedbackRef.current = loadFeedback;
+  }, [loadFeedback]);
 
-    intervalId = setInterval(() => {
-      if (!cancelled) {
-        loadFeedback();
-      }
-    }, 5000);
+  useEffect(() => {
+    if (!roomId) {
+      requestIdRef.current += 1;
+      setVoiceData(null);
+      setFeedbackData(null);
+      setError(new Error("roomId를 확인할 수 없습니다."));
+      setLoading(false);
+      return undefined;
+    }
+
+    loadFeedbackRef.current("initial");
+
+    // 60초마다 무조건 폴링한다. 오래된 응답은 requestId 가드로 무시되므로 중복 커밋은 없다.
+    const intervalId = window.setInterval(() => {
+      loadFeedbackRef.current("poll");
+    }, POLL_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      window.clearInterval(intervalId);
     };
   }, [roomId]);
 
@@ -140,58 +199,93 @@ const ReviewSlide = () => {
       .join("\n");
   }, [feedbackData, loading, error]);
 
+  const hasQuestions = Boolean(voiceData?.hasQuestions);
+
+  // 내보낼 답변이 하나라도 있을 때만 GNB 의 CSV 버튼을 활성화한다.
+  const setCsvEnabled = useSetAtom(audienceVoiceCsvEnabledAtom);
+  useEffect(() => {
+    const hasAnswers = Boolean(
+      voiceData?.hasQuestions && voiceData.questions.some((q) => q.answerCount > 0)
+    );
+    setCsvEnabled(hasAnswers);
+  }, [voiceData, setCsvEnabled]);
+  useEffect(() => () => setCsvEnabled(false), [setCsvEnabled]);
+
   return (
     <ReviewSlideContainer>
-      <AITitle title="청중의 한마디" description="청중이 세션에 대해 남긴 후기와 의견입니다." />
-      <TotalContainer>
-        <LeftBoxContainer>
-          <ContentBox title="" variant="custom" width="640px" height="300px">
-            <CenterHeader>
-              <img src={SatisfyImage} alt="satisfy" width={48} height={48} />
-              <h2>세션 만족도</h2>
-              <SmallDivider />
-            </CenterHeader>
-            <RatingWrapper>
-              <RatingRow>
-                <img src={StarImage} alt="star" width={28} height={28} />
-                <RatingScore>
-                  {averageRating}점 <span>/ 5점</span>
-                </RatingScore>
-              </RatingRow>
-            </RatingWrapper>
-          </ContentBox>
+      <SectionHeaderRow>
+        <SectionTitleWrap>
+          <AITitle title="청중의 목소리" description="청중이 세션에 대해 남긴 후기와 의견입니다." />
+        </SectionTitleWrap>
+      </SectionHeaderRow>
 
-          <ContentBox title="청중 후기 요약" variant="custom" height="300px" width="640px">
-            <SummaryBoxContainer>
-              <img className="icon-image" src={GrayFaceImage} alt="face" />
-              <h2>청중 후기 요약</h2>
-              <SmallDivider />
-              <h3>{summaryText}</h3>
-            </SummaryBoxContainer>
-          </ContentBox>
-        </LeftBoxContainer>
-        <RightBoxContainer>
-          <ContentBox
-            title="청중 후기 및 의견 모음"
-            variant="text"
-            width="765px"
-            height="650px"
-            content={feedbackListContent}
-            titleStyle={{
-              color: "#434343",
-              fontSize: "20px",
-              fontWeight: "600",
-              fontStyle: "normal",
-            }}
-            contentStyle={{
-              color: "#5C5C5C",
-              fontSize: "19px",
-              fontWeight: "400",
-              fontStyle: "normal",
-            }}
-          />
-        </RightBoxContainer>
-      </TotalContainer>
+      {hasQuestions && voiceData ? (
+        <>
+          <SatisfactionCard averageRating={voiceData.averageRating} />
+          <QuestionsContainer>
+            {voiceData.questions.map((question, index) => (
+              <QuestionVoiceCard
+                key={question.questionId}
+                index={index + 1}
+                question={question}
+                summarizationEnabled={voiceData.summarizationEnabled}
+              />
+            ))}
+          </QuestionsContainer>
+        </>
+      ) : (
+        <TotalContainer>
+          <LeftBoxContainer>
+            <ContentBox title="" variant="custom" width="640px" height="300px">
+              <CenterHeader>
+                <img src={SatisfyImage} alt="satisfy" width={48} height={48} />
+                <h2>세션 만족도</h2>
+                <SmallDivider />
+              </CenterHeader>
+              <RatingWrapper>
+                <RatingRow>
+                  <img src={StarImage} alt="star" width={28} height={28} />
+                  <RatingScore>
+                    {averageRating}점 <span>/ 5점</span>
+                  </RatingScore>
+                </RatingRow>
+              </RatingWrapper>
+            </ContentBox>
+
+            <ContentBox title="청중 후기 요약" variant="custom" height="300px" width="640px">
+              <SummaryBoxContainer>
+                <img className="icon-image" src={GrayFaceImage} alt="face" />
+                <h2>청중 후기 요약</h2>
+                <SmallDivider />
+                <h3>{summaryText}</h3>
+              </SummaryBoxContainer>
+            </ContentBox>
+          </LeftBoxContainer>
+          <RightBoxContainer>
+            <FeedbackListCardWrapper>
+              <ContentBox
+                title="청중 후기 및 의견 모음"
+                variant="text"
+                width="765px"
+                height="650px"
+                content={feedbackListContent}
+                titleStyle={{
+                  color: "#434343",
+                  fontSize: "20px",
+                  fontWeight: "600",
+                  fontStyle: "normal",
+                }}
+                contentStyle={{
+                  color: "#5C5C5C",
+                  fontSize: "19px",
+                  fontWeight: "400",
+                  fontStyle: "normal",
+                }}
+              />
+            </FeedbackListCardWrapper>
+          </RightBoxContainer>
+        </TotalContainer>
+      )}
     </ReviewSlideContainer>
   );
 };

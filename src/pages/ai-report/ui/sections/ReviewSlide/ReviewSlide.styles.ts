@@ -85,6 +85,103 @@ export const RatingScore = styled.div`
   }
 `;
 
+export const FeedbackListCardWrapper = styled.div`
+  position: relative;
+  width: 765px;
+  height: 650px;
+`;
+
+export const RefreshControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
+export const RefreshCooldownText = styled.span`
+  color: #8a8a8a;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+`;
+
+export const RefreshButton = styled.button`
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d9d9d9;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #5c5c5c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: #e74d07;
+    color: #e74d07;
+    background: #fff7f3;
+  }
+
+  &:disabled {
+    color: #b5b5b5;
+    background: #f4f4f4;
+    cursor: not-allowed;
+  }
+`;
+
+export const SectionHeaderRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+`;
+
+export const SectionTitleWrap = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+export const CsvDownloadButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.5vw;
+  padding: 0.9vh 1.2vw;
+  border: 0.1vw solid #e74d07;
+  border-radius: 0.6vw;
+  background: #fff;
+  color: #e74d07;
+  font-size: clamp(12px, 0.85vw, 14px);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+
+  img {
+    width: clamp(14px, 1vw, 18px);
+    height: auto;
+  }
+
+  &:hover {
+    background: #fff7f3;
+  }
+`;
+
+export const QuestionsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2.4vh;
+`;
+
 export const SummaryBoxContainer = styled.div`
   display: flex;
   flex-direction: column;

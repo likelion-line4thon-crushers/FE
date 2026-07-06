@@ -100,6 +100,7 @@ const AudienceRoomPage = () => {
     questionsLoading,
     questionsError,
     submitQuestion,
+    toggleQuestionLike,
     handleIncomingQuestion,
     questionTopics,
   } = useAudienceQuestions({ roomId, audienceId, currentSlide });
@@ -363,6 +364,11 @@ const AudienceRoomPage = () => {
           fullscreenControlsVisible={!isFullscreen || areFullscreenControlsVisible}
           fullscreenSlideChipVisible={isFullscreen && isFullscreenSlideChipVisible}
           onToggleFullscreen={handleToggleFullscreen}
+          reactionBar={
+            quickSettings.sticker ? (
+              <EmojiPanel selectedId={selectedEmoji?.id} onSelect={handleSelectEmoji} />
+            ) : null
+          }
         />
         {hasSlidesError && (
           <div
@@ -392,7 +398,8 @@ const AudienceRoomPage = () => {
             </button>
           </div>
         )}
-        {quickSettings.sticker && (!isFullscreen || areFullscreenControlsVisible) && (
+        {/* 전체화면에서는 슬라이드 위 오버레이로 리액션 바를 띄운다 (일반 화면은 SlideViewer 내부 컨트롤 줄에 배치) */}
+        {quickSettings.sticker && isFullscreen && areFullscreenControlsVisible && (
           <EmojiPanel selectedId={selectedEmoji?.id} onSelect={handleSelectEmoji} />
         )}
       </CenterContainer>
@@ -406,6 +413,7 @@ const AudienceRoomPage = () => {
           isWaiting={isQuestionListWaiting}
           waitingMessage={isQuestionListWaiting ? "질문을 불러오는 중입니다." : undefined}
           onSubmitQuestion={submitQuestion}
+          onToggleQuestionLike={toggleQuestionLike}
           canSubmit={isWebsocketReady && reactionsReady}
           isLocked={!quickSettings.question}
         />

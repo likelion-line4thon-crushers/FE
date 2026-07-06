@@ -6,7 +6,7 @@ export const QuickTogglesList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.8vh;
-  padding: 0 0.6vw 1vh;
+  padding: clamp(10px, 1.1vh, 14px) 0.6vw 1vh;
 `;
 
 export const ToggleRowLabel = styled.span`
@@ -18,7 +18,26 @@ export const ToggleRowLabel = styled.span`
   transition: color 0.2s ease;
 `;
 
-/* 한 줄: 라벨(좌) + 토글(우) — 켜지면 행이 어둡게(#303030) 강조됨 (Figma) */
+/* 라벨 아래 보조 설명 (Figma: 스위치 설명 문구) */
+export const ToggleRowDescription = styled.p`
+  margin: 0;
+  color: #838383;
+  font-size: clamp(9px, 0.6vw, 11px);
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: -0.3px;
+  transition: color 0.2s ease;
+`;
+
+/* 라벨 + 설명을 세로로 묶는 텍스트 열 */
+export const ToggleRowText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.2vh;
+  min-width: 0;
+`;
+
+/* 한 줄: 텍스트(좌) + 토글(우) — 켜지면 행이 어둡게(#303030) 강조됨 (Figma) */
 export const ToggleRow = styled.div`
   display: flex;
   flex-direction: row;
@@ -26,7 +45,7 @@ export const ToggleRow = styled.div`
   justify-content: space-between;
   gap: 0.6vw;
   min-height: clamp(50px, 5.56vh, 60px);
-  padding: 0 clamp(12px, 0.78vw, 15px);
+  padding: clamp(10px, 1vh, 14px) clamp(12px, 0.78vw, 15px);
   border-radius: clamp(16px, 1.04vw, 20px);
   border: 0.05vw solid #eaeaea;
   background: #fafafa;
@@ -46,6 +65,10 @@ export const ToggleRow = styled.div`
 
   &:has(input:checked) ${ToggleRowLabel} {
     color: #ffffff;
+  }
+
+  &:has(input:checked) ${ToggleRowDescription} {
+    color: #d0d0d0;
   }
 `;
 

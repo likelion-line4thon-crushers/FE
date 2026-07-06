@@ -6,6 +6,10 @@ import Emoji1 from "@/shared/assets/images/emoji1.svg";
 import Emoji2 from "@/shared/assets/images/emoji2.svg";
 import Emoji3 from "@/shared/assets/images/emoji3.svg";
 import Emoji4 from "@/shared/assets/images/emoji4.svg";
+import {
+  isSupportedPresentationFile,
+  PRESENTATION_FILE_ACCEPT,
+} from "../lib/presentationFile";
 
 /* === 전체 레이아웃 === */
 const MainLayout = styled.div`
@@ -205,10 +209,10 @@ const MainPage = () => {
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type === "application/pdf") {
+    if (isSupportedPresentationFile(file)) {
       setSelectedFile(file);
     } else {
-      alert("PDF 파일만 선택해주세요!");
+      alert("PDF, PPT, PPTX 파일만 선택해주세요!");
     }
   };
 
@@ -218,17 +222,21 @@ const MainPage = () => {
     setIsDragging(false);
 
     const file = e.dataTransfer.files[0];
-    if (file && file.type === "application/pdf") {
+    if (isSupportedPresentationFile(file)) {
       setSelectedFile(file);
     } else {
-      alert("PDF 파일만 선택해주세요!");
+      alert("PDF, PPT, PPTX 파일만 선택해주세요!");
     }
   };
 
   const handleStartPresentation = () => {
-    if (!selectedFile) return alert("PDF를 먼저 업로드해주세요!");
+    if (!selectedFile) return alert("발표 자료를 먼저 업로드해주세요!");
     navigate("/rooms/new", {
-      state: { pdfFile: selectedFile, fileName: selectedFile.name },
+      state: {
+        presentationFile: selectedFile,
+        pdfFile: selectedFile,
+        fileName: selectedFile.name,
+      },
     });
   };
 
@@ -275,7 +283,7 @@ const MainPage = () => {
                 ? selectedFile.name
                 : isDragging
                   ? "여기에 파일을 놓으세요 📂"
-                  : "여기에 PDF 파일을 업로드하고 시작하세요!"}
+                  : "여기에 PDF, PPT, PPTX 파일을 업로드하고 시작하세요!"}
             </span>
             <span
               className="arrow"
@@ -288,7 +296,12 @@ const MainPage = () => {
             </span>
           </UploadBox>
 
-          <HiddenInput id="pdfInput" type="file" accept=".pdf" onChange={handleFileSelect} />
+          <HiddenInput
+            id="pdfInput"
+            type="file"
+            accept={PRESENTATION_FILE_ACCEPT}
+            onChange={handleFileSelect}
+          />
         </CenterContent>
         <Box striped style={{ gridRow: "2 / 4", gridColumn: 4 }} /> {/* #6 */}
         {/* 3행 */}
