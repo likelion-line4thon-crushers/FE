@@ -28,18 +28,22 @@ export function QuestionVoiceCard({
           <Tick />
           <AnswersLabel>답변 모음</AnswersLabel>
         </AnswersHeader>
-        <AnswerList>
-          {question.answers.length === 0 ? (
-            <EmptyText>아직 답변이 없습니다.</EmptyText>
-          ) : (
-            question.answers.map((answer, i) => (
-              <AnswerItem key={i}>
-                <Dot />
-                <AnswerText>{answer}</AnswerText>
-              </AnswerItem>
-            ))
-          )}
-        </AnswerList>
+        <ListWrap>
+          <AnswerList>
+            {question.answers.length === 0 ? (
+              <EmptyText>아직 답변이 없습니다.</EmptyText>
+            ) : (
+              question.answers.map((answer, i) => (
+                <AnswerItem key={i}>
+                  <Dot />
+                  <AnswerText>{answer}</AnswerText>
+                </AnswerItem>
+              ))
+            )}
+          </AnswerList>
+          {/* 하단 그라디언트 마스크: 더 스크롤할 내용이 있음을 표시 */}
+          <FadeMask aria-hidden />
+        </ListWrap>
       </AnswersBox>
 
       {/* 3) BOiNi 정리 다크 바 (답변 박스와 분리된 별도 요소).
@@ -105,6 +109,10 @@ const AnswersLabel = styled.span`
   letter-spacing: -0.5px;
 `;
 
+const ListWrap = styled.div`
+  position: relative;
+`;
+
 const AnswerList = styled.ul`
   list-style: none;
   margin: 0;
@@ -115,6 +123,18 @@ const AnswerList = styled.ul`
   /* Fixed-height answer box: the list scrolls inside the card, never the section. */
   height: 30vh;
   overflow-y: auto;
+`;
+
+// 스크롤이 더 있음을 알리는 하단 페이드. 답변 박스 배경(#fafafa)으로 자연스럽게 사라진다.
+const FadeMask = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5vh;
+  pointer-events: none;
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(to bottom, rgba(250, 250, 250, 0), #fafafa 92%);
 `;
 
 const AnswerItem = styled.li`

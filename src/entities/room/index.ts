@@ -8,5 +8,6 @@ export {
   pdfIdAtom,
   canStartSessionAtom,
   presenterModeAtom,
+  audienceVoiceCsvEnabledAtom,
 } from "./model/store";
 export type { PresenterMode } from "./model/store";

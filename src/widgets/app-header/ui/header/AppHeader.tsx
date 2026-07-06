@@ -15,7 +15,11 @@ import {
 import { FeedbackQuestionModal } from "@/features/feedback-questions";
 import { leaveRoom } from "@/shared/api/room";
 import { downloadAudienceVoiceCsv } from "@/shared/api/ai-report";
-import { canStartSessionAtom, presenterModeAtom } from "@/entities/room";
+import {
+  canStartSessionAtom,
+  presenterModeAtom,
+  audienceVoiceCsvEnabledAtom,
+} from "@/entities/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { SessionWarningModal } from "@/shared/ui/session-warning-modal";
 import { useHeaderRoomData, useHeaderSessionAction, resolveShareJoinUrl } from "../../model";
@@ -125,6 +129,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   // 단일 진실 소스로 atom 만 사용. SessionCreatePage 가 SSE 수신/복원 시 atom 을 true 로 세팅하고,
   // 진입 시점엔 항상 false 로 리셋한다.
   const resolvedCanStartSession = useAtomValue(canStartSessionAtom);
+  const csvEnabled = useAtomValue(audienceVoiceCsvEnabledAtom);
 
   const { isSessionEnding, showLandingPage, landingMessage, handleSessionAction } =
     useHeaderSessionAction({
@@ -182,7 +187,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
     }
     setCsvDownloading(true);
     try {
-      await downloadAudienceVoiceCsv(csvRoomId);
+      await downloadAudienceVoiceCsv(csvRoomId, fileName);
     } catch {
       alert("CSV 다운로드에 실패했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -281,7 +286,10 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
             )}
 
             {isAiReport && (
-              <CsvDownloadButton onClick={handleDownloadCsv} disabled={csvDownloading} />
+              <CsvDownloadButton
+                onClick={handleDownloadCsv}
+                disabled={csvDownloading || !csvEnabled}
+              />
             )}
 
             {(isAudienceView || isAiReport) && <ExitButton onClick={handleExitClick} />}

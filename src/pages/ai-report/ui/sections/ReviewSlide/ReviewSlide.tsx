@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
+import { useSetAtom } from "jotai";
+import { audienceVoiceCsvEnabledAtom } from "@/entities/room";
 import { createLogger } from "@/shared/lib/logger";
 import {
   ReviewSlideContainer,
@@ -198,6 +200,16 @@ const ReviewSlide = () => {
   }, [feedbackData, loading, error]);
 
   const hasQuestions = Boolean(voiceData?.hasQuestions);
+
+  // 내보낼 답변이 하나라도 있을 때만 GNB 의 CSV 버튼을 활성화한다.
+  const setCsvEnabled = useSetAtom(audienceVoiceCsvEnabledAtom);
+  useEffect(() => {
+    const hasAnswers = Boolean(
+      voiceData?.hasQuestions && voiceData.questions.some((q) => q.answerCount > 0)
+    );
+    setCsvEnabled(hasAnswers);
+  }, [voiceData, setCsvEnabled]);
+  useEffect(() => () => setCsvEnabled(false), [setCsvEnabled]);
 
   return (
     <ReviewSlideContainer>

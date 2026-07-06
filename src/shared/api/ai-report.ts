@@ -123,7 +123,10 @@ export async function fetchAudienceVoiceReport(
   }
 }
 
-export async function downloadAudienceVoiceCsv(roomId: string): Promise<void> {
+export async function downloadAudienceVoiceCsv(
+  roomId: string,
+  sessionName?: string
+): Promise<void> {
   if (!roomId) throw new Error("roomId is required");
   const response = await api.get(`/api/report/${roomId}/audience-voice/csv`, {
     responseType: "blob",
@@ -132,7 +135,13 @@ export async function downloadAudienceVoiceCsv(roomId: string): Promise<void> {
   const url = window.URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `audience-voice-${roomId}.csv`;
+  // 세션 이름으로 파일명을 시작한다. (확장자 제거 + 파일명 불가 문자 치환)
+  const base =
+    (sessionName ?? "")
+      .replace(/\.[^.]+$/, "")
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .trim() || "청중의목소리";
+  anchor.download = `${base}_청중의목소리.csv`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
