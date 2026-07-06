@@ -279,7 +279,9 @@ const SideInner = styled.div`
 const CenterGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1.4fr;
-  grid-template-rows: 1fr 1fr auto;
+  /* minmax(0, 1fr) lets the question row shrink below its content so the inner
+     list scrolls instead of expanding the grid past the viewport. */
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 1vw;
   width: 100%;
   height: 100%;
@@ -288,7 +290,7 @@ const CenterGrid = styled.div`
   box-sizing: border-box;
   border-left: 0.1vw solid #eaeaea;
   border-right: 0.1vw solid #eaeaea;
-  overflow-y: auto;
+  overflow: hidden;
 `;
 
 /* 각 박스 */

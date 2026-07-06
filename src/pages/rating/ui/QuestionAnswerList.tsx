@@ -63,6 +63,10 @@ const List = styled.div`
   flex-direction: column;
   gap: 1.6vh;
   width: 100%;
+  /* Fill the remaining FeedbackBox height and scroll internally so a long
+     question list scrolls in place instead of growing the page. */
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 0.5vw;
 `;
