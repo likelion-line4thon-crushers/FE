@@ -71,6 +71,7 @@ export function FeedbackQuestionModal({ roomId, isOpen, onClose }: FeedbackQuest
                       id={`fq-${index}`}
                       value={value}
                       placeholder="내용을 입력해 주세요."
+                      maxLength={500}
                       onChange={(e) => setRow(index, e.target.value)}
                     />
                   </QuestionField>
