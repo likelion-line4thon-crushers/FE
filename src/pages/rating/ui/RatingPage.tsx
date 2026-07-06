@@ -10,6 +10,7 @@ import StarCheckedIcon from "@/shared/assets/images/star_checked.svg";
 import { getOriginalSlideUrl } from "@/shared/api/presentation";
 import { resolveRatingSessionContext } from "../model/resolveRatingSessionContext";
 import { hasSubmittedFeedback } from "../model/feedbackSubmissionMarker";
+import { Skeleton } from "@/shared/ui/skeleton";
 import { useRatingPdfDownload } from "../model/useRatingPdfDownload";
 import { useAudienceFeedbackForm } from "../model/useAudienceFeedbackForm";
 import { useRatingSubmission } from "../model/useRatingSubmission";
@@ -167,12 +168,10 @@ const RatingPage = () => {
       <CenterGrid>
         {/* 좌측 상단 - 발표자료 첫 번째 슬라이드 */}
         <ThumbnailBox>
-          {loadingSlide ? (
-            <div style={{ color: "#999", fontSize: "0.9vw" }}>로딩 중...</div>
-          ) : firstSlideUrl ? (
+          {!loadingSlide && firstSlideUrl ? (
             <img src={firstSlideUrl} alt="발표자료 첫 번째 슬라이드" />
           ) : (
-            <img src="https://via.placeholder.com/400x200.png?text=발표+썸네일" alt="썸네일" />
+            <Skeleton width="85%" height="60%" radius="0.5vw" />
           )}
         </ThumbnailBox>
 
