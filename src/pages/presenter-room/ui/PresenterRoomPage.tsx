@@ -217,15 +217,8 @@ const PresenterRoomPage = () => {
     [slideCount, roomId]
   );
 
-  // 🔹 발표 화면(외부 디스플레이) 미러링 — 세션 시작 후에도 projector 창과 계속 동기화.
-  //    projector 창의 클릭/키 입력(nav)은 여기서 슬라이드를 이동하고 WS 로 청중에게 전파된다.
-  const { openScreen, isWindowManagementSupported } = useBroadcastPublisher({
-    roomId: roomId ? String(roomId) : null,
-    slides: slideUrls,
-    currentSlide,
-    onNavigate: (direction) =>
-      changeSlide(currentSlideRef.current + (direction === "next" ? 1 : -1)),
-  });
+  // 🔹 발표 화면 리액션 스티커 노출 여부 — 발표자 본인 화면과 독립적으로 제어. 기본값은 숨김.
+  const [showStampsOnBroadcast, setShowStampsOnBroadcast] = useState(false);
 
   // 🔹 슬라이드 다운로드 허용 정책 — 라이브 중에도 발표자가 변경 가능.
   const {
@@ -306,6 +299,19 @@ const PresenterRoomPage = () => {
   });
 
   const currentReactionStamps = reactionStamps[String(currentSlide)] || [];
+
+  // 🔹 발표 화면(외부 디스플레이) 미러링 — 현재 슬라이드/리액션을 projector 창으로 전파.
+  //    projector 창의 클릭/키 입력(nav)은 여기서 슬라이드를 이동하고 WS 로 청중에게 전파된다.
+  const { openScreen, isWindowManagementSupported, openScreenCount } = useBroadcastPublisher({
+    roomId: roomId ? String(roomId) : null,
+    slides: slideUrls,
+    currentSlide,
+    stamps: currentReactionStamps,
+    broadcastReactionsVisible: showStampsOnBroadcast,
+    onNavigate: (direction) =>
+      changeSlide(currentSlideRef.current + (direction === "next" ? 1 : -1)),
+  });
+
   const currentSlidePage = currentSlide + 1;
   const currentSlideNotes = notesByPage[currentSlidePage] ?? "";
 
@@ -521,6 +527,9 @@ const PresenterRoomPage = () => {
         focusHighlight={showFocusHighlight}
         timer={timer}
         showUnlockToast={showUnlockToast}
+        showBroadcastReactionToggle={openScreenCount > 0}
+        broadcastReactionsVisible={showStampsOnBroadcast}
+        onToggleBroadcastReactions={setShowStampsOnBroadcast}
         audienceCountSlot={
           <AudienceCount
             variant="chip"

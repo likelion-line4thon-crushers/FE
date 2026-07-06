@@ -11,14 +11,29 @@ export const Screen = styled.div`
   cursor: default;
 `;
 
+/* 16:9 무대 — 뷰포트에 레터박스로 맞추고, 그 안에서 리액션 스티커를 %로 배치 */
+export const Stage = styled.div`
+  position: relative;
+  width: 100vw;
+  max-width: calc(100vh * 16 / 9);
+  aspect-ratio: 16 / 9;
+  container-type: inline-size;
+`;
+
 export const SlideImage = styled.img`
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
+`;
+
+export const BroadcastStampImage = styled.img`
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 3.4cqw;
+  height: 3.4cqw;
+  pointer-events: none;
 `;
 
 export const Placeholder = styled.div`

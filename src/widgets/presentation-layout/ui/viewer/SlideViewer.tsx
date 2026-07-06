@@ -15,6 +15,7 @@ import {
   FocusRight,
   TimerButton,
   ReactionButton,
+  BroadcastToggleButton,
   TooltipHoverArea,
   Tooltip,
   FeedbackContainer,
@@ -29,6 +30,8 @@ import FocusIcon from "@/shared/assets/images/focus.svg";
 import TimerIcon from "@/shared/assets/images/timer.svg";
 import openeyes from "@/shared/assets/images/openeyes.png";
 import closeeyes from "@/shared/assets/images/closeeyes.png";
+import BroadcastReactionOnIcon from "@/shared/assets/images/broadcast-reaction-on.svg";
+import BroadcastReactionOffIcon from "@/shared/assets/images/broadcast-reaction-off.svg";
 import FeedbackIconImage from "@/shared/assets/images/feedback.svg";
 import SlideHiddenIcon from "@/shared/assets/images/slide-hidden.svg";
 
@@ -50,6 +53,9 @@ const SlideViewer = ({
   showUnlockToast = false,
   afterSlideContent = null,
   audienceCountSlot = null,
+  showBroadcastReactionToggle = false,
+  broadcastReactionsVisible = true,
+  onToggleBroadcastReactions,
 }: any) => {
   const { prev, current, next } = audienceStats;
   const total = Math.max(prev + current + next, 1);
@@ -116,6 +122,24 @@ const SlideViewer = ({
 
         {/* 🔹 오른쪽 (로고, 타이머) */}
         <FocusRight>
+          {showBroadcastReactionToggle && (
+            <TooltipHoverArea>
+              <Tooltip>
+                {broadcastReactionsVisible ? "발표 화면 리액션 숨기기" : "발표 화면 리액션 보이기"}
+              </Tooltip>
+              <BroadcastToggleButton
+                onClick={() => onToggleBroadcastReactions?.(!broadcastReactionsVisible)}
+                aria-pressed={broadcastReactionsVisible}
+              >
+                <img
+                  src={
+                    broadcastReactionsVisible ? BroadcastReactionOnIcon : BroadcastReactionOffIcon
+                  }
+                  alt="발표 화면 리액션 토글"
+                />
+              </BroadcastToggleButton>
+            </TooltipHoverArea>
+          )}
           <TooltipHoverArea>
             <Tooltip>리액션 스티커 보이기</Tooltip>
             <ReactionButton onClick={handleToggleEyesClick}>

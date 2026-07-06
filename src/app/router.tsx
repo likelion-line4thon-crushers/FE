@@ -27,7 +27,7 @@ const router = createBrowserRouter([
 
   // * Projector view — bare fullscreen slide mirror on an external display.
   //   Rendered outside App so no header/chrome appears on the giant screen.
-  { path: "rooms/:roomId/screen", element: <BroadcastScreenPage /> },
+  { path: "rooms/:roomId/broadcast", element: <BroadcastScreenPage /> },
 ]);
 
 export default router;

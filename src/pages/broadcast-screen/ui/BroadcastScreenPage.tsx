@@ -4,9 +4,17 @@ import { useParams } from "react-router";
 import {
   getBroadcastChannelName,
   type BroadcastMessage,
+  type BroadcastStamp,
   type NavDirection,
 } from "@/shared/lib/broadcast";
-import { Screen, SlideImage, Placeholder, FullscreenHint } from "./BroadcastScreenPage.styles";
+import {
+  Screen,
+  Stage,
+  SlideImage,
+  BroadcastStampImage,
+  Placeholder,
+  FullscreenHint,
+} from "./BroadcastScreenPage.styles";
 
 /**
  * Projector view. Rendered bare (no app chrome) on the external display and
@@ -21,8 +29,16 @@ const BroadcastScreenPage = () => {
   const { roomId } = useParams();
   const [slides, setSlides] = useState<(string | null)[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
+  const [stamps, setStamps] = useState<BroadcastStamp[]>([]);
+  const [showStamps, setShowStamps] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const channelRef = useRef<BroadcastChannel | null>(null);
+  // Stable id so the presenter can count this window via presence heartbeats.
+  const screenIdRef = useRef<string>(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `screen-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 
   // Subscribe to the presenter and pull the current slide on mount.
   useEffect(() => {
@@ -32,11 +48,22 @@ const BroadcastScreenPage = () => {
     channelRef.current = channel;
     let received = false;
 
+    const screenId = screenIdRef.current;
+    const announceOpen = () =>
+      channel.postMessage({ type: "screen-open", id: screenId } satisfies BroadcastMessage);
+    const announceClose = () =>
+      channel.postMessage({ type: "screen-close", id: screenId } satisfies BroadcastMessage);
+
     channel.onmessage = (event: MessageEvent<BroadcastMessage>) => {
       if (event.data?.type === "slide") {
         received = true;
         setSlides(event.data.slides);
         setSlideIndex(event.data.slideIndex);
+        setStamps(event.data.stamps ?? []);
+        setShowStamps(Boolean(event.data.showStamps));
+      } else if (event.data?.type === "screen-rollcall") {
+        // A (re)mounted presenter is asking who's open — re-announce.
+        announceOpen();
       }
     };
 
@@ -53,9 +80,23 @@ const BroadcastScreenPage = () => {
     }, 400);
     const stopRetry = window.setTimeout(() => window.clearInterval(retry), 4000);
 
+    // Announce presence once on mount; tell the presenter when we go away.
+    // `pagehide` is the reliable teardown signal (tab close, navigation, bfcache);
+    // `pageshow` with `persisted` covers a bfcache restore.
+    announceOpen();
+    const onPageHide = () => announceClose();
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) announceOpen();
+    };
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("pageshow", onPageShow);
+
     return () => {
       window.clearInterval(retry);
       window.clearTimeout(stopRetry);
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("pageshow", onPageShow);
+      announceClose();
       channel.close();
       channelRef.current = null;
     };
@@ -129,7 +170,19 @@ const BroadcastScreenPage = () => {
   return (
     <Screen onClick={handleScreenClick}>
       {currentSrc ? (
-        <SlideImage src={currentSrc} alt={`슬라이드 ${slideIndex + 1}`} draggable={false} />
+        <Stage>
+          <SlideImage src={currentSrc} alt={`슬라이드 ${slideIndex + 1}`} draggable={false} />
+          {showStamps &&
+            stamps.map((stamp, index) => (
+              <BroadcastStampImage
+                key={stamp.id || `${stamp.xPct}-${stamp.yPct}-${index}`}
+                src={stamp.src}
+                alt="reaction"
+                style={{ top: `${stamp.yPct}%`, left: `${stamp.xPct}%` }}
+                draggable={false}
+              />
+            ))}
+        </Stage>
       ) : (
         <Placeholder>발표자 화면과 연결 중입니다…</Placeholder>
       )}
