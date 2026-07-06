@@ -34,6 +34,19 @@ const parseOptionalNumber = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+// Decode the JWT `exp` claim (seconds) without a library to check the audience
+// token is still usable before reusing a durable identity. No exp → treat valid.
+const isAudienceTokenValid = (token?: string): boolean => {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (!payload?.exp) return true;
+    return payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+};
+
 /**
  * ! Refactored to use Jotai atoms — no more setter params.
  * Only `lastPresenterPageRef`, `setFollowPresenter`, `changeCurrentSlide` remain as params
@@ -66,12 +79,36 @@ const useAudienceJoinRoom = ({
     const storageKey = `boini_audience_${code}`;
     let storedData: any = null;
 
+    // Durable per-browser identity: this tab's sessionStorage copy is cleared
+    // after submitting feedback, but we keep a durable copy in localStorage. If a
+    // re-join finds no working copy, rehydrate it (only while the token is still
+    // valid) so the browser reuses the SAME audienceId instead of minting a new
+    // one — which is what makes feedback dedupe effective per browser.
+    try {
+      if (!sessionStorage.getItem(storageKey)) {
+        const durable = localStorage.getItem(storageKey);
+        if (durable && isAudienceTokenValid(JSON.parse(durable).audienceToken)) {
+          sessionStorage.setItem(storageKey, durable);
+        }
+      }
+    } catch (_error) {
+      // ignore
+    }
+
     try {
       const stored = sessionStorage.getItem(storageKey);
       if (stored) {
         storedData = JSON.parse(stored);
         if (storedData.audienceId && storedData.audienceToken) {
           log.log("Restoring audience info from sessionStorage");
+
+          // Keep the durable copy in sync (covers identities created before this
+          // durable-storage change existed).
+          try {
+            localStorage.setItem(storageKey, stored);
+          } catch (_error) {
+            // ignore
+          }
 
           setRoomId(storedData.roomId);
           setAudienceId(storedData.audienceId);
@@ -225,10 +262,13 @@ const useAudienceJoinRoom = ({
               return wsUrlValue;
             })(),
           };
-          sessionStorage.setItem(storageKey, JSON.stringify(dataToStore));
-          log.log("Audience info saved to sessionStorage");
+          const serialized = JSON.stringify(dataToStore);
+          sessionStorage.setItem(storageKey, serialized);
+          // Durable copy so a later re-join in this browser reuses this identity.
+          localStorage.setItem(storageKey, serialized);
+          log.log("Audience info saved to session/local storage");
         } catch (storageError) {
-          log.warn("SessionStorage write failed:", storageError);
+          log.warn("Storage write failed:", storageError);
         }
 
         setRoomId(joinData.roomId);

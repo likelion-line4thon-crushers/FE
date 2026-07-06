@@ -9,6 +9,8 @@ import StarIcon from "@/shared/assets/images/star.svg";
 import StarCheckedIcon from "@/shared/assets/images/star_checked.svg";
 import { getOriginalSlideUrl } from "@/shared/api/presentation";
 import { resolveRatingSessionContext } from "../model/resolveRatingSessionContext";
+import { hasSubmittedFeedback } from "../model/feedbackSubmissionMarker";
+import { Skeleton } from "@/shared/ui/skeleton";
 import { useRatingPdfDownload } from "../model/useRatingPdfDownload";
 import { useAudienceFeedbackForm } from "../model/useAudienceFeedbackForm";
 import { useRatingSubmission } from "../model/useRatingSubmission";
@@ -36,7 +38,7 @@ const RatingPage = () => {
     }
   };
 
-  const { roomId, audienceId, deckId, hasIdentity } = useMemo(
+  const { roomId, audienceId, audienceToken, deckId, hasIdentity } = useMemo(
     () => resolveRatingSessionContext(code, location.state),
     [location.state, code]
   );
@@ -60,7 +62,11 @@ const RatingPage = () => {
     downloadSlides,
   } = useRatingPdfDownload({ roomId, audienceId, enabled: hasIdentity });
 
-  const { submit, submitting, error: submitError } = useRatingSubmission(roomId, audienceId);
+  const {
+    submit,
+    submitting,
+    error: submitError,
+  } = useRatingSubmission(roomId, audienceId, audienceToken);
 
   const isDownloadEnabled = Boolean(pdfDownloadAvailability?.enabled);
   const isComplete = rating > 0 && (hasCustomQuestions ? allAnswered : comment.trim().length > 0);
@@ -123,8 +129,22 @@ const RatingPage = () => {
     navigate("/", { replace: true });
   };
 
+  // This identity already submitted (durable, per-browser marker). Re-submitting
+  // replaces the previous feedback, so warn before they do.
+  const alreadySubmitted = useMemo(
+    () => hasSubmittedFeedback(roomId, audienceId),
+    [roomId, audienceId]
+  );
+
   const showIdentityWarning = !hasIdentity && !identityWarningDismissed;
   const showPopover = isDownloadEnabled && !popoverDismissed;
+
+  const overwriteNotice =
+    alreadySubmitted && hasIdentity ? (
+      <OverwriteNotice role="status">
+        이미 후기를 제출하셨어요. 다시 제출하면 기존 후기가 새 내용으로 대체됩니다.
+      </OverwriteNotice>
+    ) : null;
 
   const identityWarning = showIdentityWarning ? (
     <IdentityNotice role="status">
@@ -148,12 +168,10 @@ const RatingPage = () => {
       <CenterGrid>
         {/* 좌측 상단 - 발표자료 첫 번째 슬라이드 */}
         <ThumbnailBox>
-          {loadingSlide ? (
-            <div style={{ color: "#999", fontSize: "0.9vw" }}>로딩 중...</div>
-          ) : firstSlideUrl ? (
+          {!loadingSlide && firstSlideUrl ? (
             <img src={firstSlideUrl} alt="발표자료 첫 번째 슬라이드" />
           ) : (
-            <img src="https://via.placeholder.com/400x200.png?text=발표+썸네일" alt="썸네일" />
+            <Skeleton width="85%" height="60%" radius="0.5vw" />
           )}
         </ThumbnailBox>
 
@@ -199,6 +217,7 @@ const RatingPage = () => {
               <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
               {questionsError && <ErrorNote role="alert">{questionsError}</ErrorNote>}
               {identityWarning}
+              {overwriteNotice}
               <QuestionAnswerList
                 questions={questions}
                 answers={answers}
@@ -223,6 +242,7 @@ const RatingPage = () => {
                 <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
                 {questionsError && <ErrorNote role="alert">{questionsError}</ErrorNote>}
                 {identityWarning}
+                {overwriteNotice}
                 <CommentTextArea
                   placeholder="여러분의 한 마디가 세션 진행자에게 큰 도움이 됩니다 :)"
                   value={comment}
@@ -505,6 +525,17 @@ const DismissButton = styled.button`
   color: #fff;
   font-size: clamp(11px, 0.8vw, 13px);
   cursor: pointer;
+`;
+
+const OverwriteNotice = styled.div`
+  width: 100%;
+  border: 0.1vw solid #cdd8f0;
+  background: #f2f6ff;
+  color: #2c4a8a;
+  border-radius: 0.6vw;
+  padding: 1vh 1vw;
+  font-size: clamp(12px, 0.85vw, 14px);
+  line-height: 1.5;
 `;
 
 /* 버튼 영역 */
