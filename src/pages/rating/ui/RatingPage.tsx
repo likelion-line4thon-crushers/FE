@@ -36,7 +36,7 @@ const RatingPage = () => {
     }
   };
 
-  const { roomId, audienceId, deckId, hasIdentity } = useMemo(
+  const { roomId, audienceId, audienceToken, deckId, hasIdentity } = useMemo(
     () => resolveRatingSessionContext(code, location.state),
     [location.state, code]
   );
@@ -60,7 +60,11 @@ const RatingPage = () => {
     downloadSlides,
   } = useRatingPdfDownload({ roomId, audienceId, enabled: hasIdentity });
 
-  const { submit, submitting, error: submitError } = useRatingSubmission(roomId, audienceId);
+  const {
+    submit,
+    submitting,
+    error: submitError,
+  } = useRatingSubmission(roomId, audienceId, audienceToken);
 
   const isDownloadEnabled = Boolean(pdfDownloadAvailability?.enabled);
   const isComplete = rating > 0 && (hasCustomQuestions ? allAnswered : comment.trim().length > 0);

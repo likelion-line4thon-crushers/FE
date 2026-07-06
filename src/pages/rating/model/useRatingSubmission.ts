@@ -9,14 +9,18 @@ export type SubmitPayload = {
   comment: string;
 };
 
-export function useRatingSubmission(roomId: string | null, audienceId: string | null) {
+export function useRatingSubmission(
+  roomId: string | null,
+  audienceId: string | null,
+  audienceToken: string | null
+) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const feedbackSubmitted = useRef(false);
 
   const submit = useCallback(
     async (payload: SubmitPayload): Promise<boolean> => {
-      if (!roomId || !audienceId) {
+      if (!roomId || !audienceId || !audienceToken) {
         setError("세션 정보를 찾을 수 없습니다.");
         return false;
       }
@@ -27,13 +31,14 @@ export function useRatingSubmission(roomId: string | null, audienceId: string | 
           await submitFeedback({
             roomId,
             audienceId,
+            audienceToken,
             rating: payload.rating,
             comment: payload.hasCustomQuestions ? "" : payload.comment,
           });
           feedbackSubmitted.current = true;
         }
         if (payload.hasCustomQuestions) {
-          await submitFeedbackAnswers(roomId, audienceId, payload.answers);
+          await submitFeedbackAnswers(roomId, audienceId, audienceToken, payload.answers);
         }
         return true;
       } catch {
@@ -43,7 +48,7 @@ export function useRatingSubmission(roomId: string | null, audienceId: string | 
         setSubmitting(false);
       }
     },
-    [roomId, audienceId]
+    [roomId, audienceId, audienceToken]
   );
 
   return { submit, submitting, error };
