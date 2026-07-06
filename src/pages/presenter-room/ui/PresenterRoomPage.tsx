@@ -51,6 +51,9 @@ import {
 } from "./QuickSettings.styles";
 import styled from "styled-components";
 
+// 안정적인 빈 배열 참조 (렌더마다 새 배열 생성 방지)
+const EMPTY_STAMPS: never[] = [];
+
 const PresenterRoomPage = () => {
   const location = useLocation();
   const { roomId: roomIdParam } = useParams();
@@ -298,7 +301,9 @@ const PresenterRoomPage = () => {
     service: presenterSocketService,
   });
 
-  const currentReactionStamps = reactionStamps[String(currentSlide)] || [];
+  // 안정적인 빈 배열 참조 — 리액션이 없는 슬라이드에서 매 렌더마다 새 배열이 만들어져
+  // 브로드캐스트 이펙트가 불필요하게 재실행되는 것을 방지 (타이머 틱마다 전체 덱 재전송 방지).
+  const currentReactionStamps = reactionStamps[String(currentSlide)] ?? EMPTY_STAMPS;
 
   // 🔹 발표 화면(외부 디스플레이) 미러링 — 현재 슬라이드/리액션을 projector 창으로 전파.
   //    projector 창의 클릭/키 입력(nav)은 여기서 슬라이드를 이동하고 WS 로 청중에게 전파된다.

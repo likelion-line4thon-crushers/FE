@@ -106,7 +106,8 @@ const CollapsibleSection = ({
         <SectionChevron src={ChevronIcon} alt="" aria-hidden="true" $collapsed={collapsed} />
       </SectionHeader>
       <CollapsibleBody $collapsed={collapsed} aria-hidden={collapsed}>
-        <CollapsibleInner>{children}</CollapsibleInner>
+        {/* inert: 접힌 상태에서 내부 컨트롤을 탭 순서/접근성 트리에서 제거 */}
+        <CollapsibleInner inert={collapsed}>{children}</CollapsibleInner>
       </CollapsibleBody>
     </Section>
   );

@@ -12,9 +12,27 @@ export async function createRoom(totalPages = 10): Promise<RoomData> {
   return res.data.data;
 }
 
+// * Dedupe concurrent join requests for the same code.
+// StrictMode double-mounts the join effect, and the sessionStorage guard only
+// applies AFTER the async join resolves — so two joins could race and mint two
+// audienceIds for one person (doubling the audience count). Sharing the in-flight
+// promise guarantees a single backend join per code while a request is pending.
+const inFlightJoins = new Map<string, Promise<JoinRoomResponse>>();
+
 export async function joinRoom(code: string): Promise<JoinRoomResponse> {
-  const res = await api.get(`/api/rooms/join/${code}`);
-  return res.data.data;
+  const pending = inFlightJoins.get(code);
+  if (pending) return pending;
+
+  const request = api
+    .get(`/api/rooms/join/${code}`)
+    .then((res) => res.data.data as JoinRoomResponse);
+  inFlightJoins.set(code, request);
+
+  try {
+    return await request;
+  } finally {
+    inFlightJoins.delete(code);
+  }
 }
 
 export async function startSession(roomId: string) {
