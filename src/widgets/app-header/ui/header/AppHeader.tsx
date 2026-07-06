@@ -10,9 +10,11 @@ import {
   ExitButton,
   StartSessionButton,
   FeedbackQuestionButton,
+  CsvDownloadButton,
 } from "./HeaderButtons";
 import { FeedbackQuestionModal } from "@/features/feedback-questions";
 import { leaveRoom } from "@/shared/api/room";
+import { downloadAudienceVoiceCsv } from "@/shared/api/ai-report";
 import { canStartSessionAtom, presenterModeAtom } from "@/entities/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { SessionWarningModal } from "@/shared/ui/session-warning-modal";
@@ -116,6 +118,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const [showFeedbackQuestionModal, setShowFeedbackQuestionModal] = useState(false);
   const [showPresenterStartWarning, setShowPresenterStartWarning] = useState(false);
   const [sessionStatus, setSessionStatus] = useState("waiting");
+  const [csvDownloading, setCsvDownloading] = useState(false);
 
   const { roomData, fileName } = useHeaderRoomData(propRoomData);
   // roomData.canStartSession 은 sessionStorage 스냅샷이라 이전 세션 값이 남아있을 수 있다.
@@ -170,6 +173,21 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
   const handleFeedbackQuestionClick = () => {
     setShowFeedbackQuestionModal(true);
+  };
+
+  const handleDownloadCsv = async () => {
+    const csvRoomId = roomData?.roomId;
+    if (!csvRoomId || csvDownloading) {
+      return;
+    }
+    setCsvDownloading(true);
+    try {
+      await downloadAudienceVoiceCsv(csvRoomId);
+    } catch {
+      alert("CSV 다운로드에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setCsvDownloading(false);
+    }
   };
 
   const handleStartSessionClick = () => {
@@ -260,6 +278,10 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
               >
                 {isPrep ? "세션 시작" : "세션 종료"}
               </StartSessionButton>
+            )}
+
+            {isAiReport && (
+              <CsvDownloadButton onClick={handleDownloadCsv} disabled={csvDownloading} />
             )}
 
             {(isAudienceView || isAiReport) && <ExitButton onClick={handleExitClick} />}

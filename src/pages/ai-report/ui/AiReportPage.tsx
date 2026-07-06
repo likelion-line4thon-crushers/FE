@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router";
-import { PageContainer, PageBody, ContentContainer, FooterContainer } from "./AiReportPage.styles";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useParams } from "react-router";
+import { PageContainer, ContentContainer, FooterContainer } from "./AiReportPage.styles";
 import { SideHeader } from "./navigation";
-import { ReportGnb } from "./ReportGnb";
 import {
   TotalReaction,
   Top3,
@@ -12,21 +11,12 @@ import {
   ReviewSlide,
 } from "./sections";
 import FooterImage from "@/shared/assets/images/AI/AIFooter.png";
-import { createLogger } from "@/shared/lib/logger";
 import { loadStoredRoomData, computeRoomInfo } from "../model/room-info";
-import {
-  fetchStoredAiReport,
-  fetchMostRevisitSlide,
-  downloadAudienceVoiceCsv,
-} from "@/shared/api/ai-report";
-
-const log = createLogger("ai-report");
+import { fetchStoredAiReport, fetchMostRevisitSlide } from "@/shared/api/ai-report";
 
 const AiReportPage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { roomId: roomIdParam } = useParams();
-  const [csvDownloading, setCsvDownloading] = useState(false);
   const totalReactionRef = useRef<HTMLDivElement | null>(null);
   const top3Ref = useRef<HTMLDivElement | null>(null);
   const popularSlideRef = useRef<HTMLDivElement | null>(null);
@@ -52,25 +42,6 @@ const AiReportPage = () => {
   // * URL param is the primary source for roomId; fall back to storage/state
   const roomId = roomIdParam || roomInfo.roomId;
   const { deckId, fileName } = roomInfo;
-
-  const handleDownloadCsv = useCallback(async () => {
-    if (!roomId) {
-      return;
-    }
-    setCsvDownloading(true);
-    try {
-      await downloadAudienceVoiceCsv(roomId);
-    } catch (err) {
-      log.error("청중의 목소리 CSV 다운로드 실패:", err);
-      alert("CSV 다운로드에 실패했습니다. 잠시 후 다시 시도해주세요.");
-    } finally {
-      setCsvDownloading(false);
-    }
-  }, [roomId]);
-
-  const handleExit = useCallback(() => {
-    navigate("/", { replace: true });
-  }, [navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -235,50 +206,43 @@ const AiReportPage = () => {
 
   return (
     <PageContainer>
-      <ReportGnb
-        onDownloadCsv={handleDownloadCsv}
-        csvDownloading={csvDownloading}
-        onExit={handleExit}
-      />
-      <PageBody>
-        <SideHeader onIconClick={scrollToSection} activeSection={activeSection} />
-        <ContentContainer ref={contentContainerRef}>
-          <div ref={totalReactionRef}>
-            <TotalReaction
-              reportData={storedReport}
-              loading={reportLoading}
-              error={reportError}
-              roomId={roomId}
-              deckId={deckId}
-              fileName={fileName}
-            />
-          </div>
-          <div ref={top3Ref}>
-            <Top3 />
-          </div>
-          <div ref={popularSlideRef}>
-            <PopularSlide roomId={roomId} deckId={deckId} />
-          </div>
-          <div ref={questionSlideRef}>
-            <QuestionSlide />
-          </div>
-          <div ref={replaySlideRef}>
-            <ReplaySlide
-              reportData={revisitReport}
-              loading={revisitLoading}
-              error={revisitError}
-              roomId={roomId}
-              deckId={deckId}
-            />
-          </div>
-          <div ref={reviewRef}>
-            <ReviewSlide />
-          </div>
-          <FooterContainer>
-            <img src={FooterImage} alt="footer" />
-          </FooterContainer>
-        </ContentContainer>
-      </PageBody>
+      <SideHeader onIconClick={scrollToSection} activeSection={activeSection} />
+      <ContentContainer ref={contentContainerRef}>
+        <div ref={totalReactionRef}>
+          <TotalReaction
+            reportData={storedReport}
+            loading={reportLoading}
+            error={reportError}
+            roomId={roomId}
+            deckId={deckId}
+            fileName={fileName}
+          />
+        </div>
+        <div ref={top3Ref}>
+          <Top3 />
+        </div>
+        <div ref={popularSlideRef}>
+          <PopularSlide roomId={roomId} deckId={deckId} />
+        </div>
+        <div ref={questionSlideRef}>
+          <QuestionSlide />
+        </div>
+        <div ref={replaySlideRef}>
+          <ReplaySlide
+            reportData={revisitReport}
+            loading={revisitLoading}
+            error={revisitError}
+            roomId={roomId}
+            deckId={deckId}
+          />
+        </div>
+        <div ref={reviewRef}>
+          <ReviewSlide />
+        </div>
+        <FooterContainer>
+          <img src={FooterImage} alt="footer" />
+        </FooterContainer>
+      </ContentContainer>
     </PageContainer>
   );
 };
