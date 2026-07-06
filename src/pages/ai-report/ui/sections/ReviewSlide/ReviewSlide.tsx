@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { createLogger } from "@/shared/lib/logger";
 import {
@@ -11,9 +11,6 @@ import {
   RatingScore,
   SummaryBoxContainer,
   FeedbackListCardWrapper,
-  RefreshControls,
-  RefreshCooldownText,
-  RefreshButton,
   CenterHeader,
   SmallDivider,
   SectionHeaderRow,
@@ -44,23 +41,19 @@ interface FeedbackReport {
   feedbacks?: Array<{ comment?: string | null }>;
 }
 
-const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
-const MANUAL_REFRESH_COOLDOWN_MS = 60 * 1000;
+// 60초마다 청중 답변을 폴링한다. (요약은 서버에서 새 답변이 있을 때만 재생성)
+const POLL_INTERVAL_MS = 60 * 1000;
 
 const ReviewSlide = () => {
   const location = useLocation();
   const [feedbackData, setFeedbackData] = useState<FeedbackReport | null>(null);
   const [voiceData, setVoiceData] = useState<AudienceVoiceReport | null>(null);
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [requestInFlight, setRequestInFlight] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [csvDownloading, setCsvDownloading] = useState(false);
-  const [nextManualRefreshAt, setNextManualRefreshAt] = useState<number | null>(null);
-  const [cooldownNow, setCooldownNow] = useState(() => Date.now());
   const mountedRef = useRef(true);
-  const feedbackRequestIdRef = useRef(0);
-  const pendingFeedbackRequestsRef = useRef(0);
+  const requestIdRef = useRef(0);
+  const pendingRequestsRef = useRef(0);
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
 
@@ -73,46 +66,30 @@ const ReviewSlide = () => {
 
   useEffect(() => {
     mountedRef.current = true;
-
     return () => {
       mountedRef.current = false;
     };
   }, []);
 
-  const cooldownRemainingSeconds = useMemo(() => {
-    if (!nextManualRefreshAt) {
-      return 0;
-    }
-
-    return Math.max(0, Math.ceil((nextManualRefreshAt - cooldownNow) / 1000));
-  }, [cooldownNow, nextManualRefreshAt]);
-
   const loadFeedback = useCallback(
-    async (mode: "initial" | "auto" | "manual") => {
+    async (mode: "initial" | "poll") => {
       if (!roomId) {
-        feedbackRequestIdRef.current += 1;
+        requestIdRef.current += 1;
         setVoiceData(null);
         setFeedbackData(null);
         setError(new Error("roomId를 확인할 수 없습니다."));
         setLoading(false);
-        setRefreshing(false);
-        setRequestInFlight(false);
         return;
       }
 
-      const requestId = feedbackRequestIdRef.current + 1;
-      feedbackRequestIdRef.current = requestId;
-      const canCommit = () => mountedRef.current && feedbackRequestIdRef.current === requestId;
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+      const canCommit = () => mountedRef.current && requestIdRef.current === requestId;
       const isInitialLoad = mode === "initial";
-      const isManualRefresh = mode === "manual";
-      pendingFeedbackRequestsRef.current += 1;
-      setRequestInFlight(true);
+      pendingRequestsRef.current += 1;
 
       if (isInitialLoad) {
         setLoading(true);
-      }
-      if (isManualRefresh) {
-        setRefreshing(true);
       }
 
       try {
@@ -132,7 +109,6 @@ const ReviewSlide = () => {
             if (!canCommit()) {
               return;
             }
-
             if (isInitialLoad) {
               setFeedbackData(null);
               setError(feedbackErr);
@@ -145,7 +121,6 @@ const ReviewSlide = () => {
         if (!canCommit()) {
           return;
         }
-
         if (isInitialLoad) {
           setVoiceData(null);
           setError(err);
@@ -153,23 +128,9 @@ const ReviewSlide = () => {
           log.warn("청중의 목소리 업데이트 실패 (기존 데이터 유지):", err);
         }
       } finally {
-        pendingFeedbackRequestsRef.current = Math.max(0, pendingFeedbackRequestsRef.current - 1);
-        if (pendingFeedbackRequestsRef.current === 0 && mountedRef.current) {
-          setRequestInFlight(false);
-        }
-
-        if (!canCommit()) {
-          if (isManualRefresh && mountedRef.current) {
-            setRefreshing(false);
-          }
-          return;
-        }
-
-        if (isInitialLoad) {
+        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
+        if (canCommit() && isInitialLoad) {
           setLoading(false);
-        }
-        if (isManualRefresh) {
-          setRefreshing(false);
         }
       }
     },
@@ -178,68 +139,26 @@ const ReviewSlide = () => {
 
   useEffect(() => {
     if (!roomId) {
-      feedbackRequestIdRef.current += 1;
+      requestIdRef.current += 1;
       setVoiceData(null);
       setFeedbackData(null);
       setError(new Error("roomId를 확인할 수 없습니다."));
       setLoading(false);
-      setRefreshing(false);
-      setRequestInFlight(false);
       return undefined;
     }
 
-    setNextManualRefreshAt(null);
     loadFeedback("initial");
 
     const intervalId = window.setInterval(() => {
-      if (pendingFeedbackRequestsRef.current === 0) {
-        loadFeedback("auto");
+      if (pendingRequestsRef.current === 0) {
+        loadFeedback("poll");
       }
-    }, AUTO_REFRESH_INTERVAL_MS);
+    }, POLL_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);
     };
   }, [loadFeedback, roomId]);
-
-  useEffect(() => {
-    if (!nextManualRefreshAt) {
-      return undefined;
-    }
-
-    if (nextManualRefreshAt <= Date.now()) {
-      setNextManualRefreshAt(null);
-      return undefined;
-    }
-
-    const updateCooldownNow = () => {
-      const now = Date.now();
-      setCooldownNow(now);
-      if (now >= nextManualRefreshAt) {
-        setNextManualRefreshAt(null);
-      }
-    };
-
-    updateCooldownNow();
-    const intervalId = window.setInterval(() => {
-      updateCooldownNow();
-    }, 1000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [nextManualRefreshAt]);
-
-  const handleManualRefresh = useCallback(() => {
-    if (!roomId || loading || refreshing || requestInFlight || cooldownRemainingSeconds > 0) {
-      return;
-    }
-
-    const now = Date.now();
-    setCooldownNow(now);
-    setNextManualRefreshAt(now + MANUAL_REFRESH_COOLDOWN_MS);
-    loadFeedback("manual");
-  }, [cooldownRemainingSeconds, loadFeedback, loading, refreshing, requestInFlight, roomId]);
 
   const averageRating = useMemo(() => {
     if (loading || error) {
@@ -277,19 +196,6 @@ const ReviewSlide = () => {
       .join("\n");
   }, [feedbackData, loading, error]);
 
-  const refreshButtonLabel = useMemo(() => {
-    if (requestInFlight) {
-      return "청중 후기 새로고침 중";
-    }
-    if (cooldownRemainingSeconds > 0) {
-      return `청중 후기 새로고침 대기 ${cooldownRemainingSeconds}초`;
-    }
-    return "청중 후기 새로고침";
-  }, [cooldownRemainingSeconds, requestInFlight]);
-
-  const isRefreshDisabled =
-    loading || refreshing || requestInFlight || cooldownRemainingSeconds > 0 || !roomId;
-
   const handleDownloadCsv = useCallback(async () => {
     if (!roomId) {
       return;
@@ -314,20 +220,6 @@ const ReviewSlide = () => {
         <SectionTitleWrap>
           <AITitle title="청중의 목소리" description="청중이 세션에 대해 남긴 후기와 의견입니다." />
         </SectionTitleWrap>
-        <RefreshControls>
-          {cooldownRemainingSeconds > 0 && (
-            <RefreshCooldownText>{cooldownRemainingSeconds}초 후 가능</RefreshCooldownText>
-          )}
-          <RefreshButton
-            type="button"
-            onClick={handleManualRefresh}
-            disabled={isRefreshDisabled}
-            aria-label={refreshButtonLabel}
-            title={refreshButtonLabel}
-          >
-            ↻
-          </RefreshButton>
-        </RefreshControls>
         {hasQuestions && (
           <CsvDownloadButton type="button" onClick={handleDownloadCsv} disabled={csvDownloading}>
             <img src={DownloadCsvIcon} alt="" />
@@ -341,7 +233,12 @@ const ReviewSlide = () => {
           <SatisfactionCard averageRating={voiceData.averageRating} />
           <QuestionsContainer>
             {voiceData.questions.map((question, index) => (
-              <QuestionVoiceCard key={question.questionId} index={index + 1} question={question} />
+              <QuestionVoiceCard
+                key={question.questionId}
+                index={index + 1}
+                question={question}
+                summarizationEnabled={voiceData.summarizationEnabled}
+              />
             ))}
           </QuestionsContainer>
         </>

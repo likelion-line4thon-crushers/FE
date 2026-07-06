@@ -4,62 +4,103 @@ import type { AudienceVoiceQuestion } from "@/shared/api/ai-report";
 interface QuestionVoiceCardProps {
   index: number;
   question: AudienceVoiceQuestion;
+  summarizationEnabled: boolean;
 }
 
-export function QuestionVoiceCard({ index, question }: QuestionVoiceCardProps) {
+const WAITING_TEXT = "답변이 5개를 넘게 모이면 AI 요약이 제공됩니다.";
+
+export function QuestionVoiceCard({
+  index,
+  question,
+  summarizationEnabled,
+}: QuestionVoiceCardProps) {
   return (
-    <Wrap>
-      <QuestionHeader>
+    <Block>
+      {/* 1) 질문 제목 박스 (분리) */}
+      <TitleBox>
         {index}. {question.questionText}
-      </QuestionHeader>
-      <Body>
-        <SectionLabel>답변 모음</SectionLabel>
+      </TitleBox>
+
+      {/* 2) 답변 모음 박스 (분리, 내부 스크롤) */}
+      <AnswersBox>
+        <AnswersHeader>
+          <Tick />
+          <AnswersLabel>답변 모음</AnswersLabel>
+        </AnswersHeader>
         <AnswerList>
           {question.answers.length === 0 ? (
             <EmptyText>아직 답변이 없습니다.</EmptyText>
           ) : (
-            question.answers.map((answer, i) => <AnswerItem key={i}>{answer}</AnswerItem>)
+            question.answers.map((answer, i) => (
+              <AnswerItem key={i}>
+                <Dot />
+                <AnswerText>{answer}</AnswerText>
+              </AnswerItem>
+            ))
           )}
         </AnswerList>
-      </Body>
+      </AnswersBox>
+
+      {/* 3) BOiNi 정리 다크 바 (답변 박스와 분리된 별도 요소) */}
       <SummaryBar>
-        <SummaryTag>BOiNi 정리</SummaryTag>
-        <SummaryText>{question.summary}</SummaryText>
+        <Brand>BOiNi 정리</Brand>
+        <Divider>|</Divider>
+        <SummaryText $waiting={!summarizationEnabled}>
+          {summarizationEnabled ? question.summary : WAITING_TEXT}
+        </SummaryText>
       </SummaryBar>
-    </Wrap>
+    </Block>
   );
 }
 
 export default QuestionVoiceCard;
 
-const Wrap = styled.div`
+const Block = styled.div`
   display: flex;
   flex-direction: column;
-  border: 0.1vw solid #eaeaea;
-  border-radius: 0.8vw;
-  overflow: hidden;
-  background: #fff;
+  gap: 1.2vh;
+  width: 100%;
 `;
 
-const QuestionHeader = styled.div`
-  padding: 1.4vh 1.4vw;
-  font-size: clamp(13px, 0.95vw, 16px);
+const TitleBox = styled.div`
+  background: #ffffff;
+  border: 0.13vw solid #eaeaea;
+  border-radius: 16px;
+  padding: 1.8vh 1.4vw;
+  font-size: clamp(14px, 1vw, 20px);
   font-weight: 600;
-  color: #303030;
-  border-bottom: 0.1vw solid #f0f0f0;
+  color: #5c5c5c;
+  letter-spacing: -0.5px;
 `;
 
-const Body = styled.div`
+const AnswersBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+  background: #fafafa;
+  border: 0.1vw solid #eaeaea;
+  border-radius: 12px;
+  padding: 2.2vh 1.6vw;
+`;
+
+const AnswersHeader = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.8vh;
-  padding: 1.4vh 1.4vw;
 `;
 
-const SectionLabel = styled.span`
-  font-size: clamp(12px, 0.85vw, 14px);
+const Tick = styled.span`
+  width: clamp(18px, 1.4vw, 24px);
+  height: 4px;
+  border-radius: 2px;
+  background: #e74d07;
+`;
+
+const AnswersLabel = styled.span`
+  font-size: clamp(14px, 1vw, 20px);
   font-weight: 600;
-  color: #e74d07;
+  color: #434343;
+  letter-spacing: -0.5px;
 `;
 
 const AnswerList = styled.ul`
@@ -68,22 +109,35 @@ const AnswerList = styled.ul`
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6vh;
-  max-height: 22vh;
+  gap: 0.9vh;
+  max-height: 26vh;
   overflow-y: auto;
 `;
 
 const AnswerItem = styled.li`
-  font-size: clamp(12px, 0.85vw, 14px);
-  color: #303030;
-  &::before {
-    content: "· ";
-    color: #767676;
-  }
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6vw;
+`;
+
+const Dot = styled.span`
+  flex-shrink: 0;
+  width: 4px;
+  height: 4px;
+  margin-top: 0.9vh;
+  border-radius: 50%;
+  background: #767676;
+`;
+
+const AnswerText = styled.span`
+  font-size: clamp(13px, 0.95vw, 16px);
+  color: #5c5c5c;
+  line-height: 1.5;
+  letter-spacing: -0.4px;
 `;
 
 const EmptyText = styled.li`
-  font-size: clamp(12px, 0.85vw, 14px);
+  font-size: clamp(13px, 0.95vw, 16px);
   color: #999;
 `;
 
@@ -92,18 +146,27 @@ const SummaryBar = styled.div`
   align-items: flex-start;
   gap: 0.6vw;
   background: #303030;
-  color: #fff;
-  padding: 1.2vh 1.4vw;
+  border: 0.13vw solid #eaeaea;
+  border-radius: 16px;
+  padding: 1.6vh 1.4vw;
 `;
 
-const SummaryTag = styled.span`
+const Brand = styled.span`
   flex-shrink: 0;
-  font-size: clamp(11px, 0.8vw, 13px);
+  font-size: clamp(12px, 0.9vw, 16px);
   font-weight: 700;
   color: #ff8a4c;
+  letter-spacing: -0.4px;
 `;
 
-const SummaryText = styled.span`
-  font-size: clamp(12px, 0.85vw, 14px);
+const Divider = styled.span`
+  flex-shrink: 0;
+  color: #767676;
+`;
+
+const SummaryText = styled.span<{ $waiting?: boolean }>`
+  font-size: clamp(12px, 0.9vw, 16px);
+  color: ${({ $waiting }) => ($waiting ? "#bdbdbd" : "#ffffff")};
   line-height: 1.5;
+  letter-spacing: -0.4px;
 `;

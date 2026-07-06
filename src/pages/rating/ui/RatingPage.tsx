@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("rating");
+import Emoji3 from "@/shared/assets/images/emoji3.svg";
 import StarIcon from "@/shared/assets/images/star.svg";
 import StarCheckedIcon from "@/shared/assets/images/star_checked.svg";
 import { getOriginalSlideUrl } from "@/shared/api/presentation";
@@ -125,6 +126,17 @@ const RatingPage = () => {
   const showIdentityWarning = !hasIdentity && !identityWarningDismissed;
   const showPopover = isDownloadEnabled && !popoverDismissed;
 
+  const identityWarning = showIdentityWarning ? (
+    <IdentityNotice role="status">
+      평가 세션 정보를 찾을 수 없습니다. 청중 입장 후 받은 링크나 방 상태로 다시 열어주세요.
+      <IdentityNoticeActions>
+        <DismissButton type="button" onClick={() => setIdentityWarningDismissed(true)}>
+          닫기
+        </DismissButton>
+      </IdentityNoticeActions>
+    </IdentityNotice>
+  ) : null;
+
   return (
     <MainLayout>
       {/* 좌측 빗금 */}
@@ -174,37 +186,54 @@ const RatingPage = () => {
           </RatingBox>
         </StarRatingBox>
 
-        {/* 우측 - 후기 입력 (전체 높이) */}
-        <QuestionsBox>
-          <FeedbackBox>
-            <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
-            {questionsError && <ErrorNote role="alert">{questionsError}</ErrorNote>}
-            {showIdentityWarning && (
-              <IdentityNotice role="status">
-                평가 세션 정보를 찾을 수 없습니다. 청중 입장 후 받은 링크나 방 상태로 다시
-                열어주세요.
-                <IdentityNoticeActions>
-                  <DismissButton type="button" onClick={() => setIdentityWarningDismissed(true)}>
-                    닫기
-                  </DismissButton>
-                </IdentityNoticeActions>
-              </IdentityNotice>
-            )}
-            {loadingQuestions ? (
-              <div style={{ color: "#999", fontSize: "0.9vw" }}>질문 불러오는 중...</div>
-            ) : (
+        {/* 우측 - 후기 입력.
+            발표자가 질문을 작성한 경우: 질문 답변 폼(전체 높이).
+            질문이 없는 경우: 원본 디자인(감사 메시지 + 단일 후기 입력). */}
+        {loadingQuestions ? (
+          <QuestionsBox>
+            <div style={{ color: "#999", fontSize: "0.9vw" }}>질문 불러오는 중...</div>
+          </QuestionsBox>
+        ) : hasCustomQuestions ? (
+          <QuestionsBox>
+            <FeedbackBox>
+              <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
+              {questionsError && <ErrorNote role="alert">{questionsError}</ErrorNote>}
+              {identityWarning}
               <QuestionAnswerList
                 questions={questions}
                 answers={answers}
                 onAnswerChange={setAnswer}
-                hasCustomQuestions={hasCustomQuestions}
-                comment={comment}
-                onCommentChange={setComment}
                 disabled={!hasIdentity}
               />
-            )}
-          </FeedbackBox>
-        </QuestionsBox>
+            </FeedbackBox>
+          </QuestionsBox>
+        ) : (
+          <>
+            <ThanksBox>
+              <ThanksText>
+                <img src={Emoji3} alt="감사 로고" />
+                <div>
+                  세션에 참여해주셔서 감사합니다! <br />
+                  함께해서 즐거웠어요 :)
+                </div>
+              </ThanksText>
+            </ThanksBox>
+            <CommentBox>
+              <FeedbackBox>
+                <FeedbackTitle>세션에 대한 후기를 남겨주세요!</FeedbackTitle>
+                {questionsError && <ErrorNote role="alert">{questionsError}</ErrorNote>}
+                {identityWarning}
+                <CommentTextArea
+                  placeholder="여러분의 한 마디가 세션 진행자에게 큰 도움이 됩니다 :)"
+                  value={comment}
+                  disabled={!hasIdentity}
+                  maxLength={2000}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+              </FeedbackBox>
+            </CommentBox>
+          </>
+        )}
 
         {/* 하단 버튼 영역 */}
         <ButtonArea>
@@ -323,13 +352,66 @@ const StarRatingBox = styled(Box)`
   grid-row: 2;
 `;
 
-/* 우측 - 후기 (좌측 두 행 전체 높이) */
+/* 우측 - 후기 (좌측 두 행 전체 높이) — 발표자 질문이 있을 때 */
 const QuestionsBox = styled(Box)`
   grid-column: 2;
   grid-row: 1 / 3;
   justify-content: flex-start;
   align-items: center;
   overflow: hidden;
+`;
+
+/* 원본 디자인(질문 없음) - 우측 상단 감사 메시지 */
+const ThanksBox = styled(Box)`
+  grid-column: 2;
+  grid-row: 1;
+`;
+
+/* 원본 디자인(질문 없음) - 우측 하단 단일 후기 입력 */
+const CommentBox = styled(Box)`
+  grid-column: 2;
+  grid-row: 2;
+`;
+
+const ThanksText = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: left;
+
+  img {
+    width: 12vw;
+    height: auto;
+    margin-right: -2vw;
+    margin-left: -3vw;
+  }
+
+  div {
+    font-size: 1.3vw;
+    font-weight: 400;
+    color: #333;
+    line-height: 1.5;
+  }
+`;
+
+const CommentTextArea = styled.textarea`
+  width: 100%;
+  flex: 1 1 0;
+  min-height: 10vh;
+  resize: none;
+  border: 0.1vw solid #eaeaea;
+  border-radius: 0.6vw;
+  padding: 1vh 1vw;
+  font-size: clamp(12px, 0.9vw, 15px);
+  background: #fff;
+  outline: none;
+  &:focus {
+    border-color: #e8541e;
+  }
+  &::placeholder {
+    color: #b5b5b5;
+    opacity: 0.8;
+  }
 `;
 
 /* 별점 박스 */

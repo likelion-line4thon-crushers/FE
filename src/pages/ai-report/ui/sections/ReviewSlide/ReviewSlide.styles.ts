@@ -179,7 +179,7 @@ export const CsvDownloadButton = styled.button`
 export const QuestionsContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 1.4vh;
+  gap: 2.4vh;
   min-height: 0;
   max-height: 62vh;
   overflow-y: auto;

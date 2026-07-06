@@ -94,12 +94,15 @@ export type AudienceVoiceQuestion = {
   orderIndex: number;
   questionText: string;
   answers: string[];
-  summary: string;
+  answerCount: number;
+  // null until AI summarization is enabled (all questions have >5 answers)
+  summary: string | null;
 };
 
 export type AudienceVoiceReport = {
   averageRating: number;
   hasQuestions: boolean;
+  summarizationEnabled: boolean;
   questions: AudienceVoiceQuestion[];
 };
 

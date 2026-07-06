@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import SatisfyImage from "@/shared/assets/images/AI/Satisfy.png";
 import StarImage from "@/shared/assets/images/AI/Star.png";
 
 interface SatisfactionCardProps {
@@ -8,7 +9,10 @@ interface SatisfactionCardProps {
 export function SatisfactionCard({ averageRating }: SatisfactionCardProps) {
   return (
     <Card>
-      <Label>세션 만족도 평점</Label>
+      <LeftGroup>
+        <img src={SatisfyImage} alt="" />
+        <Label>세션 만족도 평점</Label>
+      </LeftGroup>
       <Score>
         <img src={StarImage} alt="" />
         <strong>{averageRating.toFixed(1)}점</strong>
@@ -25,33 +29,44 @@ const Card = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 1vw;
-  padding: 1.6vh 1.4vw;
-  border: 0.1vw solid #eaeaea;
-  border-radius: 0.8vw;
+  padding: 2vh 1.4vw;
+  border: 0.13vw solid #eaeaea;
+  border-radius: 16px;
   background: #fff;
 `;
 
+const LeftGroup = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6vw;
+  img {
+    width: clamp(22px, 1.8vw, 32px);
+    height: auto;
+  }
+`;
+
 const Label = styled.span`
-  font-size: clamp(14px, 1vw, 18px);
+  font-size: clamp(15px, 1.2vw, 22px);
   font-weight: 600;
-  color: #303030;
+  color: #5c5c5c;
+  letter-spacing: -0.5px;
 `;
 
 const Score = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 0.4vw;
-  color: #303030;
   img {
-    width: clamp(16px, 1.2vw, 22px);
+    width: clamp(18px, 1.5vw, 28px);
     height: auto;
   }
   strong {
-    font-size: clamp(15px, 1.1vw, 20px);
-    font-weight: 700;
+    font-size: clamp(16px, 1.2vw, 22px);
+    font-weight: 600;
+    color: #303030;
   }
   span {
-    font-size: clamp(12px, 0.85vw, 14px);
-    color: #767676;
+    font-size: clamp(12px, 0.9vw, 15px);
+    color: #999999;
   }
 `;
