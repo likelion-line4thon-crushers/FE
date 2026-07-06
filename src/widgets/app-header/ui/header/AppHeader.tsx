@@ -5,7 +5,12 @@ import { useAtomValue } from "jotai";
 import BoiniLogo from "@/shared/assets/images/Boini_logo.svg";
 import LiveIcon from "@/shared/assets/images/live.png";
 import { ShareModal } from "../share";
-import { ShareButton, ExitButton, StartSessionButton } from "./HeaderButtons";
+import {
+  ShareButton,
+  ExitButton,
+  StartSessionButton,
+  FeedbackQuestionButton,
+} from "./HeaderButtons";
 import { leaveRoom } from "@/shared/api/room";
 import { canStartSessionAtom, presenterModeAtom } from "@/entities/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
@@ -161,6 +166,9 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
     setShowShareModal(true);
   };
 
+  // TODO: 세션 후기 질문 작성 플로우 연결 (모달/페이지)는 추후 구현.
+  const handleFeedbackQuestionClick = () => {};
+
   const handleStartSessionClick = () => {
     if (isPrep) {
       setShowPresenterStartWarning(true);
@@ -237,6 +245,8 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
         {(isAudienceView || isPrep || isPresenter || isAiReport) && (
           <RightActions>
+            {isPrep && <FeedbackQuestionButton onClick={handleFeedbackQuestionClick} />}
+
             {(isPrep || isPresenter) && <ShareButton onClick={handleShareClick} />}
 
             {(isPrep || isPresenter) && (

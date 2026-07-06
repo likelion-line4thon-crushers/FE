@@ -6,7 +6,7 @@ export const QuickTogglesList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.8vh;
-  padding: 0 0.6vw 1vh;
+  padding: clamp(10px, 1.1vh, 14px) 0.6vw 1vh;
 `;
 
 export const ToggleRowLabel = styled.span`

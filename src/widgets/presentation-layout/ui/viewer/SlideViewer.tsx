@@ -49,6 +49,7 @@ const SlideViewer = ({
   showAudienceLegend = false,
   showUnlockToast = false,
   afterSlideContent = null,
+  audienceCountSlot = null,
 }: any) => {
   const { prev, current, next } = audienceStats;
   const total = Math.max(prev + current + next, 1);
@@ -80,6 +81,8 @@ const SlideViewer = ({
             <img src={FocusIcon} alt="집중 유도" width={20} height={20} />
             <span>집중 유도</span>
           </FocusLeft>
+
+          {audienceCountSlot}
 
           {showAudienceLegend && (
             <LegendContainer>

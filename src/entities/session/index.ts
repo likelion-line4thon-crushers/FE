@@ -13,3 +13,4 @@ export {
   DEFAULT_QUICK_SETTINGS,
   readQuickSettingsFromStorage,
 } from "./model/useQuickSettingsStorage";
+export { usePdfDownloadPolicy } from "./model/usePdfDownloadPolicy";

@@ -36,9 +36,9 @@ const PdfDownloadPolicyControl = ({
         onChange={(event) => onChange(event.target.checked)}
       />
     </PolicyBox>
-    <PolicyStatus role={error ? "alert" : undefined}>
-      {error ?? (saving ? "저장 중..." : "")}
-    </PolicyStatus>
+    {(error || saving) && (
+      <PolicyStatus role={error ? "alert" : undefined}>{error ?? "저장 중..."}</PolicyStatus>
+    )}
   </PolicyWrapper>
 );
 

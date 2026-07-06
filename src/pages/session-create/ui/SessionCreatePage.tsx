@@ -4,22 +4,26 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import { useSetAtom } from "jotai";
 import { createLogger } from "@/shared/lib/logger";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
-import { PresentationLayout, SlideViewer, SettingsPanel } from "@/widgets/presentation-layout";
+import {
+  PresentationLayout,
+  SlideViewer,
+  SettingsPanel,
+  AudienceCount,
+  PdfDownloadPolicyControl,
+  BroadcastScreenControl,
+} from "@/widgets/presentation-layout";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
-import { useQuickSettingsStorage } from "@/entities/session";
+import { useQuickSettingsStorage, usePdfDownloadPolicy } from "@/entities/session";
 import { canStartSessionAtom } from "@/entities/room";
 import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
 import { storageKeys } from "@/shared/config/storage-keys";
 import { useChunkedPdfUpload } from "../model/useChunkedPdfUpload";
 import { usePdfStream } from "../model/usePdfStream";
-import { usePdfDownloadPolicy } from "../model/usePdfDownloadPolicy";
 import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
 import { createRoom } from "@/shared/api/room";
 import { fetchSlidesMeta, fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import websocketService from "@/shared/api/websocket";
 import { useBroadcastPublisher } from "@/shared/lib/broadcast";
-import PdfDownloadPolicyControl from "./PdfDownloadPolicyControl";
-import BroadcastScreenControl from "./BroadcastScreenControl";
 
 const log = createLogger("session-create");
 
@@ -507,6 +511,14 @@ const PresentationPrepPage = () => {
         currentSlide={currentSlide}
         setCurrentSlide={setCurrentSlide}
         mode="prepare"
+        audienceCountSlot={
+          <AudienceCount
+            variant="chip"
+            roomId={roomId}
+            audienceCapacity={roomData?.count ?? 50}
+            isWsReady={isPresenterWsReady}
+          />
+        }
         afterSlideContent={
           <SlideNotesPanel
             notes={currentSlideNotes}
@@ -519,9 +531,8 @@ const PresentationPrepPage = () => {
         quickSettings={quickSettings}
         onOptionChange={handleOptionChange}
         onUnlockChange={handleUnlockChange}
-        roomId={roomId}
-        audienceCapacity={roomData?.count ?? 50}
-        isWsReady={isPresenterWsReady}
+        slides={displaySlides}
+        currentSlide={currentSlide}
         prepSettingsContent={
           <>
             <PdfDownloadPolicyControl

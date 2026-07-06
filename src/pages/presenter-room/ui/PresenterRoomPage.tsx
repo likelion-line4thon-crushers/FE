@@ -6,6 +6,10 @@ import {
   SlideViewer,
   AudienceCount,
   LiveLockButton,
+  NextSlidePreview,
+  CollapsibleSection,
+  PdfDownloadPolicyControl,
+  BroadcastScreenControl,
 } from "@/widgets/presentation-layout";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
 import QuestionList from "./QuestionList";
@@ -16,6 +20,7 @@ import QuestionSortDropdown from "./QuestionSortDropdown";
 import { QuestionScrollArea } from "./QuestionList.styles";
 import websocketService from "@/shared/api/websocket";
 import { useBroadcastPublisher } from "@/shared/lib/broadcast";
+import { usePdfDownloadPolicy } from "@/entities/session";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
@@ -214,12 +219,26 @@ const PresenterRoomPage = () => {
 
   // 🔹 발표 화면(외부 디스플레이) 미러링 — 세션 시작 후에도 projector 창과 계속 동기화.
   //    projector 창의 클릭/키 입력(nav)은 여기서 슬라이드를 이동하고 WS 로 청중에게 전파된다.
-  useBroadcastPublisher({
+  const { openScreen, isWindowManagementSupported } = useBroadcastPublisher({
     roomId: roomId ? String(roomId) : null,
     slides: slideUrls,
     currentSlide,
     onNavigate: (direction) =>
       changeSlide(currentSlideRef.current + (direction === "next" ? 1 : -1)),
+  });
+
+  // 🔹 슬라이드 다운로드 허용 정책 — 라이브 중에도 발표자가 변경 가능.
+  const {
+    enabled: pdfDownloadEnabled,
+    saving: pdfDownloadPolicySaving,
+    error: pdfDownloadPolicyError,
+    setPolicyEnabled: setPdfDownloadPolicyEnabled,
+  } = usePdfDownloadPolicy({
+    roomId,
+    initialEnabled:
+      typeof storedRoomData?.pdfDownloadEnabled === "boolean"
+        ? storedRoomData.pdfDownloadEnabled
+        : undefined,
   });
 
   // 🔹 WebSocket 연결 및 구독
@@ -449,7 +468,7 @@ const PresenterRoomPage = () => {
         />
         <PanelWrapper>
           <Section>
-            <Title>빠른 설정</Title>
+            <Title>세션 설정</Title>
           </Section>
           <Section>
             <Title>실시간 질문</Title>
@@ -502,29 +521,26 @@ const PresenterRoomPage = () => {
         focusHighlight={showFocusHighlight}
         timer={timer}
         showUnlockToast={showUnlockToast}
-        afterSlideContent={<SlideNotesPanel notes={currentSlideNotes} readOnly />}
-      />
-
-      {/* 🔹 우측: 빠른 설정 + 실시간 질문 */}
-      <PanelWrapper>
-        {/* === 빠른 설정 섹션 === */}
-        <Section>
+        audienceCountSlot={
           <AudienceCount
+            variant="chip"
             roomId={roomId}
             audienceCapacity={audienceCapacity}
             isWsReady={isPresenterWsReady}
             initialAudienceCount={initialAudienceCount}
           />
+        }
+        afterSlideContent={<SlideNotesPanel notes={currentSlideNotes} readOnly />}
+      />
 
+      {/* 🔹 우측: 다음 슬라이드 미리보기 + 세션 설정 + 실시간 질문 */}
+      <PanelWrapper>
+        {/* === 다음 슬라이드 미리보기 === */}
+        <NextSlidePreview slides={slideUrls} currentSlide={currentSlide} />
+
+        {/* === 세션 설정 섹션 === */}
+        <CollapsibleSection title="세션 설정">
           <QuickTogglesList>
-            <QuickSettingToggle
-              label="리액션 스티커"
-              description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
-              checked={quickSettings.sticker}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                handleOptionChange("sticker", event.target.checked)
-              }
-            />
             <QuickSettingToggle
               label="실시간 질문"
               description="청중이 실시간으로 질문을 남길 수 있습니다."
@@ -534,15 +550,36 @@ const PresenterRoomPage = () => {
               }
             />
             <QuickSettingToggle
-              label="다음 슬라이드 공개"
+              label="리액션 스티커"
+              description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
+              checked={quickSettings.sticker}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                handleOptionChange("sticker", event.target.checked)
+              }
+            />
+            <QuickSettingToggle
+              label="다음 구간 슬라이드 공개하기"
               description="청중이 다음 슬라이드 화면들을 미리 볼 수 있습니다."
               checked={quickSettings.unlock}
               onChange={(event: ChangeEvent<HTMLInputElement>) =>
                 handleUnlockChange(event.target.checked)
               }
             />
+            <PdfDownloadPolicyControl
+              enabled={pdfDownloadEnabled}
+              saving={pdfDownloadPolicySaving}
+              error={pdfDownloadPolicyError}
+              onChange={(enabled) => {
+                void setPdfDownloadPolicyEnabled(enabled);
+              }}
+            />
+            <BroadcastScreenControl
+              onOpen={openScreen}
+              windowManagementSupported={isWindowManagementSupported}
+              disabled={!roomId}
+            />
           </QuickTogglesList>
-        </Section>
+        </CollapsibleSection>
 
         {/* === 실시간 질문 섹션 === */}
         <QuestionSection>
@@ -711,18 +748,30 @@ const sortPresenterQuestionRows = ({
   return rows.sort((a, b) => b.latestTs - a.latestTs);
 };
 
-// 실시간 질문 섹션 스타일 — 패널 하단까지 차오르도록 flex:1
+// 실시간 질문 섹션 — 라이브에서는 사이드 패널 전체를 스크롤하므로 내부 스크롤 대신 자연 높이로 확장
 const QuestionSection = styled(Section)`
   position: relative;
-  flex: 1;
   min-height: 40vh;
 `;
 
+// 헤더 바가 제목 + 정렬 버튼을 한 줄에 담고, #f9f9f9 배경/구분선이 줄 전체를 덮도록 함
 const QuestionHeaderBar = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: clamp(32px, 3.52vh, 38px);
+  padding: 0 clamp(12px, 1.15vw, 23px);
+  background: #f9f9f9;
+  border-bottom: 0.05vw solid #eaeaea;
+  box-sizing: border-box;
+
+  ${Title} {
+    min-height: 0;
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+  }
 `;
 
 const LockButtonWrapper = styled.div`

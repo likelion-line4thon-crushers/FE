@@ -4,28 +4,16 @@ import styled from "styled-components";
 // question list read as one continuous list with uniform 20px gaps).
 export const QuestionScrollArea = styled.div`
   container-type: inline-size;
-  flex: 1;
-  min-height: 0;
+  min-height: 30vh;
   margin: 1vh 0.6vw 1.5vh;
   border: 1px solid #eaeaea;
   background: #fafafa;
   border-radius: 1.04vw;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 20px 11px;
   box-sizing: border-box;
-  scrollbar-width: thin;
-  scrollbar-color: #ccc transparent;
-
-  &::-webkit-scrollbar {
-    width: 0.4vw;
-  }
-  &::-webkit-scrollbar-thumb {
-    background-color: #c8c8c8;
-    border-radius: 1vw;
-  }
 `;
 
 export const LiveBox = styled.div`

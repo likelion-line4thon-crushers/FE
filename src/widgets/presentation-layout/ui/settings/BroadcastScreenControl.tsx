@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ArrowRightIcon from "@/shared/assets/images/arrow-right.svg";
 import {
   ControlBox,
   ControlDescription,
@@ -40,26 +41,27 @@ const BroadcastScreenControl = ({
   };
 
   const description = windowManagementSupported
-    ? "연결된 외부 화면(빔프로젝터 등)에 슬라이드만 전체 화면으로 띄웁니다."
-    : "슬라이드만 표시되는 발표 화면을 새 창으로 엽니다. 외부 화면으로 옮겨 사용하세요.";
+    ? "연결된 외부 화면(빔프로젝터 등)에 오직 슬라이드 화면만 띄웁니다."
+    : "새 창에서 오직 슬라이드 화면만이 보여집니다.";
 
   return (
     <ControlWrapper>
       <ControlBox>
         <ControlText>
-          <ControlLabel>발표 화면 열기</ControlLabel>
+          <ControlLabel>깔끔한 발표 화면</ControlLabel>
           <ControlDescription>{description}</ControlDescription>
         </ControlText>
         <LaunchButton
           type="button"
           onClick={() => void handleClick()}
           disabled={disabled}
-          aria-label="발표 화면 열기"
+          aria-label="깔끔한 발표 화면 열기"
         >
           화면 열기
+          <img src={ArrowRightIcon} alt="" aria-hidden="true" />
         </LaunchButton>
       </ControlBox>
-      <ControlStatus role={error ? "alert" : undefined}>{error ?? ""}</ControlStatus>
+      {error && <ControlStatus role="alert">{error}</ControlStatus>}
     </ControlWrapper>
   );
 };
