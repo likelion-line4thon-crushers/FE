@@ -92,12 +92,10 @@ export const FeedbackListCardWrapper = styled.div`
 `;
 
 export const RefreshControls = styled.div`
-  position: absolute;
-  top: 18px;
-  right: 18px;
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 `;
 
 export const RefreshCooldownText = styled.span`
@@ -137,6 +135,55 @@ export const RefreshButton = styled.button`
     background: #f4f4f4;
     cursor: not-allowed;
   }
+`;
+
+export const SectionHeaderRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+`;
+
+export const SectionTitleWrap = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+export const CsvDownloadButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.5vw;
+  padding: 0.9vh 1.2vw;
+  border: 0.1vw solid #e74d07;
+  border-radius: 0.6vw;
+  background: #fff;
+  color: #e74d07;
+  font-size: clamp(12px, 0.85vw, 14px);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+
+  img {
+    width: clamp(14px, 1vw, 18px);
+    height: auto;
+  }
+
+  &:hover {
+    background: #fff7f3;
+  }
+`;
+
+export const QuestionsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1.4vh;
+  min-height: 0;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 0.4vw;
 `;
 
 export const SummaryBoxContainer = styled.div`

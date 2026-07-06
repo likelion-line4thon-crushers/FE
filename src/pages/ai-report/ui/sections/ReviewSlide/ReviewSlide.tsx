@@ -16,13 +16,25 @@ import {
   RefreshButton,
   CenterHeader,
   SmallDivider,
+  SectionHeaderRow,
+  SectionTitleWrap,
+  CsvDownloadButton,
+  QuestionsContainer,
 } from "./ReviewSlide.styles";
 import { AITitle, ContentBox } from "../../summary";
 import SatisfyImage from "@/shared/assets/images/AI/Satisfy.png";
 import StarImage from "@/shared/assets/images/AI/Star.png";
 import GrayFaceImage from "@/shared/assets/images/AI/reviewslide_face.png";
-import { fetchFeedbackReport } from "@/shared/api/ai-report";
+import DownloadCsvIcon from "@/shared/assets/images/AI/download-csv.svg";
+import {
+  fetchFeedbackReport,
+  fetchAudienceVoiceReport,
+  downloadAudienceVoiceCsv,
+  type AudienceVoiceReport,
+} from "@/shared/api/ai-report";
 import { loadStoredRoomData, computeRoomInfo } from "../../../model/room-info";
+import { SatisfactionCard } from "./SatisfactionCard";
+import { QuestionVoiceCard } from "./QuestionVoiceCard";
 
 const log = createLogger("ai-report");
 
@@ -38,10 +50,12 @@ const MANUAL_REFRESH_COOLDOWN_MS = 60 * 1000;
 const ReviewSlide = () => {
   const location = useLocation();
   const [feedbackData, setFeedbackData] = useState<FeedbackReport | null>(null);
+  const [voiceData, setVoiceData] = useState<AudienceVoiceReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [requestInFlight, setRequestInFlight] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [csvDownloading, setCsvDownloading] = useState(false);
   const [nextManualRefreshAt, setNextManualRefreshAt] = useState<number | null>(null);
   const [cooldownNow, setCooldownNow] = useState(() => Date.now());
   const mountedRef = useRef(true);
@@ -77,6 +91,7 @@ const ReviewSlide = () => {
     async (mode: "initial" | "auto" | "manual") => {
       if (!roomId) {
         feedbackRequestIdRef.current += 1;
+        setVoiceData(null);
         setFeedbackData(null);
         setError(new Error("roomId를 확인할 수 없습니다."));
         setLoading(false);
@@ -101,10 +116,30 @@ const ReviewSlide = () => {
       }
 
       try {
-        const data = await fetchFeedbackReport(roomId);
+        const voice = await fetchAudienceVoiceReport(roomId);
         if (canCommit()) {
-          setFeedbackData(data);
+          setVoiceData(voice);
           setError(null);
+        }
+
+        if (voice && !voice.hasQuestions) {
+          try {
+            const data = await fetchFeedbackReport(roomId);
+            if (canCommit()) {
+              setFeedbackData(data);
+            }
+          } catch (feedbackErr) {
+            if (!canCommit()) {
+              return;
+            }
+
+            if (isInitialLoad) {
+              setFeedbackData(null);
+              setError(feedbackErr);
+            } else {
+              log.warn("후기 업데이트 실패 (기존 데이터 유지):", feedbackErr);
+            }
+          }
         }
       } catch (err) {
         if (!canCommit()) {
@@ -112,10 +147,10 @@ const ReviewSlide = () => {
         }
 
         if (isInitialLoad) {
-          setFeedbackData(null);
+          setVoiceData(null);
           setError(err);
         } else {
-          log.warn("후기 업데이트 실패 (기존 데이터 유지):", err);
+          log.warn("청중의 목소리 업데이트 실패 (기존 데이터 유지):", err);
         }
       } finally {
         pendingFeedbackRequestsRef.current = Math.max(0, pendingFeedbackRequestsRef.current - 1);
@@ -144,6 +179,7 @@ const ReviewSlide = () => {
   useEffect(() => {
     if (!roomId) {
       feedbackRequestIdRef.current += 1;
+      setVoiceData(null);
       setFeedbackData(null);
       setError(new Error("roomId를 확인할 수 없습니다."));
       setLoading(false);
@@ -195,13 +231,7 @@ const ReviewSlide = () => {
   }, [nextManualRefreshAt]);
 
   const handleManualRefresh = useCallback(() => {
-    if (
-      !roomId ||
-      loading ||
-      refreshing ||
-      requestInFlight ||
-      cooldownRemainingSeconds > 0
-    ) {
+    if (!roomId || loading || refreshing || requestInFlight || cooldownRemainingSeconds > 0) {
       return;
     }
 
@@ -260,74 +290,114 @@ const ReviewSlide = () => {
   const isRefreshDisabled =
     loading || refreshing || requestInFlight || cooldownRemainingSeconds > 0 || !roomId;
 
+  const handleDownloadCsv = useCallback(async () => {
+    if (!roomId) {
+      return;
+    }
+
+    setCsvDownloading(true);
+    try {
+      await downloadAudienceVoiceCsv(roomId);
+    } catch (err) {
+      log.error("청중의 목소리 CSV 다운로드 실패:", err);
+      alert("CSV 다운로드에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setCsvDownloading(false);
+    }
+  }, [roomId]);
+
+  const hasQuestions = Boolean(voiceData?.hasQuestions);
+
   return (
     <ReviewSlideContainer>
-      <AITitle title="청중의 한마디" description="청중이 세션에 대해 남긴 후기와 의견입니다." />
-      <TotalContainer>
-        <LeftBoxContainer>
-          <ContentBox title="" variant="custom" width="640px" height="300px">
-            <CenterHeader>
-              <img src={SatisfyImage} alt="satisfy" width={48} height={48} />
-              <h2>세션 만족도</h2>
-              <SmallDivider />
-            </CenterHeader>
-            <RatingWrapper>
-              <RatingRow>
-                <img src={StarImage} alt="star" width={28} height={28} />
-                <RatingScore>
-                  {averageRating}점 <span>/ 5점</span>
-                </RatingScore>
-              </RatingRow>
-            </RatingWrapper>
-          </ContentBox>
+      <SectionHeaderRow>
+        <SectionTitleWrap>
+          <AITitle title="청중의 목소리" description="청중이 세션에 대해 남긴 후기와 의견입니다." />
+        </SectionTitleWrap>
+        <RefreshControls>
+          {cooldownRemainingSeconds > 0 && (
+            <RefreshCooldownText>{cooldownRemainingSeconds}초 후 가능</RefreshCooldownText>
+          )}
+          <RefreshButton
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={isRefreshDisabled}
+            aria-label={refreshButtonLabel}
+            title={refreshButtonLabel}
+          >
+            ↻
+          </RefreshButton>
+        </RefreshControls>
+        {hasQuestions && (
+          <CsvDownloadButton type="button" onClick={handleDownloadCsv} disabled={csvDownloading}>
+            <img src={DownloadCsvIcon} alt="" />
+            CSV 다운로드
+          </CsvDownloadButton>
+        )}
+      </SectionHeaderRow>
 
-          <ContentBox title="청중 후기 요약" variant="custom" height="300px" width="640px">
-            <SummaryBoxContainer>
-              <img className="icon-image" src={GrayFaceImage} alt="face" />
-              <h2>청중 후기 요약</h2>
-              <SmallDivider />
-              <h3>{summaryText}</h3>
-            </SummaryBoxContainer>
-          </ContentBox>
-        </LeftBoxContainer>
-        <RightBoxContainer>
-          <FeedbackListCardWrapper>
-            <ContentBox
-              title="청중 후기 및 의견 모음"
-              variant="text"
-              width="765px"
-              height="650px"
-              content={feedbackListContent}
-              titleStyle={{
-                color: "#434343",
-                fontSize: "20px",
-                fontWeight: "600",
-                fontStyle: "normal",
-              }}
-              contentStyle={{
-                color: "#5C5C5C",
-                fontSize: "19px",
-                fontWeight: "400",
-                fontStyle: "normal",
-              }}
-            />
-            <RefreshControls>
-              {cooldownRemainingSeconds > 0 && (
-                <RefreshCooldownText>{cooldownRemainingSeconds}초 후 가능</RefreshCooldownText>
-              )}
-              <RefreshButton
-                type="button"
-                onClick={handleManualRefresh}
-                disabled={isRefreshDisabled}
-                aria-label={refreshButtonLabel}
-                title={refreshButtonLabel}
-              >
-                ↻
-              </RefreshButton>
-            </RefreshControls>
-          </FeedbackListCardWrapper>
-        </RightBoxContainer>
-      </TotalContainer>
+      {hasQuestions && voiceData ? (
+        <>
+          <SatisfactionCard averageRating={voiceData.averageRating} />
+          <QuestionsContainer>
+            {voiceData.questions.map((question, index) => (
+              <QuestionVoiceCard key={question.questionId} index={index + 1} question={question} />
+            ))}
+          </QuestionsContainer>
+        </>
+      ) : (
+        <TotalContainer>
+          <LeftBoxContainer>
+            <ContentBox title="" variant="custom" width="640px" height="300px">
+              <CenterHeader>
+                <img src={SatisfyImage} alt="satisfy" width={48} height={48} />
+                <h2>세션 만족도</h2>
+                <SmallDivider />
+              </CenterHeader>
+              <RatingWrapper>
+                <RatingRow>
+                  <img src={StarImage} alt="star" width={28} height={28} />
+                  <RatingScore>
+                    {averageRating}점 <span>/ 5점</span>
+                  </RatingScore>
+                </RatingRow>
+              </RatingWrapper>
+            </ContentBox>
+
+            <ContentBox title="청중 후기 요약" variant="custom" height="300px" width="640px">
+              <SummaryBoxContainer>
+                <img className="icon-image" src={GrayFaceImage} alt="face" />
+                <h2>청중 후기 요약</h2>
+                <SmallDivider />
+                <h3>{summaryText}</h3>
+              </SummaryBoxContainer>
+            </ContentBox>
+          </LeftBoxContainer>
+          <RightBoxContainer>
+            <FeedbackListCardWrapper>
+              <ContentBox
+                title="청중 후기 및 의견 모음"
+                variant="text"
+                width="765px"
+                height="650px"
+                content={feedbackListContent}
+                titleStyle={{
+                  color: "#434343",
+                  fontSize: "20px",
+                  fontWeight: "600",
+                  fontStyle: "normal",
+                }}
+                contentStyle={{
+                  color: "#5C5C5C",
+                  fontSize: "19px",
+                  fontWeight: "400",
+                  fontStyle: "normal",
+                }}
+              />
+            </FeedbackListCardWrapper>
+          </RightBoxContainer>
+        </TotalContainer>
+      )}
     </ReviewSlideContainer>
   );
 };
