@@ -15,18 +15,15 @@ import {
   SmallDivider,
   SectionHeaderRow,
   SectionTitleWrap,
-  CsvDownloadButton,
   QuestionsContainer,
 } from "./ReviewSlide.styles";
 import { AITitle, ContentBox } from "../../summary";
 import SatisfyImage from "@/shared/assets/images/AI/Satisfy.png";
 import StarImage from "@/shared/assets/images/AI/Star.png";
 import GrayFaceImage from "@/shared/assets/images/AI/reviewslide_face.png";
-import DownloadCsvIcon from "@/shared/assets/images/AI/download-csv.svg";
 import {
   fetchFeedbackReport,
   fetchAudienceVoiceReport,
-  downloadAudienceVoiceCsv,
   type AudienceVoiceReport,
 } from "@/shared/api/ai-report";
 import { loadStoredRoomData, computeRoomInfo } from "../../../model/room-info";
@@ -50,7 +47,6 @@ const ReviewSlide = () => {
   const [voiceData, setVoiceData] = useState<AudienceVoiceReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [csvDownloading, setCsvDownloading] = useState(false);
   const mountedRef = useRef(true);
   const requestIdRef = useRef(0);
   const pendingRequestsRef = useRef(0);
@@ -137,6 +133,12 @@ const ReviewSlide = () => {
     [roomId]
   );
 
+  // 인터벌이 loadFeedback 정체성 변화로 재생성되지 않도록 ref로 최신 함수를 참조한다.
+  const loadFeedbackRef = useRef(loadFeedback);
+  useEffect(() => {
+    loadFeedbackRef.current = loadFeedback;
+  }, [loadFeedback]);
+
   useEffect(() => {
     if (!roomId) {
       requestIdRef.current += 1;
@@ -147,18 +149,17 @@ const ReviewSlide = () => {
       return undefined;
     }
 
-    loadFeedback("initial");
+    loadFeedbackRef.current("initial");
 
+    // 60초마다 무조건 폴링한다. 오래된 응답은 requestId 가드로 무시되므로 중복 커밋은 없다.
     const intervalId = window.setInterval(() => {
-      if (pendingRequestsRef.current === 0) {
-        loadFeedback("poll");
-      }
+      loadFeedbackRef.current("poll");
     }, POLL_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [loadFeedback, roomId]);
+  }, [roomId]);
 
   const averageRating = useMemo(() => {
     if (loading || error) {
@@ -196,22 +197,6 @@ const ReviewSlide = () => {
       .join("\n");
   }, [feedbackData, loading, error]);
 
-  const handleDownloadCsv = useCallback(async () => {
-    if (!roomId) {
-      return;
-    }
-
-    setCsvDownloading(true);
-    try {
-      await downloadAudienceVoiceCsv(roomId);
-    } catch (err) {
-      log.error("청중의 목소리 CSV 다운로드 실패:", err);
-      alert("CSV 다운로드에 실패했습니다. 잠시 후 다시 시도해주세요.");
-    } finally {
-      setCsvDownloading(false);
-    }
-  }, [roomId]);
-
   const hasQuestions = Boolean(voiceData?.hasQuestions);
 
   return (
@@ -220,12 +205,6 @@ const ReviewSlide = () => {
         <SectionTitleWrap>
           <AITitle title="청중의 목소리" description="청중이 세션에 대해 남긴 후기와 의견입니다." />
         </SectionTitleWrap>
-        {hasQuestions && (
-          <CsvDownloadButton type="button" onClick={handleDownloadCsv} disabled={csvDownloading}>
-            <img src={DownloadCsvIcon} alt="" />
-            CSV 다운로드
-          </CsvDownloadButton>
-        )}
       </SectionHeaderRow>
 
       {hasQuestions && voiceData ? (

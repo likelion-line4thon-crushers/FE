@@ -14,6 +14,7 @@ export function QuestionVoiceCard({
   question,
   summarizationEnabled,
 }: QuestionVoiceCardProps) {
+  const hasSummary = summarizationEnabled && Boolean(question.summary && question.summary.trim());
   return (
     <Block>
       {/* 1) 질문 제목 박스 (분리) */}
@@ -41,12 +42,13 @@ export function QuestionVoiceCard({
         </AnswerList>
       </AnswersBox>
 
-      {/* 3) BOiNi 정리 다크 바 (답변 박스와 분리된 별도 요소) */}
+      {/* 3) BOiNi 정리 다크 바 (답변 박스와 분리된 별도 요소).
+          요약이 활성화되고 실제 요약이 있을 때만 요약을 보여주고, 그 외(답변 없음/미달)에는 안내 문구. */}
       <SummaryBar>
         <Brand>BOiNi 정리</Brand>
         <Divider>|</Divider>
-        <SummaryText $waiting={!summarizationEnabled}>
-          {summarizationEnabled ? question.summary : WAITING_TEXT}
+        <SummaryText $waiting={!hasSummary}>
+          {hasSummary ? question.summary : WAITING_TEXT}
         </SummaryText>
       </SummaryBar>
     </Block>
@@ -110,7 +112,8 @@ const AnswerList = styled.ul`
   display: flex;
   flex-direction: column;
   gap: 0.9vh;
-  max-height: 26vh;
+  /* Fixed-height answer box: the list scrolls inside the card, never the section. */
+  height: 30vh;
   overflow-y: auto;
 `;
 

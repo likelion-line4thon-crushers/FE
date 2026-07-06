@@ -2,9 +2,17 @@ import styled from "styled-components";
 
 export const PageContainer = styled.div`
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   width: 100%;
   height: 100%;
+`;
+
+export const PageBody = styled.div`
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
 `;
 
 export const ContentContainer = styled.div`

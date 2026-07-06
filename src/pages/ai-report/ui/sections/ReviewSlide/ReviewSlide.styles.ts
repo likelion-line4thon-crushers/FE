@@ -180,10 +180,6 @@ export const QuestionsContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2.4vh;
-  min-height: 0;
-  max-height: 62vh;
-  overflow-y: auto;
-  padding-right: 0.4vw;
 `;
 
 export const SummaryBoxContainer = styled.div`
