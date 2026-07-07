@@ -19,7 +19,7 @@ import QuestionTabs from "./QuestionTabs";
 import QuestionSortDropdown from "./QuestionSortDropdown";
 import { QuestionScrollArea } from "./QuestionList.styles";
 import websocketService from "@/shared/api/websocket";
-import { useBroadcastPublisher } from "@/shared/lib/broadcast";
+import { useBroadcastPublisher, useBroadcastReactionVisibility } from "@/shared/lib/broadcast";
 import { usePdfDownloadPolicy } from "@/entities/session";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
@@ -220,8 +220,10 @@ const PresenterRoomPage = () => {
     [slideCount, roomId]
   );
 
-  // 🔹 발표 화면 리액션 스티커 노출 여부 — 발표자 본인 화면과 독립적으로 제어. 기본값은 숨김.
-  const [showStampsOnBroadcast, setShowStampsOnBroadcast] = useState(false);
+  // 🔹 발표 화면 리액션 스티커 노출 여부 — 준비/발표 화면 간 sessionStorage 로 유지. 기본값은 숨김.
+  const [showStampsOnBroadcast, setShowStampsOnBroadcast] = useBroadcastReactionVisibility(
+    roomId ? String(roomId) : null
+  );
 
   // 🔹 슬라이드 다운로드 허용 정책 — 라이브 중에도 발표자가 변경 가능.
   const {

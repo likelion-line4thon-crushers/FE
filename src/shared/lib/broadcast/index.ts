@@ -145,3 +145,4 @@ export async function openBroadcastScreen(roomId: string): Promise<Window | null
 }
 
 export { useBroadcastPublisher } from "./useBroadcastPublisher";
+export { useBroadcastReactionVisibility } from "./useBroadcastReactionVisibility";

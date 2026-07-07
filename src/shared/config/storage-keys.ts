@@ -14,6 +14,8 @@ export const storageKeys = {
   audienceCount: (roomId: string) => `boini_audience_count_${roomId}` as const,
   quickSettings: (roomId: string) => `presentation_quick_settings_${roomId}` as const,
   pdfDownloadPolicy: (roomId: string) => `boini_pdf_download_policy_${roomId}` as const,
+  // 발표 화면(외부 디스플레이)에 리액션 스티커 노출 여부 — 준비/발표 화면 간 유지
+  broadcastReactionsVisible: (roomId: string) => `boini_broadcast_reactions_${roomId}` as const,
   // 발표자가 이 브라우저에서 세션을 시작했음을 기록하는 마커 (새로고침 시 발표 화면 복원에 사용)
   sessionStarted: (roomId: string) => `boini_session_started_${roomId}` as const,
 } as const;
