@@ -4,7 +4,7 @@ import styled from "styled-components";
 // question list read as one continuous list with uniform 20px gaps).
 export const QuestionScrollArea = styled.div`
   container-type: inline-size;
-  min-height: 30vh;
+  flex: 1 0 auto;
   margin: 1vh 0.6vw 1.5vh;
   border: 1px solid #eaeaea;
   background: #fafafa;
