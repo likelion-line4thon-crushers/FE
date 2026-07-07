@@ -55,6 +55,7 @@ export const SlideWrapper = styled.div`
 `;
 
 export const LargeSlide = styled.div`
+  position: relative;
   flex: 1;
   background: #ffffff;
   border: 1px solid #eaeaea;
@@ -74,6 +75,7 @@ export const LargeSlide = styled.div`
 `;
 
 export const SmallSlide = styled.div`
+  position: relative;
   width: 400px;
   background: #ffffff;
   border: 1px solid #eaeaea;
@@ -89,6 +91,19 @@ export const SmallSlide = styled.div`
     width: 100%;
     height: 100%;
     object-fit: contain;
+  }
+`;
+
+/* LargeSlide/SmallSlide의 'img { width/height: 100% }' 규칙보다 우선해야 하므로 && 사용 */
+export const StampImage = styled.img`
+  && {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: clamp(18px, 4%, 34px);
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+    pointer-events: none;
   }
 `;
 

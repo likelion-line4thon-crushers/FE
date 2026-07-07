@@ -11,13 +11,16 @@ import {
   NoSlideMessage,
   SectionContainer,
   SlideWrapper,
+  StampImage,
 } from "./PopularSlide.styles";
-import { EmojiPanel } from "@/entities/reaction";
+import { EmojiPanel, SELECTED_EMOJI_ICONS } from "@/entities/reaction";
 import { ContentBox, AITitle, SlideNumber, SlideSkeleton } from "../../summary";
 import NoSlideImage from "@/shared/assets/images/AI/NoSlide.png";
 import { fetchMostReactionSticker } from "@/shared/api/ai-report";
 import { useSlideImage } from "@/entities/slide";
 import type { EmojiId } from "@/entities/reaction";
+import useRoomStickers from "../../../model/useRoomStickers";
+import type { SlideSticker } from "../../../model/useRoomStickers";
 
 interface ReactionSlideReportItem {
   emoji: number;
@@ -109,6 +112,27 @@ const PopularSlide = ({ roomId, deckId }: { roomId?: any; deckId?: any }) => {
   const hasData = (selectedData?.topSlide ?? 0) > 0;
   const primarySlideNumber = selectedData?.topSlide != null ? Number(selectedData.topSlide) : null;
 
+  // 실제 찍힌 스티커 좌표 (기존 /stickers/{roomId}/all 재사용)
+  const { getStickers } = useRoomStickers(roomId);
+  const firstSlideStamps = getStickers(selectedEmojiId, primarySlideNumber);
+  const secondSlideStamps = getStickers(
+    selectedEmojiId,
+    hasSecondSlide ? Number(secondSlideValue) : null
+  );
+  const stampSrc = SELECTED_EMOJI_ICONS[selectedEmojiId as EmojiId];
+
+  const renderStamps = (stamps: SlideSticker[]) =>
+    stampSrc
+      ? stamps.map((stamp) => (
+          <StampImage
+            key={stamp.id}
+            src={stampSrc}
+            alt="sticker"
+            style={{ top: `${stamp.yPct}%`, left: `${stamp.xPct}%` }}
+          />
+        ))
+      : null;
+
   return (
     <PopularSlideContainer>
       <AITitle
@@ -135,7 +159,10 @@ const PopularSlide = ({ roomId, deckId }: { roomId?: any; deckId?: any }) => {
                 <SlideWrapper>
                   <LargeSlide>
                     {firstSlideUrl ? (
-                      <img src={firstSlideUrl} alt="Most popular slide" />
+                      <>
+                        <img src={firstSlideUrl} alt="Most popular slide" />
+                        {renderStamps(firstSlideStamps)}
+                      </>
                     ) : (
                       <SlideSkeleton width="100%" height="100%" />
                     )}
@@ -155,7 +182,10 @@ const PopularSlide = ({ roomId, deckId }: { roomId?: any; deckId?: any }) => {
                   <SlideWrapper>
                     <SmallSlide>
                       {secondSlideUrl ? (
-                        <img src={secondSlideUrl} alt="Second popular slide" />
+                        <>
+                          <img src={secondSlideUrl} alt="Second popular slide" />
+                          {renderStamps(secondSlideStamps)}
+                        </>
                       ) : (
                         <SlideSkeleton width="100%" height="100%" />
                       )}
