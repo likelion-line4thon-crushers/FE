@@ -38,7 +38,6 @@ Boini는 발표자와 청중이 실시간으로 상호작용할 수 있는 프�
 
 - `axios`
 - `@stomp/stompjs`, `sockjs-client`
-- `recharts`
 - `qrcode.react`
 - `uuid`
 
