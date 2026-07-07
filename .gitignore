@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+playwright-report
+test-results
+blob-report
+playwright/.cache
 
 # Editor directories and files
 .vscode/*
@@ -29,3 +33,8 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
+
+docs/
+.omc/
+playwright/
+.playwright-mcp

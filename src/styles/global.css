@@ -1,13 +1,23 @@
 /* global.css */
-html, body {
+html,
+body {
   margin: 0;
   height: 100%;
   overflow: hidden; /* 스크롤 완전 차단 */
 }
 
+body {
+  font-family: "Pretendard", sans-serif;
+  /* 폰트 최적화: 안티앨리어싱 + 렌더링 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "tnum"; /* 숫자 고정폭 */
+}
+
 #root {
   display: grid;
-  grid-template-rows: 3.7vh 1fr; /* 헤더 + 나머지 */
+  grid-template-rows: auto minmax(0, 1fr); /* 헤더 + 나머지 */
   height: 100vh;
   overflow: hidden;
 }
@@ -15,7 +25,7 @@ html, body {
 .HeaderBar {
   grid-row: 1;
   width: 100%;
-  height: 3.7vh;
+  height: 5.2vh;
   background: #fff;
   z-index: 100;
 }
@@ -23,5 +33,6 @@ html, body {
 .page {
   grid-row: 2;
   overflow: hidden;
-  height: 100%; /* ✅ 남은 영역 자동 채움 */
+  min-height: 0;
+  height: 100%;
 }
