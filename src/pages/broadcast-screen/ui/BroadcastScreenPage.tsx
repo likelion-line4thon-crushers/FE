@@ -14,7 +14,37 @@ import {
   BroadcastStampImage,
   Placeholder,
   FullscreenHint,
+  BottomControls,
+  ArrowButton,
 } from "./BroadcastScreenPage.styles";
+
+/** 전체화면 컨트롤 자동 숨김까지의 유휴 시간 — 청중 전체화면 동작과 동일한 패턴. */
+const CONTROLS_IDLE_MS = 2500;
+
+// Figma "하단 인디케이터 영역"의 좌우 화살표 (currentColor 로 렌더).
+const ChevronLeft = () => (
+  <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+    <path
+      d="M25 30L15 20L25 10"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ChevronRight = () => (
+  <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+    <path
+      d="M15 10L25 20L15 30"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 /**
  * Projector view. Rendered bare (no app chrome) on the external display and
@@ -32,7 +62,9 @@ const BroadcastScreenPage = () => {
   const [stamps, setStamps] = useState<BroadcastStamp[]>([]);
   const [showStamps, setShowStamps] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(false);
   const channelRef = useRef<BroadcastChannel | null>(null);
+  const controlsTimerRef = useRef<number | null>(null);
   // Stable id so the presenter can count this window via presence heartbeats.
   const screenIdRef = useRef<string>(
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -112,11 +144,36 @@ const BroadcastScreenPage = () => {
     });
   }, []);
 
+  const clearControlsTimer = useCallback(() => {
+    if (controlsTimerRef.current != null) {
+      window.clearTimeout(controlsTimerRef.current);
+      controlsTimerRef.current = null;
+    }
+  }, []);
+
+  // 마우스 이동/터치 시 하단 컨트롤을 노출하고, 유휴 시간이 지나면 다시 숨긴다 (전체화면에서만).
+  const revealControls = useCallback(() => {
+    if (!isFullscreen) return;
+    setControlsVisible(true);
+    clearControlsTimer();
+    controlsTimerRef.current = window.setTimeout(() => {
+      setControlsVisible(false);
+      controlsTimerRef.current = null;
+    }, CONTROLS_IDLE_MS);
+  }, [isFullscreen, clearControlsTimer]);
+
   useEffect(() => {
-    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const onChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+      // 전체화면을 벗어나면 컨트롤/타이머를 초기화.
+      setControlsVisible(false);
+      clearControlsTimer();
+    };
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
+  }, [clearControlsTimer]);
+
+  useEffect(() => clearControlsTimer, [clearControlsTimer]);
 
   // Try to go fullscreen immediately (works when the window-management
   // permission carries activation into the opened window).
@@ -165,10 +222,27 @@ const BroadcastScreenPage = () => {
     enterFullscreen();
   };
 
+  const handlePrev = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation(); // arrow drives nav; don't also advance via screen click
+    navigate("prev");
+    revealControls();
+  };
+
+  const handleNext = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    navigate("next");
+    revealControls();
+  };
+
   const currentSrc = slides[slideIndex] || null;
 
   return (
-    <Screen onClick={handleScreenClick}>
+    <Screen
+      onClick={handleScreenClick}
+      onPointerMove={revealControls}
+      onTouchStart={revealControls}
+      $immersive={isFullscreen && !controlsVisible}
+    >
       {currentSrc ? (
         <Stage>
           <SlideImage src={currentSrc} alt={`슬라이드 ${slideIndex + 1}`} draggable={false} />
@@ -190,6 +264,16 @@ const BroadcastScreenPage = () => {
         <FullscreenHint type="button" onClick={handleFullscreenClick}>
           전체 화면으로 보기
         </FullscreenHint>
+      )}
+      {isFullscreen && (
+        <BottomControls $visible={controlsVisible}>
+          <ArrowButton type="button" aria-label="이전 슬라이드" onClick={handlePrev}>
+            <ChevronLeft />
+          </ArrowButton>
+          <ArrowButton type="button" aria-label="다음 슬라이드" onClick={handleNext}>
+            <ChevronRight />
+          </ArrowButton>
+        </BottomControls>
       )}
     </Screen>
   );

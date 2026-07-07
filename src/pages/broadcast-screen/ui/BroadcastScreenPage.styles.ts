@@ -1,6 +1,6 @@
 import styled from "styled-components";
 
-export const Screen = styled.div`
+export const Screen = styled.div<{ $immersive?: boolean }>`
   position: fixed;
   inset: 0;
   display: flex;
@@ -8,7 +8,7 @@ export const Screen = styled.div`
   justify-content: center;
   background: #000;
   overflow: hidden;
-  cursor: default;
+  cursor: ${({ $immersive }) => ($immersive ? "none" : "default")};
 `;
 
 /* 16:9 무대 — 뷰포트에 레터박스로 맞추고, 그 안에서 리액션 스티커를 %로 배치 */
@@ -63,5 +63,46 @@ export const FullscreenHint = styled.button`
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
+  }
+`;
+
+/* 하단 인디케이터 영역 — 전체화면에서 마우스/터치 시 노출, 그라데이션 마스크 + 좌우 화살표 */
+export const BottomControls = styled.div<{ $visible: boolean }>`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(96px, 15vh, 180px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 100%);
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  pointer-events: ${({ $visible }) => ($visible ? "auto" : "none")};
+  transition: opacity 0.3s ease;
+`;
+
+export const ArrowButton = styled.button`
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.7;
+  }
+
+  svg {
+    display: block;
+    width: 40px;
+    height: 40px;
   }
 `;
