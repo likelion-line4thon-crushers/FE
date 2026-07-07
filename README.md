@@ -295,4 +295,9 @@ pnpm test:e2e
 
 ## 라이선스
 
-이 프로젝트는 4호선톤 프로젝트입니다.
+이 프로젝트는 멋쟁이사자처럼 4호선톤 출품작입니다.
+
+Copyright © 2026 4호선톤 Boini 팀 (likelion-line4thon-crushers). All rights reserved.
+
+코드와 에셋의 저작권은 Boini 팀원 전원에게 있으며, 팀의 사전 동의 없는 복제, 수정,
+재배포를 허용하지 않습니다.
