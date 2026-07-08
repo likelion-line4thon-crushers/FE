@@ -12,6 +12,7 @@ import {
 } from "./AudienceRoomPage.styles";
 import { useIsMobile } from "@/shared/lib/use-media-query";
 import { useVisualViewportHeight } from "@/shared/lib/use-visual-viewport-height";
+import { useImmersiveMode } from "@/shared/lib/use-immersive-mode";
 import SlideViewer from "./SlideViewerAudience/SlideViewer_audience";
 import { EmojiPanel, useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { WebSocketService } from "@/shared/api/websocket";
@@ -33,15 +34,6 @@ import DelayAudience from "./DelayAudience";
 import SessionEndedAudience from "./SessionEndedAudience";
 import { roomIdAtom, deckIdAtom, totalPagesAtom, wsUrlAtom } from "@/entities/room";
 import { quickSettingsAtom, unlockSettingsAtom } from "@/entities/session";
-
-type FullscreenElement = HTMLDivElement & {
-  webkitRequestFullscreen?: () => Promise<void>;
-};
-
-type FullscreenDocument = Document & {
-  webkitFullscreenElement?: Element | null;
-  webkitExitFullscreen?: () => Promise<void>;
-};
 
 const FULLSCREEN_CONTROLS_IDLE_MS = 5000;
 
@@ -67,12 +59,18 @@ const AudienceRoomPage = () => {
   const [selectedEmoji, setSelectedEmoji] = useState<any>(null);
   const [showStamps, setShowStamps] = useState(true);
   const [hasPlacedStamp, setHasPlacedStamp] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [areFullscreenControlsVisible, setAreFullscreenControlsVisible] = useState(false);
   const [isFullscreenSlideChipVisible, setIsFullscreenSlideChipVisible] = useState(false);
   const [showAudienceJoinWarning, setShowAudienceJoinWarning] = useState(false);
   const lastPresenterPageRef = useRef(0);
-  const centerContainerRef = useRef<FullscreenElement | null>(null);
+  const centerContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // * 네이티브 전체화면(데스크톱/안드로이드) 또는 pseudo-fullscreen(아이폰) 통합 토글
+  const {
+    isImmersive: isFullscreen,
+    isPseudoFullscreen,
+    toggleImmersive: handleToggleFullscreen,
+  } = useImmersiveMode(centerContainerRef);
   const fullscreenControlsTimerRef = useRef<number | null>(null);
   const fullscreenSlideChipTimerRef = useRef<number | null>(null);
   const shouldConsumeFullscreenClickRef = useRef(false);
@@ -239,29 +237,14 @@ const AudienceRoomPage = () => {
     scheduleFullscreenControlsHide();
   }, [isFullscreen, scheduleFullscreenControlsHide]);
 
+  // * 몰입 모드 진입/이탈 시 컨트롤 표시 상태 초기화 (네이티브/pseudo 공통)
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      const fullscreenDocument = document as FullscreenDocument;
-      const isCurrentContainerFullscreen =
-        document.fullscreenElement === centerContainerRef.current ||
-        fullscreenDocument.webkitFullscreenElement === centerContainerRef.current;
-
-      setIsFullscreen(isCurrentContainerFullscreen);
-      setAreFullscreenControlsVisible(false);
-      setIsFullscreenSlideChipVisible(false);
-      clearFullscreenControlsTimer();
-      clearFullscreenSlideChipTimer();
-      shouldConsumeFullscreenClickRef.current = false;
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
-    };
-  }, [clearFullscreenControlsTimer, clearFullscreenSlideChipTimer]);
+    setAreFullscreenControlsVisible(false);
+    setIsFullscreenSlideChipVisible(false);
+    clearFullscreenControlsTimer();
+    clearFullscreenSlideChipTimer();
+    shouldConsumeFullscreenClickRef.current = false;
+  }, [isFullscreen, clearFullscreenControlsTimer, clearFullscreenSlideChipTimer]);
 
   useEffect(() => clearFullscreenControlsTimer, [clearFullscreenControlsTimer]);
   useEffect(() => clearFullscreenSlideChipTimer, [clearFullscreenSlideChipTimer]);
@@ -293,36 +276,6 @@ const AudienceRoomPage = () => {
     shouldConsumeFullscreenClickRef.current = false;
     event.preventDefault();
     event.stopPropagation();
-  };
-
-  const handleToggleFullscreen = async () => {
-    const fullscreenDocument = document as FullscreenDocument;
-    const activeFullscreenElement =
-      document.fullscreenElement || fullscreenDocument.webkitFullscreenElement;
-
-    if (activeFullscreenElement) {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-        return;
-      }
-
-      if (fullscreenDocument.webkitExitFullscreen) {
-        await fullscreenDocument.webkitExitFullscreen();
-      }
-      return;
-    }
-
-    const fullscreenElement = centerContainerRef.current;
-    if (!fullscreenElement) return;
-
-    if (fullscreenElement.requestFullscreen) {
-      await fullscreenElement.requestFullscreen();
-      return;
-    }
-
-    if (fullscreenElement.webkitRequestFullscreen) {
-      await fullscreenElement.webkitRequestFullscreen();
-    }
   };
 
   // Audience opened the session URL after it already ended: same layout as the
@@ -374,6 +327,7 @@ const AudienceRoomPage = () => {
       <CenterContainer
         ref={centerContainerRef}
         $isFullscreen={isFullscreen}
+        $isPseudoFullscreen={isPseudoFullscreen}
         onPointerMove={handleFullscreenPointerMove}
         onPointerDownCapture={handleFullscreenPointerDownCapture}
         onClickCapture={handleFullscreenClickCapture}

@@ -13,7 +13,10 @@ export const PageContainer = styled.div`
   }
 `;
 
-export const CenterContainer = styled.div<{ $isFullscreen?: boolean }>`
+export const CenterContainer = styled.div<{
+  $isFullscreen?: boolean;
+  $isPseudoFullscreen?: boolean;
+}>`
   display: flex;
   height: 100%;
   flex-direction: column;
@@ -40,6 +43,18 @@ export const CenterContainer = styled.div<{ $isFullscreen?: boolean }>`
       gap: 0;
       overflow: hidden;
       background: #121212;
+    `}
+
+  /* 아이폰 Safari: Element Fullscreen API 미지원 — fixed 오버레이로 유사 전체화면
+     크기는 inset 으로 잡는다 (100vw 는 레이아웃 뷰포트 초과로 넘칠 수 있음) */
+  ${({ $isPseudoFullscreen }) =>
+    $isPseudoFullscreen &&
+    `
+      position: fixed;
+      inset: 0;
+      width: auto;
+      height: auto;
+      z-index: 1000;
     `}
 
   &:fullscreen {

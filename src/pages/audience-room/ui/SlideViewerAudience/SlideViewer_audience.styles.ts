@@ -14,15 +14,20 @@ export const Main = styled.div<{ $isFullscreen?: boolean }>`
   background: #fff;
   position: relative;
 
-  @media ${MEDIA.mobile} {
-    padding: 8px 12px;
-    gap: 8px;
-  }
+  /* 전체화면 스타일과의 병합 충돌 방지를 위해 비전체화면일 때만 적용 */
+  ${({ $isFullscreen }) =>
+    !$isFullscreen &&
+    css`
+      @media ${MEDIA.mobile} {
+        padding: 8px 12px;
+        gap: 8px;
+      }
+    `}
 
   ${({ $isFullscreen }) =>
     $isFullscreen &&
     `
-      width: 100vw;
+      width: 100%;
       height: 100vh;
       height: 100dvh;
       padding: clamp(24px, 3vh, 32px) 0 clamp(72px, 8vh, 88px);
@@ -144,6 +149,7 @@ export const ReactionSlot = styled.div`
     position: relative;
     top: auto;
     left: auto;
+    right: auto;
     transform: none;
     margin: 0;
     width: clamp(320px, 34vw, 480px);
@@ -189,10 +195,14 @@ export const SlideBox = styled.div<{ focusHighlight?: boolean; $isFullscreen?: b
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 
-  @media ${MEDIA.mobile} {
-    border-radius: 8px;
-    border: 1px solid #ddd;
-  }
+  ${({ $isFullscreen }) =>
+    !$isFullscreen &&
+    css`
+      @media ${MEDIA.mobile} {
+        border-radius: 8px;
+        border: 1px solid #ddd;
+      }
+    `}
 
   ${({ focusHighlight }) => (focusHighlight ? HighlightedSlideStyles : css``)}
 
@@ -376,6 +386,12 @@ export const SlideNumberChip = styled.div<{ $visible?: boolean }>`
   opacity: ${({ $visible }) => ($visible ? 1 : 0)};
   pointer-events: none;
   transition: opacity 0.2s ease;
+
+  /* 모바일 전체화면: 하단 이모지 바와 겹치지 않게 그 위로 배치 */
+  @media ${MEDIA.mobile} {
+    left: 12px;
+    bottom: 116px;
+  }
 `;
 
 export const TooltipWrapper = styled.div`

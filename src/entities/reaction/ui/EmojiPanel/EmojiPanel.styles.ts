@@ -20,11 +20,15 @@ export const EmojiContainer = styled.div`
   transform: translate(-50%, -50%);
   z-index: 10;
 
+  /* 모바일 오버레이(전체화면): 우측 종료 버튼을 가리지 않도록 좌우 오프셋 배치 */
   @media ${MEDIA.mobile} {
-    width: 100%;
+    width: auto;
     max-width: 100%;
     height: auto;
     padding: 6px 12px;
+    left: 12px;
+    right: 116px;
+    transform: translateY(-50%);
   }
 `;
 
