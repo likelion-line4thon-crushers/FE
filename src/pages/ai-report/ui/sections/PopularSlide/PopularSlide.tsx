@@ -78,6 +78,11 @@ const StampedSlideBox = ({
       {src ? (
         <>
           <img
+            key={src}
+            ref={(img) => {
+              // 캐시된 이미지는 onLoad 를 놓칠 수 있어 ref 시점에 complete 여부도 확인
+              if (img && img.complete) setNaturalRatio(imageNaturalRatio(img));
+            }}
             src={src}
             alt={alt}
             onLoad={(e: SyntheticEvent<HTMLImageElement>) =>

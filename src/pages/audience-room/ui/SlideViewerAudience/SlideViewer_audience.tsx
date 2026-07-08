@@ -94,6 +94,7 @@ const SlideViewer = ({
   onNavigate,
 }: SlideViewerProps) => {
   const boxRef = useRef<HTMLDivElement | null>(null);
+  const slideImageRef = useRef<HTMLImageElement | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressClickAfterSwipeRef = useRef(false);
   const [slideNaturalRatio, setSlideNaturalRatio] = useState<number | null>(null);
@@ -103,6 +104,14 @@ const SlideViewer = ({
 
   // 레터박스를 제외한 실제 슬라이드 콘텐츠 영역 — 스탬프 좌표의 기준
   const contentFractions = slideContentFractions(slideNaturalRatio);
+
+  // 캐시된 이미지는 onLoad 를 놓칠 수 있어 ref 시점에 complete 여부도 확인
+  const attachSlideImage = (img: HTMLImageElement | null) => {
+    slideImageRef.current = img;
+    if (img && img.complete) {
+      setSlideNaturalRatio(imageNaturalRatio(img));
+    }
+  };
 
   const handleSlideImageLoad = (e: SyntheticEvent<HTMLImageElement>) => {
     setSlideNaturalRatio(imageNaturalRatio(e.currentTarget));
@@ -115,11 +124,17 @@ const SlideViewer = ({
       return;
     }
     if (isWaiting || !onPlace || !boxRef.current) return;
+
+    // 상태가 아직 갱신되지 않았어도 클릭 시점의 실제 이미지에서 비율을 직접 읽는다
+    // (로딩 지연/슬라이드 전환 중 잘못된 좌표계로 전송되는 것을 방지)
+    const liveRatio = slideImageRef.current ? imageNaturalRatio(slideImageRef.current) : null;
+    if (!liveRatio) return;
+
     const rect = boxRef.current.getBoundingClientRect();
     const point = boxPointToContentPct(
       (e.clientX - rect.left) / rect.width,
       (e.clientY - rect.top) / rect.height,
-      contentFractions
+      slideContentFractions(liveRatio)
     );
     // 레터박스(여백) 영역 탭은 무시
     if (!point) return;
@@ -196,6 +211,8 @@ const SlideViewer = ({
       ) : (
         currentSlideSrc && (
           <img
+            key={currentSlideSrc}
+            ref={attachSlideImage}
             src={currentSlideSrc}
             alt={`슬라이드 ${safeSlideIndex + 1}`}
             onLoad={handleSlideImageLoad}

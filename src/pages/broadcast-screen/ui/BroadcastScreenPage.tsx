@@ -252,6 +252,11 @@ const BroadcastScreenPage = () => {
       {currentSrc ? (
         <Stage>
           <SlideImage
+            key={currentSrc}
+            ref={(img: HTMLImageElement | null) => {
+              // 캐시된 이미지는 onLoad 를 놓칠 수 있어 ref 시점에 complete 여부도 확인
+              if (img && img.complete) setSlideNaturalRatio(imageNaturalRatio(img));
+            }}
             src={currentSrc}
             alt={`슬라이드 ${slideIndex + 1}`}
             draggable={false}

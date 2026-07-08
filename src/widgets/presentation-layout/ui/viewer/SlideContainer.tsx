@@ -33,10 +33,19 @@ const SlideContainer = ({
     setNaturalRatio(imageNaturalRatio(e.currentTarget));
   };
 
+  // 캐시된 이미지는 onLoad 를 놓칠 수 있어 ref 시점에 complete 여부도 확인
+  const attachImage = (img: HTMLImageElement | null) => {
+    if (img && img.complete) {
+      setNaturalRatio(imageNaturalRatio(img));
+    }
+  };
+
   return (
     <SlideBox highlight={highlight} data-testid={testId}>
       {hasSrc ? (
         <img
+          key={src}
+          ref={attachImage}
           src={src}
           alt={alt}
           onLoad={handleImageLoad}
