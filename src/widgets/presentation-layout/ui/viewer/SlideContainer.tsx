@@ -79,8 +79,11 @@ const SlideBox = styled.div<{ highlight?: boolean }>`
 const StampImage = styled.img`
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 25px;
-  height: 25px;
+  /* 슬라이드 폭 대비 상대 크기 — broadcast(3.4cqw)와 동일 비율로 기기 무관하게 일치 */
+  width: 3.4%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
   pointer-events: none;
 `;
 

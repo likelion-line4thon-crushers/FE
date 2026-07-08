@@ -349,6 +349,7 @@ const AudienceRoomPage = () => {
           fullscreenControlsVisible={!isFullscreen || areFullscreenControlsVisible}
           fullscreenSlideChipVisible={isFullscreen && isFullscreenSlideChipVisible}
           onToggleFullscreen={handleToggleFullscreen}
+          onNavigate={(delta) => handleAudienceSelectSlide(currentSlide + delta)}
           reactionBar={
             quickSettings.sticker ? (
               <EmojiPanel selectedId={selectedEmoji?.id} onSelect={handleSelectEmoji} />

@@ -218,6 +218,17 @@ export const SlideBox = styled.div<{ focusHighlight?: boolean; $isFullscreen?: b
     `}
 `;
 
+/* 리액션 스탬프 — 슬라이드 폭 대비 상대 크기 (broadcast 3.4cqw 와 동일 비율) */
+export const StampImage = styled.img`
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 3.4%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  pointer-events: none;
+`;
+
 export const NavButton = styled.button`
   padding: 0.8vh 0.8vw;
   border: 0.05vw solid #ddd;
@@ -235,7 +246,7 @@ export const ToggleText = styled.span`
   letter-spacing: -0.021vw;
 
   @media ${MEDIA.mobile} {
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.4;
     letter-spacing: -0.2px;
     white-space: nowrap;
@@ -265,6 +276,19 @@ export const ReactionButton = styled.button<{ $isFullscreen?: boolean }>`
     aspect-ratio: 1;
     object-fit: contain;
   }
+
+  /* 모바일(비전체화면): 상단 바에 맞는 축소 크기 */
+  ${({ $isFullscreen }) =>
+    !$isFullscreen &&
+    css`
+      @media ${MEDIA.mobile} {
+        padding: 9px;
+
+        img {
+          width: 22px;
+        }
+      }
+    `}
 `;
 
 export const FullscreenButton = styled.button<{
@@ -330,6 +354,19 @@ export const FullscreenButton = styled.button<{
     css`
       > img {
         width: clamp(30px, 1.9vw, 36px);
+      }
+    `}
+
+  /* 모바일(비전체화면): 상단/하단 컨트롤 줄에 맞는 축소 크기 */
+  ${({ $isFullscreen }) =>
+    !$isFullscreen &&
+    css`
+      @media ${MEDIA.mobile} {
+        padding: 9px;
+
+        > img {
+          width: 22px;
+        }
       }
     `}
 `;
@@ -506,14 +543,47 @@ export const WaitingText = styled.p`
   }
 `;
 
-/* 모바일 전용: 상단 바 가운데 현재 슬라이드 표시 칩 */
+/* 모바일 전용: 상단 바 가운데 ‹ n / N › 페이저 */
+export const MobileNavGroup = styled.div`
+  display: none;
+
+  @media ${MEDIA.mobile} {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+`;
+
+export const MobileNavButton = styled.button`
+  display: none;
+
+  @media ${MEDIA.mobile} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #5c5c5c;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+
+    &:disabled {
+      color: #c9c9c9;
+    }
+  }
+`;
+
 export const MobileSlideChip = styled.span`
   display: none;
 
   @media ${MEDIA.mobile} {
     display: inline-flex;
     align-items: center;
-    padding: 4px 12px;
+    padding: 4px 10px;
     border: 1px solid #eaeaea;
     border-radius: 100px;
     background: #fafafa;

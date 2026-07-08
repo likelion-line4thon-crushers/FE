@@ -25,9 +25,9 @@ export const EmojiContainer = styled.div`
     width: auto;
     max-width: 100%;
     height: auto;
-    padding: 6px 12px;
+    padding: 4px 10px;
     left: 12px;
-    right: 116px;
+    right: 108px;
     transform: translateY(-50%);
   }
 `;
@@ -68,10 +68,10 @@ export const EmojiItem = styled.div`
     background-color: #e0e0e0;
   }
 
-  /* 터치 타깃 44px 확보 */
+  /* 터치 타깃 확보 */
   @media ${MEDIA.mobile} {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
   }
 `;
@@ -83,8 +83,8 @@ export const EmojiIcon = styled.img`
   filter: grayscale(100%);
 
   @media ${MEDIA.mobile} {
-    width: 38px;
-    height: 38px;
+    width: 30px;
+    height: 30px;
   }
 `;
 
