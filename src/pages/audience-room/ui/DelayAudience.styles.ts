@@ -28,4 +28,7 @@ export const WaitingMessage = styled.p`
   font-weight: 400;
   color: #666;
   margin: 0;
+  padding: 0 24px;
+  text-align: center;
+  word-break: keep-all;
 `;

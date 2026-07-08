@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import styled from "styled-components";
+import { MEDIA } from "@/shared/config/breakpoints";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("rating");
@@ -300,6 +301,16 @@ const MainLayout = styled.div`
   overflow: hidden;
   background: #fff;
   box-sizing: border-box;
+
+  /* 모바일: 단일 컬럼 + 내부 세로 스크롤 (.page 가 overflow hidden 이므로 여기서 스크롤) */
+  @media ${MEDIA.mobile} {
+    grid-template-columns: 1fr;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 `;
 
 /* 양옆 빗금 영역 */
@@ -311,6 +322,10 @@ const Side = styled.div`
   justify-content: center;
   align-items: center;
   box-sizing: border-box;
+
+  @media ${MEDIA.mobile} {
+    display: none;
+  }
 `;
 
 const SideInner = styled.div`
@@ -344,6 +359,18 @@ const CenterGrid = styled.div`
   border-left: 0.1vw solid #eaeaea;
   border-right: 0.1vw solid #eaeaea;
   overflow: hidden;
+
+  /* 모바일: 그리드 대신 세로 스택, 페이지 스크롤로 전환 */
+  @media ${MEDIA.mobile} {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: auto;
+    max-height: none;
+    padding: 20px 16px 32px;
+    border: none;
+    overflow: visible;
+  }
 `;
 
 /* 각 박스 */
@@ -368,12 +395,21 @@ const Box = styled.div`
 const ThumbnailBox = styled(Box)`
   grid-column: 1;
   grid-row: 1;
+
+  @media ${MEDIA.mobile} {
+    min-height: 180px;
+    padding: 12px 0;
+  }
 `;
 
 /* 좌측 하단 - 별점 */
 const StarRatingBox = styled(Box)`
   grid-column: 1;
   grid-row: 2;
+
+  @media ${MEDIA.mobile} {
+    padding: 20px 0;
+  }
 `;
 
 /* 우측 - 후기 (좌측 두 행 전체 높이) — 발표자 질문이 있을 때 */
@@ -383,18 +419,31 @@ const QuestionsBox = styled(Box)`
   justify-content: flex-start;
   align-items: center;
   overflow: hidden;
+
+  @media ${MEDIA.mobile} {
+    padding: 4px 0;
+    overflow: visible;
+  }
 `;
 
 /* 원본 디자인(질문 없음) - 우측 상단 감사 메시지 */
 const ThanksBox = styled(Box)`
   grid-column: 2;
   grid-row: 1;
+
+  @media ${MEDIA.mobile} {
+    padding: 16px 8px;
+  }
 `;
 
 /* 원본 디자인(질문 없음) - 우측 하단 단일 후기 입력 */
 const CommentBox = styled(Box)`
   grid-column: 2;
   grid-row: 2;
+
+  @media ${MEDIA.mobile} {
+    padding: 4px 0;
+  }
 `;
 
 const ThanksText = styled.div`
@@ -416,6 +465,18 @@ const ThanksText = styled.div`
     color: #333;
     line-height: 1.5;
   }
+
+  @media ${MEDIA.mobile} {
+    img {
+      width: 84px;
+      margin-right: -8px;
+      margin-left: -12px;
+    }
+
+    div {
+      font-size: 14px;
+    }
+  }
 `;
 
 const CommentTextArea = styled.textarea`
@@ -436,6 +497,15 @@ const CommentTextArea = styled.textarea`
     color: #b5b5b5;
     opacity: 0.8;
   }
+
+  /* iOS: 16px 미만 입력창 포커스 시 자동 확대 방지 */
+  @media ${MEDIA.mobile} {
+    min-height: 120px;
+    padding: 10px 12px;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    font-size: 16px;
+  }
 `;
 
 /* 별점 박스 */
@@ -447,12 +517,23 @@ const RatingTitle = styled.h3`
   font-size: 1.4vw;
   margin-bottom: 1vh;
   color: #5c5c5c;
+
+  @media ${MEDIA.mobile} {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
 `;
 
 const StarImg = styled.img`
   width: 2vw !important;
   height: auto;
   cursor: pointer;
+
+  /* 터치 타깃 확보 */
+  @media ${MEDIA.mobile} {
+    width: 36px !important;
+    padding: 4px;
+  }
   transition:
     transform 0.15s ease,
     filter 0.15s ease;
@@ -513,6 +594,12 @@ const IdentityNotice = styled.div`
   padding: 1vh 1vw;
   font-size: clamp(12px, 0.85vw, 14px);
   line-height: 1.5;
+
+  @media ${MEDIA.mobile} {
+    border: 1px solid #f2b08d;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
 `;
 
 const IdentityNoticeActions = styled.div`
@@ -540,6 +627,12 @@ const OverwriteNotice = styled.div`
   padding: 1vh 1vw;
   font-size: clamp(12px, 0.85vw, 14px);
   line-height: 1.5;
+
+  @media ${MEDIA.mobile} {
+    border: 1px solid #cdd8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
 `;
 
 /* 버튼 영역 */
