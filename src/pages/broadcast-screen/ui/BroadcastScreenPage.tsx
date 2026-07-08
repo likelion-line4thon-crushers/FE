@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { MouseEvent } from "react";
+import type { MouseEvent, SyntheticEvent } from "react";
+import {
+  slideContentFractions,
+  stampBoxStyle,
+  imageNaturalRatio,
+} from "@/shared/lib/slide-geometry";
 import { useParams } from "react-router";
 import {
   getBroadcastChannelName,
@@ -61,6 +66,7 @@ const BroadcastScreenPage = () => {
   const [slideIndex, setSlideIndex] = useState(0);
   const [stamps, setStamps] = useState<BroadcastStamp[]>([]);
   const [showStamps, setShowStamps] = useState(false);
+  const [slideNaturalRatio, setSlideNaturalRatio] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(false);
   const channelRef = useRef<BroadcastChannel | null>(null);
@@ -245,14 +251,25 @@ const BroadcastScreenPage = () => {
     >
       {currentSrc ? (
         <Stage>
-          <SlideImage src={currentSrc} alt={`슬라이드 ${slideIndex + 1}`} draggable={false} />
+          <SlideImage
+            src={currentSrc}
+            alt={`슬라이드 ${slideIndex + 1}`}
+            draggable={false}
+            onLoad={(e: SyntheticEvent<HTMLImageElement>) =>
+              setSlideNaturalRatio(imageNaturalRatio(e.currentTarget))
+            }
+          />
           {showStamps &&
             stamps.map((stamp, index) => (
               <BroadcastStampImage
                 key={stamp.id || `${stamp.xPct}-${stamp.yPct}-${index}`}
                 src={stamp.src}
                 alt="reaction"
-                style={{ top: `${stamp.yPct}%`, left: `${stamp.xPct}%` }}
+                style={stampBoxStyle(
+                  stamp.xPct,
+                  stamp.yPct,
+                  slideContentFractions(slideNaturalRatio)
+                )}
                 draggable={false}
               />
             ))}

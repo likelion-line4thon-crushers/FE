@@ -1,5 +1,11 @@
-import React, { useRef } from "react";
-import type { MouseEvent, ChangeEvent, TouchEvent } from "react";
+import React, { useRef, useState } from "react";
+import type { MouseEvent, ChangeEvent, TouchEvent, SyntheticEvent } from "react";
+import {
+  slideContentFractions,
+  stampBoxStyle,
+  boxPointToContentPct,
+  imageNaturalRatio,
+} from "@/shared/lib/slide-geometry";
 import {
   Main,
   SlideBox,
@@ -90,9 +96,17 @@ const SlideViewer = ({
   const boxRef = useRef<HTMLDivElement | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const suppressClickAfterSwipeRef = useRef(false);
+  const [slideNaturalRatio, setSlideNaturalRatio] = useState<number | null>(null);
   const hasSlides = Array.isArray(slides) && slides.length > 0;
   const safeSlideIndex = hasSlides ? Math.min(Math.max(currentSlide, 0), slides.length - 1) : 0;
   const currentSlideSrc = hasSlides ? slides[safeSlideIndex] : null;
+
+  // 레터박스를 제외한 실제 슬라이드 콘텐츠 영역 — 스탬프 좌표의 기준
+  const contentFractions = slideContentFractions(slideNaturalRatio);
+
+  const handleSlideImageLoad = (e: SyntheticEvent<HTMLImageElement>) => {
+    setSlideNaturalRatio(imageNaturalRatio(e.currentTarget));
+  };
 
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
     // 스와이프 직후 발생하는 click 은 스탬프로 처리하지 않는다
@@ -102,9 +116,14 @@ const SlideViewer = ({
     }
     if (isWaiting || !onPlace || !boxRef.current) return;
     const rect = boxRef.current.getBoundingClientRect();
-    const xPct = ((e.clientX - rect.left) / rect.width) * 100;
-    const yPct = ((e.clientY - rect.top) / rect.height) * 100;
-    onPlace({ xPct, yPct });
+    const point = boxPointToContentPct(
+      (e.clientX - rect.left) / rect.width,
+      (e.clientY - rect.top) / rect.height,
+      contentFractions
+    );
+    // 레터박스(여백) 영역 탭은 무시
+    if (!point) return;
+    onPlace(point);
   };
 
   const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
@@ -179,6 +198,7 @@ const SlideViewer = ({
           <img
             src={currentSlideSrc}
             alt={`슬라이드 ${safeSlideIndex + 1}`}
+            onLoad={handleSlideImageLoad}
             style={{
               width: "100%",
               height: "100%",
@@ -198,10 +218,7 @@ const SlideViewer = ({
             key={stamp.id || `${stamp.xPct}-${stamp.yPct}-${idx}`}
             src={stamp.src}
             alt="stamp"
-            style={{
-              top: `${stamp.yPct}%`,
-              left: `${stamp.xPct}%`,
-            }}
+            style={stampBoxStyle(stamp.xPct, stamp.yPct, contentFractions)}
           />
         ))}
     </SlideBox>

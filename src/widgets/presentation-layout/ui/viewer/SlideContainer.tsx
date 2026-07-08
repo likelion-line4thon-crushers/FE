@@ -1,6 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
+import type { SyntheticEvent } from "react";
 import styled, { css } from "styled-components";
 import { HighlightedSlideStyles } from "./SlideViewer.styles";
+import {
+  slideContentFractions,
+  stampBoxStyle,
+  imageNaturalRatio,
+} from "@/shared/lib/slide-geometry";
 
 /**
  * 공용 슬라이드 컨테이너
@@ -19,12 +25,21 @@ const SlideContainer = ({
 
   const hasSrc = typeof src === "string" && src.length > 0;
 
+  // 레터박스를 제외한 실제 슬라이드 콘텐츠 영역 — 스탬프 좌표(콘텐츠 기준 %)의 기준
+  const [naturalRatio, setNaturalRatio] = useState<number | null>(null);
+  const contentFractions = slideContentFractions(naturalRatio);
+
+  const handleImageLoad = (e: SyntheticEvent<HTMLImageElement>) => {
+    setNaturalRatio(imageNaturalRatio(e.currentTarget));
+  };
+
   return (
     <SlideBox highlight={highlight} data-testid={testId}>
       {hasSrc ? (
         <img
           src={src}
           alt={alt}
+          onLoad={handleImageLoad}
           style={{
             width: "100%",
             height: "100%",
@@ -44,10 +59,7 @@ const SlideContainer = ({
           <StampImage
             key={stamp.id || `${stamp.xPct}-${stamp.yPct}-${index}`}
             src={stamp.src}
-            style={{
-              top: `${stamp.yPct}%`,
-              left: `${stamp.xPct}%`,
-            }}
+            style={stampBoxStyle(stamp.xPct, stamp.yPct, contentFractions)}
             alt="reaction"
           />
         ))}
