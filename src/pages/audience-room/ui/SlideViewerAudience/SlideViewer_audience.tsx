@@ -23,6 +23,7 @@ import {
   FullscreenButton,
   FullscreenExitIcon,
   SlideNumberChip,
+  MobileSlideChip,
 } from "./SlideViewer_audience.styles";
 import TipIcon from "@/shared/assets/images/tooltip.png";
 import fullscreenIcon from "@/shared/assets/icons/fullscreen.svg";
@@ -207,6 +208,12 @@ const SlideViewer = ({
             </RightContainer>
           </FollowTooltipArea>
         </ToggleContainer>
+
+        {!isWaiting && !isFullscreen && hasSlides && (
+          <MobileSlideChip>
+            슬라이드 {safeSlideIndex + 1} / {slides.length}
+          </MobileSlideChip>
+        )}
 
         {!isWaiting && (
           <TooltipHoverArea>

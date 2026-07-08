@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { MEDIA } from "@/shared/config/breakpoints";
 
 export const EmojiContainer = styled.div`
   width: 80%;
@@ -18,6 +19,13 @@ export const EmojiContainer = styled.div`
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 10;
+
+  @media ${MEDIA.mobile} {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    padding: 6px 12px;
+  }
 `;
 
 export const EmojiWrapper = styled.div`
@@ -27,6 +35,19 @@ export const EmojiWrapper = styled.div`
   width: 100%;
   height: 100%;
   gap: 0.42vw;
+
+  /* 모바일: 가로 스크롤 스트립 */
+  @media ${MEDIA.mobile} {
+    justify-content: flex-start;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
 `;
 
 export const EmojiItem = styled.div`
@@ -42,6 +63,13 @@ export const EmojiItem = styled.div`
   &:hover {
     background-color: #e0e0e0;
   }
+
+  /* 터치 타깃 44px 확보 */
+  @media ${MEDIA.mobile} {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
 `;
 
 export const EmojiIcon = styled.img`
@@ -49,6 +77,11 @@ export const EmojiIcon = styled.img`
   height: 48px;
   object-fit: contain;
   filter: grayscale(100%);
+
+  @media ${MEDIA.mobile} {
+    width: 38px;
+    height: 38px;
+  }
 `;
 
 export const SpacingBox = styled.div`

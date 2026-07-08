@@ -1,5 +1,6 @@
 import styled, { css } from "styled-components";
 import { ToggleInput, HighlightedSlideStyles } from "@/widgets/presentation-layout";
+import { MEDIA } from "@/shared/config/breakpoints";
 
 /* 전체 컨테이너 */
 export const Main = styled.div<{ $isFullscreen?: boolean }>`
@@ -13,11 +14,17 @@ export const Main = styled.div<{ $isFullscreen?: boolean }>`
   background: #fff;
   position: relative;
 
+  @media ${MEDIA.mobile} {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
   ${({ $isFullscreen }) =>
     $isFullscreen &&
     `
       width: 100vw;
       height: 100vh;
+      height: 100dvh;
       padding: clamp(24px, 3vh, 32px) 0 clamp(72px, 8vh, 88px);
       gap: 0;
       justify-content: center;
@@ -32,6 +39,16 @@ export const RightContainer = styled.div`
   gap: 0.52vw;
   width: 9.38vw;
   height: 2.78vh;
+
+  @media ${MEDIA.mobile} {
+    width: auto;
+    height: auto;
+    gap: 6px;
+
+    img {
+      display: none;
+    }
+  }
 `;
 export const ToggleContainer = styled.div<{ $isFullscreen?: boolean }>`
   display: flex;
@@ -107,6 +124,11 @@ export const ControlsRow = styled.div`
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   width: 100%;
+
+  @media ${MEDIA.mobile} {
+    display: flex;
+    gap: 8px;
+  }
 `;
 
 /* 리액션 스티커 바를 흐름 배치로 전환해 가운데 칸에 정렬 */
@@ -127,6 +149,15 @@ export const ReactionSlot = styled.div`
     width: clamp(320px, 34vw, 480px);
     max-width: 100%;
   }
+
+  @media ${MEDIA.mobile} {
+    flex: 1;
+    min-width: 0;
+
+    > div {
+      width: 100%;
+    }
+  }
 `;
 
 /* 오른쪽 끝 칸: 전체화면 버튼 */
@@ -135,6 +166,10 @@ export const ControlsEnd = styled.div`
   display: flex;
   justify-content: flex-end;
   align-items: center;
+
+  @media ${MEDIA.mobile} {
+    flex: none;
+  }
 `;
 
 /* 슬라이드 본문 */
@@ -150,12 +185,22 @@ export const SlideBox = styled.div<{ focusHighlight?: boolean; $isFullscreen?: b
   justify-content: center;
   border-radius: 0.6vw;
   border: 0.05vw solid #ddd;
+  /* 더블탭 확대·클릭 지연 제거 — 연속 스탬프 터치 반응성 확보 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+
+  @media ${MEDIA.mobile} {
+    border-radius: 8px;
+    border: 1px solid #ddd;
+  }
+
   ${({ focusHighlight }) => (focusHighlight ? HighlightedSlideStyles : css``)}
 
   ${({ $isFullscreen }) =>
     $isFullscreen &&
     `
       width: min(100%, calc((100vh - clamp(112px, 12vh, 140px)) * 16 / 9));
+      width: min(100%, calc((100dvh - clamp(112px, 12vh, 140px)) * 16 / 9));
       aspect-ratio: 16 / 9;
       border: 1px solid #eaeaea;
       border-radius: 10px;
@@ -178,6 +223,13 @@ export const ToggleText = styled.span`
   font-weight: 600;
   line-height: 2.22vh;
   letter-spacing: -0.021vw;
+
+  @media ${MEDIA.mobile} {
+    font-size: 13px;
+    line-height: 1.4;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+  }
 `;
 
 export const ReactionButton = styled.button<{ $isFullscreen?: boolean }>`
@@ -347,6 +399,11 @@ export const Tooltip = styled.div`
   opacity: 0;
   transition: opacity 0.15s ease;
 
+  /* 터치 기기: hover 툴팁 비활성 */
+  @media ${MEDIA.touch} {
+    display: none;
+  }
+
   color: rgb(0, 0, 0);
   font-size: 0.63vw;
   font-weight: 400;
@@ -410,6 +467,10 @@ export const WaitingImage = styled.img`
   width: clamp(6.25vw, 12vw, 9.38vw);
   height: auto;
   object-fit: contain;
+
+  @media ${MEDIA.mobile} {
+    width: 28vw;
+  }
 `;
 
 export const WaitingText = styled.p`
@@ -421,4 +482,28 @@ export const WaitingText = styled.p`
   line-height: 2.04vh;
   letter-spacing: -0.02vw;
   white-space: pre-line;
+
+  @media ${MEDIA.mobile} {
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.3px;
+  }
+`;
+
+/* 모바일 전용: 상단 바 가운데 현재 슬라이드 표시 칩 */
+export const MobileSlideChip = styled.span`
+  display: none;
+
+  @media ${MEDIA.mobile} {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border: 1px solid #eaeaea;
+    border-radius: 100px;
+    background: #fafafa;
+    color: #303030;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
 `;

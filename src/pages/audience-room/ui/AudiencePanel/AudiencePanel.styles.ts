@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { MEDIA } from "@/shared/config/breakpoints";
 
 export const PanelWrapper = styled.div`
   background: #ffffff;
@@ -11,6 +12,16 @@ export const PanelWrapper = styled.div`
   overflow: hidden;
   box-sizing: border-box;
   flex-shrink: 0;
+
+  /* 모바일: 세로 스택 하단에서 남은 높이를 채우는 라이브 채팅 형태 */
+  @media ${MEDIA.mobile} {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    box-shadow: none;
+    border: none;
+    border-top: 1px solid #eaeaea;
+  }
 `;
 
 export const HeaderBox = styled.div`
@@ -23,6 +34,13 @@ export const HeaderBox = styled.div`
   background: #f9f9f9;
   flex-shrink: 0;
   box-sizing: border-box;
+
+  @media ${MEDIA.mobile} {
+    height: auto;
+    padding: 8px 16px;
+    border-left: none;
+    border-right: none;
+  }
 `;
 
 export const Section = styled.div`
@@ -31,6 +49,10 @@ export const Section = styled.div`
   flex: 1;
   min-height: 0;
   padding: 0.5vw;
+
+  @media ${MEDIA.mobile} {
+    padding: 8px 12px 12px;
+  }
 `;
 
 export const Title = styled.h2`
@@ -53,6 +75,11 @@ export const QuestionList = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  @media ${MEDIA.mobile} {
+    padding: 8px;
+    border-radius: 12px;
+  }
 `;
 
 export const QuestionScrollArea = styled.div<{ $isWaiting?: boolean }>`
@@ -117,6 +144,11 @@ export const SlideLabel = styled.button<{ $active?: boolean }>`
   &:hover {
     background: #4a4a4a;
     transform: translateY(-1px);
+  }
+
+  @media ${MEDIA.mobile} {
+    padding: 4px 10px;
+    font-size: 11px;
   }
 `;
 
@@ -186,6 +218,11 @@ export const LikeButton = styled.button<{ $active?: boolean }>`
     outline: 2px solid #303030;
     outline-offset: 2px;
   }
+
+  /* 터치 타깃 확보 */
+  @media ${MEDIA.mobile} {
+    padding: 8px 14px;
+  }
 `;
 
 export const LikeIcon = styled.span`
@@ -209,6 +246,10 @@ export const Scrollbar = styled.div`
   right: 0.42vw;
   top: 5.56vh;
   bottom: 1.85vh;
+
+  @media ${MEDIA.mobile} {
+    display: none;
+  }
 `;
 
 export const WaitingMessage = styled.div`
@@ -279,6 +320,11 @@ export const QuestionInput = styled.textarea<{ $isInputting?: boolean }>`
   text-align: left;
   box-sizing: border-box;
   overflow: hidden;
+
+  /* iOS: 16px 미만 입력창 포커스 시 자동 확대 방지 */
+  @media ${MEDIA.mobile} {
+    font-size: 16px;
+  }
 
   &::placeholder {
     color: #999;

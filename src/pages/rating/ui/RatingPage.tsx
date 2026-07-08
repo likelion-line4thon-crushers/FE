@@ -292,8 +292,11 @@ const MainLayout = styled.div`
   grid-template-columns: 15vw 1fr 15vw;
   width: 100vw;
   min-height: 100vh;
+  min-height: 100dvh;
   height: 100vh;
+  height: 100dvh;
   max-height: 100vh;
+  max-height: 100dvh;
   overflow: hidden;
   background: #fff;
   box-sizing: border-box;
@@ -335,6 +338,7 @@ const CenterGrid = styled.div`
   width: 100%;
   height: 100%;
   max-height: 100vh;
+  max-height: 100dvh;
   padding: 5% 2%;
   box-sizing: border-box;
   border-left: 0.1vw solid #eaeaea;

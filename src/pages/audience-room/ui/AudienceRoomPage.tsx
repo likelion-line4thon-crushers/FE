@@ -4,7 +4,14 @@ import { useParams } from "react-router";
 import { useAtomValue } from "jotai";
 import AudiencePanel from "./AudiencePanel";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
-import { PageContainer, CenterContainer, RightPanelContainer } from "./AudienceRoomPage.styles";
+import {
+  PageContainer,
+  CenterContainer,
+  RightPanelContainer,
+  MobileStampHint,
+} from "./AudienceRoomPage.styles";
+import { useIsMobile } from "@/shared/lib/use-media-query";
+import { useVisualViewportHeight } from "@/shared/lib/use-visual-viewport-height";
 import SlideViewer from "./SlideViewerAudience/SlideViewer_audience";
 import { EmojiPanel, useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { WebSocketService } from "@/shared/api/websocket";
@@ -51,9 +58,15 @@ const AudienceRoomPage = () => {
   const quickSettings = useAtomValue(quickSettingsAtom);
   const unlockSettings = useAtomValue(unlockSettingsAtom);
 
+  const isMobile = useIsMobile();
+
+  // * 모바일 키보드가 열릴 때 질문 입력창이 가려지지 않도록 앱 높이를 동기화
+  useVisualViewportHeight(isMobile);
+
   // Local UI state
   const [selectedEmoji, setSelectedEmoji] = useState<any>(null);
   const [showStamps, setShowStamps] = useState(true);
+  const [hasPlacedStamp, setHasPlacedStamp] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [areFullscreenControlsVisible, setAreFullscreenControlsVisible] = useState(false);
   const [isFullscreenSlideChipVisible, setIsFullscreenSlideChipVisible] = useState(false);
@@ -337,17 +350,27 @@ const AudienceRoomPage = () => {
     );
   }
 
+  const handlePlaceStampWithHint = (coords: { xPct: number; yPct: number }) => {
+    if (!hasPlacedStamp) setHasPlacedStamp(true);
+    handlePlaceStamp(coords);
+  };
+
+  const showMobileStampHint =
+    isMobile && !isFullscreen && quickSettings.sticker && Boolean(selectedEmoji) && !hasPlacedStamp;
+
   return (
     <PageContainer>
-      <SlidesSidebar
-        slides={slides}
-        currentSlide={currentSlide}
-        setCurrentSlide={handleAudienceSelectSlide}
-        isWaiting={showSlidesPlaceholder}
-        placeholderCount={totalPages || 10}
-        maxRevealedPage={unlockSettings.maxRevealedPage}
-        revealAllSlides={unlockSettings.revealAllSlides}
-      />
+      {!isMobile && (
+        <SlidesSidebar
+          slides={slides}
+          currentSlide={currentSlide}
+          setCurrentSlide={handleAudienceSelectSlide}
+          isWaiting={showSlidesPlaceholder}
+          placeholderCount={totalPages || 10}
+          maxRevealedPage={unlockSettings.maxRevealedPage}
+          revealAllSlides={unlockSettings.revealAllSlides}
+        />
+      )}
       <CenterContainer
         ref={centerContainerRef}
         $isFullscreen={isFullscreen}
@@ -360,7 +383,7 @@ const AudienceRoomPage = () => {
           slides={slides}
           currentSlide={currentSlide}
           stamps={stampsBySlide[String(currentSlide)] || []}
-          onPlace={handlePlaceStamp}
+          onPlace={handlePlaceStampWithHint}
           followPresenter={followPresenter}
           onToggleFollow={handleToggleFollowPresenter}
           showStamps={showStamps}
@@ -409,6 +432,9 @@ const AudienceRoomPage = () => {
         {/* 전체화면에서는 슬라이드 위 오버레이로 리액션 바를 띄운다 (일반 화면은 SlideViewer 내부 컨트롤 줄에 배치) */}
         {quickSettings.sticker && isFullscreen && areFullscreenControlsVisible && (
           <EmojiPanel selectedId={selectedEmoji?.id} onSelect={handleSelectEmoji} />
+        )}
+        {showMobileStampHint && (
+          <MobileStampHint>슬라이드를 탭해 스티커를 남겨보세요</MobileStampHint>
         )}
       </CenterContainer>
       <RightPanelContainer>
