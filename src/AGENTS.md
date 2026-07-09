@@ -1,46 +1,46 @@
-<!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-06-18 | Updated: 2026-06-18 -->
+# src — FSD layers
 
-# src
+Feature-Sliced Design v2.1. Layer order, lowest → highest:
+`shared` → `entities` → `features` → `widgets` → `pages` → `app`.
 
-## Purpose
-Application source code organized strictly by Feature-Sliced Design (FSD) v2.1 layers. Each layer has a specific responsibility and import direction is enforced: lower layers never import from higher ones.
+## Import rules (strict)
 
-## FSD Layer Order (lowest → highest)
+- `shared/` imports from no other layer
+- `entities/` → `shared/` only
+- `features/` → `shared/`, `entities/`
+- `widgets/` → `shared/`, `entities/`, `features/`
+- `pages/` → `shared/`, `entities/`, `features/`, `widgets/` (pages compose widgets)
+- `app/` → any layer
 
-| Layer | Directory | Role |
-|-------|-----------|------|
-| shared | `shared/` | Framework-agnostic utilities, API clients, UI primitives |
-| entities | `entities/` | Business domain models, atoms, and pure logic |
-| pages | `pages/` | Route-level components and their page-scoped model hooks |
-| widgets | `widgets/` | Cross-page composite components (header, layout, sidebar) |
-| app | `app/` | Application bootstrap: router, root component |
+Enforced by `eslint-plugin-boundaries` (`pnpm lint`); type-only imports from
+`entities` are allowed in `shared` as documented debt.
+- Same-layer imports are forbidden; use the `@/` alias for cross-layer imports
+- Enforced by `eslint-plugin-boundaries` via `pnpm lint` (exception: `shared` may
+  import types — not values — from `entities`; existing debt in `shared/api`)
 
-## Subdirectories
+## Public API
 
-| Directory | Purpose |
-|-----------|---------|
-| `app/` | Root component, router, main entry (see `app/AGENTS.md`) |
-| `shared/` | Shared utilities, API layer, config, UI primitives (see `shared/AGENTS.md`) |
-| `entities/` | Domain entities: question, reaction, room, session, slide (see `entities/AGENTS.md`) |
-| `pages/` | Route pages: landing, session-create, presenter-room, audience-room, ai-report, rating (see `pages/AGENTS.md`) |
-| `widgets/` | App-wide widgets: header, presentation layout, slides sidebar (see `widgets/AGENTS.md`) |
-| `styles/` | Global CSS (single `global.css` file) |
+Every slice exposes its API through `index.ts` only — never deep-import slice internals
+from outside the slice.
 
-## For AI Agents
+## Slice structure
 
-### Import Rules
-- `shared/` may NOT import from any other layer
-- `entities/` may import from `shared/` only
-- `pages/` may import from `shared/` and `entities/`
-- `widgets/` may import from `shared/`, `entities/`, and `pages/`
-- `app/` may import from all layers
-- Use `@/` alias for all cross-layer imports (e.g. `@/entities/question`)
+```
+<slice>/
+  model/    ← hooks + logic (WebSocket subscriptions, fetches, derived state)
+  ui/       ← components; render only, no direct API calls
+  index.ts  ← public API
+```
 
-### Public API Convention
-Every FSD slice exposes its public API through `index.ts` only. Never import from internal paths like `@/entities/question/model/question` from outside the slice.
+## Layers
 
-### Styling
-All styles use `styled-components` v6. Style definitions live in co-located `.styles.ts` files next to the component file.
+- `app/` — router (`router.tsx`), app shell, `PresenterRoomGate`
+- `shared/` — `api/` (all HTTP + WebSocket), `lib/` (pure utils, `createLogger`),
+  `config/` (storage keys), `ui/` (generic components), `assets/`
+- `entities/` — question, reaction, room, session, slide, slide-note
+- `features/` — feedback-questions
+- `pages/` — landing, session-create, presenter-room, audience-room, broadcast-screen, ai-report, rating
+- `widgets/` — app-header, presentation-layout, slides-sidebar
+- `styles/` — single `global.css`
 
-<!-- MANUAL: -->
+Styling: styled-components v6, co-located `.styles.ts`. Global state: Jotai atoms.

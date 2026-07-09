@@ -765,9 +765,10 @@ const sortPresenterQuestionRows = ({
 };
 
 // 실시간 질문 섹션 — 라이브에서는 사이드 패널 전체를 스크롤하므로 내부 스크롤 대신 자연 높이로 확장
+// flex-grow로 남는 공간만 채움 — 고정 min-height를 두면 위 섹션이 모두 펼쳐졌을 때 패널이 넘쳐 스크롤이 생김
 const QuestionSection = styled(Section)`
   position: relative;
-  min-height: 40vh;
+  flex: 1 0 auto;
 `;
 
 // 헤더 바가 제목 + 정렬 버튼을 한 줄에 담고, #f9f9f9 배경/구분선이 줄 전체를 덮도록 함

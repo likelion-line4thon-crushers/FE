@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { MEDIA } from "@/shared/config/breakpoints";
 import DownloadIcon from "@/shared/assets/images/download.svg";
 
 interface RatingActionButtonsProps {
@@ -52,6 +53,10 @@ const Row = styled.div`
   display: flex;
   gap: 1vw;
   align-items: center;
+
+  @media ${MEDIA.mobile} {
+    gap: 12px;
+  }
 `;
 
 const BaseButton = styled.button`
@@ -74,6 +79,14 @@ const BaseButton = styled.button`
     background: #d9d9d9;
     color: #ffffff;
     cursor: not-allowed;
+  }
+
+  /* 터치 타깃 확보 */
+  @media ${MEDIA.mobile} {
+    gap: 6px;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
   }
 `;
 

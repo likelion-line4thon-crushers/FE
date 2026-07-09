@@ -1,92 +1,50 @@
-<!-- Generated: 2026-06-18 | Updated: 2026-06-18 -->
+# Boini — line4thon-presentation-frontend
 
-# line4thon-presentation-frontend (Boini)
+Real-time interactive presentation platform: presenters share slides, audiences react with
+emoji stamps, ask questions, and give feedback live over STOMP/WebSocket.
+React 19 + TypeScript + Vite, structured by Feature-Sliced Design (FSD) v2.1.
 
-## Purpose
-Real-time interactive presentation platform where presenters share slides and audiences participate via reactions, questions, and feedback. Built with React 19 + TypeScript following Feature-Sliced Design (FSD). The presenter and audience communicate over STOMP/WebSocket in real time.
+## Commands
 
-## Key Files
-
-| File | Description |
-|------|-------------|
-| `package.json` | Project deps and scripts (`dev`, `build`, `test:unit`, `test:e2e`, `test:ct`, `typecheck`) |
-| `vite.config.ts` | Vite build config with `@` alias pointing to `src/` |
-| `tsconfig.json` | TypeScript strict mode config |
-| `playwright.config.ts` | Playwright E2E test config |
-| `playwright-ct.config.ts` | Playwright component test config |
-| `vitest.config.ts` | Vitest unit test config |
-| `eslint.config.js` | ESLint + TypeScript-ESLint rules |
-| `prettier.config.mjs` | Prettier formatting rules |
-| `index.html` | HTML entry point |
-| `vite-env.d.ts` | Vite environment type declarations |
-
-## Subdirectories
-
-| Directory | Purpose |
-|-----------|---------|
-| `src/` | Application source code in FSD layers (see `src/AGENTS.md`) |
-| `tests/` | Unit, E2E, and component test suites (see `tests/AGENTS.md`) |
-| `docs/` | Architecture and backend spec documentation (see `docs/AGENTS.md`) |
-| `public/` | Static assets: favicon, Netlify `_redirects` |
-| `playwright/` | Playwright component test HTML host and entry point |
-
-## Routes
-
-| Path | Page | Role |
-|------|------|------|
-| `/` | LandingPage | Entry — create or join session |
-| `/rooms/new` | SessionCreatePage | Presenter: upload PDF, create room |
-| `/rooms/:roomId/prepare` | SessionCreatePage | Presenter: re-configure existing room |
-| `/rooms/:roomId/present` | PresenterRoomPage | Presenter: live presentation controls |
-| `/rooms/:roomId/report` | AiReportPage | Presenter: post-session AI analysis |
-| `/join/:code` | AudienceRoomPage | Audience: view slides and interact |
-| `/audience/:code/rating` | RatingPage | Audience: post-session rating |
-
-## For AI Agents
-
-### Architecture
-This project strictly follows **Feature-Sliced Design v2.1**. Layers from lowest to highest dependency:
-`shared` → `entities` → `pages` → `widgets` → `app`
-
-Cross-layer imports must only go **upward** (higher layers import lower). Never import from `pages` inside `entities`, etc.
-
-### Working In This Directory
-- Root config files only — never put application logic here
-- `@/` alias resolves to `src/` — always use this for internal imports
-- `public/` contains only static assets; bundle assets live in `src/shared/assets/`
-
-### Testing Requirements
-```
-pnpm test:unit       # Vitest unit tests (fast, no browser)
-pnpm test:ct         # Playwright component tests
-pnpm test:e2e        # Playwright E2E tests (requires running dev server)
-pnpm typecheck       # TypeScript check without emit
+```bash
+pnpm dev              # Vite dev server
+pnpm build            # production build
+pnpm typecheck        # tsc --noEmit
+pnpm lint             # eslint
+pnpm test:unit        # Vitest unit tests
+pnpm test:ct          # Playwright component tests
+pnpm test:e2e         # Playwright E2E (requires running dev server)
 ```
 
-### Common Patterns
-- Jotai atoms for global state (avoid React Context for shared state)
-- `styled-components` v6 for all component styling (`.styles.ts` co-located files)
-- `WebSocketService` singleton (STOMP over SockJS) in `src/shared/api/websocket.ts`
-- Index files (`index.ts`) as the only public API for each FSD slice
+Before claiming work done, run `pnpm typecheck` (and `pnpm build` for larger changes).
 
-## Dependencies
+## Architecture
 
-### External
-- `react` 19 — UI framework
-- `react-router` 7 — client-side routing
-- `jotai` 2 — atomic state management
-- `styled-components` 6 — CSS-in-JS styling
-- `@stomp/stompjs` + `sockjs-client` — WebSocket real-time messaging
-- `axios` — HTTP API client
-- `recharts` — Charts for AI report page
-- `qrcode.react` — QR code generation for audience join
-- `uuid` — Idempotency key generation for WebSocket sends
+FSD layers, lowest → highest: `shared` → `entities` → `features` → `widgets` → `pages` → `app`.
+Imports flow strictly toward lower layers; each slice's public API is its `index.ts`.
+Details: `src/AGENTS.md` and `.claude/rules/`.
 
-### Dev
-- `vite` 5 — build tool
-- `typescript` 6 — type checking
-- `playwright` — E2E and component testing
-- `vitest` — unit testing
-- `eslint` + `prettier` — linting and formatting
+- Global state: Jotai atoms (not React Context)
+- Styling: styled-components v6, co-located `.styles.ts` files
+- All backend I/O in `src/shared/api/` — axios instances plus the `WebSocketService`
+  singleton (STOMP over SockJS) in `src/shared/api/websocket.ts`
+- `@/` alias resolves to `src/`
 
-<!-- MANUAL: -->
+## Routes (`src/app/router.tsx`)
+
+| Path                      | Page                | Role                                                        |
+| ------------------------- | ------------------- | ----------------------------------------------------------- |
+| `/`                       | LandingPage         | Entry — create or join                                      |
+| `/rooms/new`              | PresenterRoomGate   | Presenter: create room                                      |
+| `/rooms/:roomId`          | PresenterRoomGate   | Presenter: prepare or present, decided by session state     |
+| `/rooms/:roomId/report`   | AiReportPage        | Presenter: post-session AI analysis                         |
+| `/rooms/:roomId/broadcast`| BroadcastScreenPage | Projector: bare fullscreen slide mirror (outside app shell) |
+| `/join/:code`             | AudienceRoomPage    | Audience: view slides and interact                          |
+| `/audience/:code/rating`  | RatingPage          | Audience: post-session rating                               |
+
+## Directories
+
+- `src/` — application code in FSD layers (see `src/AGENTS.md`)
+- `tests/` — unit / component / E2E suites (see `tests/AGENTS.md`)
+- `docs/` — `session-lifecycle.md` (read before touching WebSocket handling) and backend specs
+- `public/` — static assets only; bundle assets live in `src/shared/assets/`

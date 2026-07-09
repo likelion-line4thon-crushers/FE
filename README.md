@@ -38,9 +38,8 @@ Boini는 발표자와 청중이 실시간으로 상호작용할 수 있는 프�
 
 - `axios`
 - `@stomp/stompjs`, `sockjs-client`
-- `react-pdf`, `pdfjs-dist`
-- `recharts`
 - `qrcode.react`
+- `uuid`
 
 ## 아키텍처
 
@@ -49,10 +48,11 @@ Boini는 발표자와 청중이 실시간으로 상호작용할 수 있는 프�
 - `app`: 부트스트랩, 라우터, 전역 앱 셸
 - `pages`: 라우트 단위 화면과 페이지 전용 모델
 - `widgets`: 여러 페이지에서 재사용되는 복합 UI
+- `features`: 재사용 가능한 사용자 기능 단위 (예: feedback-questions)
 - `entities`: 도메인 상태, 타입, 모델, 재사용 가능한 도메인 UI
 - `shared`: API, 설정, 유틸, 에셋, 저수준 UI 인프라
 
-현재 앱은 `features/`, `services/`, `hooks/`, `store/` 같은 기술 중심 top-level 폴더를 더 이상 사용하지 않고, 책임 기준으로 코드를 배치합니다.
+현재 앱은 `services/`, `hooks/`, `store/` 같은 기술 중심 top-level 폴더를 더 이상 사용하지 않고, 책임 기준으로 코드를 배치합니다. 레이어 간 import 방향은 `eslint-plugin-boundaries` 로 강제되며, 위반 시 `pnpm lint` 가 실패합니다.
 
 또한 밀도가 높은 slice 내부는 기술 역할별 `hooks/` 같은 폴더로 나누지 않고, **관심사 기준 concern 폴더**로 정리합니다.
 
@@ -74,9 +74,9 @@ Boini는 발표자와 청중이 실시간으로 상호작용할 수 있는 프�
 ```text
 /                         랜딩 페이지
 /rooms/new                새 세션 생성
-/rooms/:roomId/prepare    세션 준비
-/rooms/:roomId/present    발표 진행
+/rooms/:roomId            세션 준비/발표 (세션 상태에 따라 PresenterRoomGate가 결정)
 /rooms/:roomId/report     AI 리포트
+/rooms/:roomId/broadcast  프로젝터용 전체화면 슬라이드 미러 (앱 셸 밖에서 렌더링)
 /join/:code               청중 입장
 /audience/:code/rating    세션 종료 후 만족도 평가
 ```
@@ -107,6 +107,7 @@ src/
 │   │   │   ├── question/
 │   │   │   └── interaction/
 │   │   └── ui/
+│   ├── broadcast-screen/           # 프로젝터용 전체화면 미러
 │   ├── ai-report/
 │   │   ├── model/
 │   │   └── ui/
@@ -128,10 +129,13 @@ src/
 │   │       ├── viewer/
 │   │       └── settings/
 │   └── slides-sidebar/
+├── features/                   # 재사용 가능한 사용자 기능
+│   └── feedback-questions/
 ├── entities/                   # 도메인 모델/상태/UI
 │   ├── room/
 │   ├── session/
 │   ├── slide/
+│   ├── slide-note/
 │   ├── question/
 │   └── reaction/
 ├── shared/
@@ -161,38 +165,38 @@ src/
 ### 설치
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 개발 서버
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 ### 프로덕션 빌드
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ### 타입 검사
 
 ```bash
-npm run typecheck
+pnpm typecheck
 ```
 
 ### 린트
 
 ```bash
-npm run lint
+pnpm lint
 ```
 
 ### 포맷
 
 ```bash
-npm run format
-npm run format:check
+pnpm format
+pnpm format:check
 ```
 
 ## 테스트
@@ -226,35 +230,35 @@ tests/
 브라우저 설치:
 
 ```bash
-npm run test:install-browsers
+pnpm test:install-browsers
 ```
 
 단위 테스트:
 
 ```bash
-npm run test:unit
+pnpm test:unit
 ```
 
 컴포넌트 테스트:
 
 ```bash
-npm run test:ct
+pnpm test:ct
 ```
 
 E2E 테스트:
 
 ```bash
-npm run test:e2e
+pnpm test:e2e
 ```
 
 전체 검증 시 자주 사용하는 순서:
 
 ```bash
-npm run typecheck
-npm run lint
-npm run test:unit
-npm run test:ct
-npm run test:e2e
+pnpm typecheck
+pnpm lint
+pnpm test:unit
+pnpm test:ct
+pnpm test:e2e
 ```
 
 ### Playwright 실행 방식
@@ -291,4 +295,9 @@ npm run test:e2e
 
 ## 라이선스
 
-이 프로젝트는 4호선톤 프로젝트입니다.
+이 프로젝트는 멋쟁이사자처럼 4호선톤 출품작입니다.
+
+Copyright © 2026 4호선톤 Boini 팀 (likelion-line4thon-crushers). All rights reserved.
+
+코드와 에셋의 저작권은 Boini 팀원 전원에게 있으며, 팀의 사전 동의 없는 복제, 수정,
+재배포를 허용하지 않습니다.

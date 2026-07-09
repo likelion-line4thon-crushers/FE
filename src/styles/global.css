@@ -19,7 +19,15 @@ body {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr); /* 헤더 + 나머지 */
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
+}
+
+/* 모바일 가상 키보드가 열리면 useVisualViewportHeight 훅이 --app-height(px)를 갱신 */
+@supports (height: 100dvh) {
+  #root {
+    height: var(--app-height, 100dvh);
+  }
 }
 
 .HeaderBar {
