@@ -4,7 +4,9 @@ import {
   slideContentFractions,
   stampBoxStyle,
   imageNaturalRatio,
+  SLIDE_BOX_ASPECT,
 } from "@/shared/lib/slide-geometry";
+import { useElementAspectRatio } from "@/shared/lib/use-element-aspect-ratio";
 import { useParams } from "react-router";
 import {
   getBroadcastChannelName,
@@ -67,6 +69,8 @@ const BroadcastScreenPage = () => {
   const [stamps, setStamps] = useState<BroadcastStamp[]>([]);
   const [showStamps, setShowStamps] = useState(false);
   const [slideNaturalRatio, setSlideNaturalRatio] = useState<number | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const stageRatio = useElementAspectRatio(stageRef);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(false);
   const channelRef = useRef<BroadcastChannel | null>(null);
@@ -250,7 +254,7 @@ const BroadcastScreenPage = () => {
       $immersive={isFullscreen && !controlsVisible}
     >
       {currentSrc ? (
-        <Stage>
+        <Stage ref={stageRef}>
           <SlideImage
             key={currentSrc}
             ref={(img: HTMLImageElement | null) => {
@@ -273,7 +277,7 @@ const BroadcastScreenPage = () => {
                 style={stampBoxStyle(
                   stamp.xPct,
                   stamp.yPct,
-                  slideContentFractions(slideNaturalRatio)
+                  slideContentFractions(slideNaturalRatio, stageRatio ?? SLIDE_BOX_ASPECT)
                 )}
                 draggable={false}
               />

@@ -8,6 +8,7 @@ import {
   SLIDE_BOX_ASPECT,
 } from "@/shared/lib/slide-geometry";
 import type { SlideContentFractions } from "@/shared/lib/slide-geometry";
+import { useElementAspectRatio } from "@/shared/lib/use-element-aspect-ratio";
 
 const log = createLogger("ai-report");
 import {
@@ -56,22 +57,8 @@ const StampedSlideBox = ({
   renderStamps: (fractions: SlideContentFractions) => ReactNode;
 }) => {
   const boxRef = useRef<HTMLDivElement | null>(null);
-  const [boxRatio, setBoxRatio] = useState<number>(SLIDE_BOX_ASPECT);
+  const boxRatio = useElementAspectRatio(boxRef);
   const [naturalRatio, setNaturalRatio] = useState<number | null>(null);
-
-  useEffect(() => {
-    const element = boxRef.current;
-    if (!element || typeof ResizeObserver === "undefined") return;
-
-    const measure = () => {
-      const rect = element.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) setBoxRatio(rect.width / rect.height);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <Box ref={boxRef}>
@@ -89,7 +76,7 @@ const StampedSlideBox = ({
               setNaturalRatio(imageNaturalRatio(e.currentTarget))
             }
           />
-          {renderStamps(slideContentFractions(naturalRatio, boxRatio))}
+          {renderStamps(slideContentFractions(naturalRatio, boxRatio ?? SLIDE_BOX_ASPECT))}
         </>
       ) : (
         <SlideSkeleton width="100%" height="100%" />

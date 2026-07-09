@@ -5,7 +5,9 @@ import {
   stampBoxStyle,
   boxPointToContentPct,
   imageNaturalRatio,
+  SLIDE_BOX_ASPECT,
 } from "@/shared/lib/slide-geometry";
+import { useElementAspectRatio } from "@/shared/lib/use-element-aspect-ratio";
 import {
   Main,
   SlideBox,
@@ -103,7 +105,9 @@ const SlideViewer = ({
   const currentSlideSrc = hasSlides ? slides[safeSlideIndex] : null;
 
   // 레터박스를 제외한 실제 슬라이드 콘텐츠 영역 — 스탬프 좌표의 기준
-  const contentFractions = slideContentFractions(slideNaturalRatio);
+  // 박스는 flex 축소로 16:9 에서 벗어날 수 있으므로 실측 비율을 쓴다
+  const boxRatio = useElementAspectRatio(boxRef);
+  const contentFractions = slideContentFractions(slideNaturalRatio, boxRatio ?? SLIDE_BOX_ASPECT);
 
   // 캐시된 이미지는 onLoad 를 놓칠 수 있어 ref 시점에 complete 여부도 확인
   const attachSlideImage = (img: HTMLImageElement | null) => {
@@ -131,10 +135,11 @@ const SlideViewer = ({
     if (!liveRatio) return;
 
     const rect = boxRef.current.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
     const point = boxPointToContentPct(
       (e.clientX - rect.left) / rect.width,
       (e.clientY - rect.top) / rect.height,
-      slideContentFractions(liveRatio)
+      slideContentFractions(liveRatio, rect.width / rect.height)
     );
     // 레터박스(여백) 영역 탭은 무시
     if (!point) return;
