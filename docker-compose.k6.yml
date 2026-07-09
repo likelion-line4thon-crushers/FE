@@ -40,7 +40,8 @@ services:
       K6_BASE_URL: ${K6_BASE_URL:-http://host.docker.internal:8080}
       K6_PROFILE: ${K6_PROFILE:-upload-smoke}
       K6_ROOM_CAPACITY: ${K6_ROOM_CAPACITY:-200}
-      K6_UPLOAD_FILE: ${K6_UPLOAD_FILE:-/fixtures/heavy.pdf}
+      K6_UPLOAD_FILE: ${K6_UPLOAD_FILE:-/fixtures/heavy_few.pdf}
+      K6_UPLOAD_FILES: ${K6_UPLOAD_FILES:-}
       K6_UPLOAD_FILE_NAME: ${K6_UPLOAD_FILE_NAME:-}
       K6_UPLOAD_MIME_TYPE: ${K6_UPLOAD_MIME_TYPE:-}
       K6_UPLOAD_CHUNK_SIZE: ${K6_UPLOAD_CHUNK_SIZE:-2097152}

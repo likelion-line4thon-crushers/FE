@@ -22,6 +22,7 @@
     "k6:target-interaction": "docker compose -f docker-compose.k6.yml run --rm -e K6_PROFILE=target-interaction k6",
     "k6:headroom": "docker compose -f docker-compose.k6.yml run --rm -e K6_PROFILE=headroom k6",
     "k6:upload": "docker compose -f docker-compose.k6.yml run --rm -e K6_PROFILE=upload-smoke k6-upload",
+    "k6:upload-all": "docker compose -f docker-compose.k6.yml run --rm -e K6_PROFILE=upload-smoke -e K6_UPLOAD_FILES=\"$(ls tests/k6/fixtures/*.pdf tests/k6/fixtures/*.pptx 2>/dev/null | sed 's|.*/|/fixtures/|' | paste -sd, -)\" k6-upload",
     "k6:upload-burst": "docker compose -f docker-compose.k6.yml run --rm -e K6_PROFILE=upload-burst k6-upload"
   },
   "dependencies": {
