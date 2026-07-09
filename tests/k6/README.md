@@ -14,7 +14,7 @@ Inside Docker, the default base URL is `http://host.docker.internal:8080`.
 
 By default, the script creates a room and calls the session-start API. This backend's
 session-start has no slide precondition, so the auto-create path runs standalone. (If you
-point these tests at a backend that *does* gate session start on uploaded slides, use the
+point these tests at a backend that _does_ gate session start on uploaded slides, use the
 existing-room mode below.)
 
 ## Early production target
@@ -58,42 +58,51 @@ K6_BASE_URL=https://api.example.com pnpm k6:target-interaction
 Upload tests use a separate k6 service and script because file upload/parsing stresses
 different backend paths than live WebSocket fanout.
 
-Place local heavy fixtures under `tests/k6/fixtures/` without committing them. The default
-file path is `/fixtures/heavy.pdf`, mounted from `tests/k6/fixtures/heavy.pdf`:
+Place local fixtures under `tests/k6/fixtures/` (git-ignored). Two independent axes drive
+cost, so name fixtures `{size}_{pages}.{pdf|pptx}` to isolate them:
+
+| axis         | value             | stresses                                                  | why                               |
+| ------------ | ----------------- | --------------------------------------------------------- | --------------------------------- |
+| size (bytes) | `light` / `heavy` | chunk upload + assembly                                   | request count = size ÷ chunk size |
+| pages        | `few` / `many`    | parse (150-DPI render + WebP + 2× S3 upload **per page**) | O(pages) × per-page complexity    |
+
+So `light_many.pdf` isolates the parse ceiling, `heavy_few.pdf` isolates upload bandwidth,
+`heavy_many.pdf` is worst case. `size`/`pages` are qualitative labels — a `medium` tier is
+fine (e.g. `light_medium.pdf`).
+
+### Sweep every fixture (recommended)
+
+Runs the upload test against **every `*.pdf` / `*.pptx` in the fixtures folder**, once each,
+with per-file metrics (`upload_duration{file:…}`, `upload_pages_parsed{file:…}`, …):
 
 ```bash
-pnpm k6:upload
+pnpm k6:upload-all
 ```
 
-For a PPT/PPTX fixture:
+### Single fixture
+
+Default file is `/fixtures/light_medium.pdf`; override with `K6_UPLOAD_FILE` (container path):
 
 ```bash
-K6_UPLOAD_FILE=/fixtures/heavy.pptx pnpm k6:upload
+pnpm k6:upload                                          # default fixture
+K6_UPLOAD_FILE=/fixtures/light_few.pptx pnpm k6:upload  # a specific one
+K6_BASE_URL=https://api.example.com K6_UPLOAD_FILE=/fixtures/heavy_many.pdf pnpm k6:upload
 ```
 
-Against EC2:
+Small burst of concurrent uploads (use a light fixture — each VU loads the file into memory):
 
 ```bash
-K6_BASE_URL=https://api.example.com \
-K6_UPLOAD_FILE=/fixtures/heavy.pdf \
-pnpm k6:upload
-```
-
-Small burst of concurrent uploads:
-
-```bash
-K6_UPLOAD_FILE=/fixtures/heavy.pdf \
+K6_UPLOAD_FILE=/fixtures/light_medium.pdf \
 K6_UPLOAD_VUS=3 \
 K6_UPLOAD_DURATION_SECONDS=180 \
 pnpm k6:upload-burst
 ```
 
-If fixtures live outside the repo, mount that directory:
+Sweep an explicit list, or fixtures outside the repo:
 
 ```bash
-K6_UPLOAD_FIXTURE_DIR=/absolute/path/to/fixtures \
-K6_UPLOAD_FILE=/fixtures/heavy.pptx \
-pnpm k6:upload
+K6_UPLOAD_FILES=/fixtures/light_many.pdf,/fixtures/heavy_many.pdf pnpm k6:upload
+K6_UPLOAD_FIXTURE_DIR=/absolute/path/to/fixtures K6_UPLOAD_FILE=/fixtures/deck.pptx pnpm k6:upload
 ```
 
 ## Existing room mode
@@ -139,15 +148,15 @@ K6_CODE=ABCD K6_DISABLE_PRESENTER=true pnpm k6:target
 
 Upload-specific knobs:
 
-- `K6_UPLOAD_FILE=/fixtures/heavy.pdf`
-- `K6_UPLOAD_FILE_NAME=heavy.pdf`
-- `K6_UPLOAD_MIME_TYPE=application/pdf`
+- `K6_UPLOAD_FILES=/fixtures/a.pdf,/fixtures/b.pptx` (comma-separated; sweeps each once. `k6:upload-all` fills this from the fixtures folder. Overrides `K6_UPLOAD_FILE`)
+- `K6_UPLOAD_FILE=/fixtures/light_medium.pdf` (single-file fallback)
+- `K6_UPLOAD_FILE_NAME` / `K6_UPLOAD_MIME_TYPE` (single-file mode only; a sweep derives both from each path)
 - `K6_UPLOAD_CHUNK_SIZE=2097152`
 - `K6_UPLOAD_CHUNK_CONCURRENCY=4`
 - `K6_UPLOAD_VUS=1`
 - `K6_UPLOAD_ITERATIONS=1`
 - `K6_UPLOAD_DURATION_SECONDS=180`
-- `K6_UPLOAD_MAX_DURATION_SECONDS=300`
+- `K6_UPLOAD_MAX_DURATION_SECONDS=600`
 
 ## Profiles
 
@@ -155,7 +164,8 @@ Upload-specific knobs:
 - `target`: 200 audiences, presenter page-change fanout, default reaction/question traffic.
 - `target-interaction`: 200 audiences with moderate reactions, questions, independent audience slide browsing, and cluster-update assertion.
 - `headroom`: 250 audiences for above-ceiling pressure.
-- `upload-smoke`: one chunked PDF/PPT/PPTX upload; asserts READY response from parsing/assembly.
+- `upload-smoke`: chunked PDF/PPT/PPTX upload; asserts READY from parsing/assembly. Uploads
+  every file in `K6_UPLOAD_FILES` (sweep) or the single `K6_UPLOAD_FILE`, with per-file metrics.
 - `upload-burst`: multiple repeated chunked uploads for upload/parse pressure.
 
 For a low-write sync-only target run, override interaction knobs:
