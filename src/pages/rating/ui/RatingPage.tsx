@@ -59,7 +59,6 @@ const RatingPage = () => {
     availability: pdfDownloadAvailability,
     downloading: pdfDownloading,
     error: pdfDownloadError,
-    refreshAvailability,
     downloadSlides,
   } = useRatingPdfDownload({ roomId, audienceId, enabled: hasIdentity });
 
@@ -110,11 +109,6 @@ const RatingPage = () => {
     if (!isComplete) return;
     const ok = await submit(buildPayload());
     if (!ok) return;
-    const nextAvailability = await refreshAvailability();
-    if (!nextAvailability?.sessionEnded || !nextAvailability?.canDownload) {
-      alert("슬라이드 다운로드가 아직 허용되지 않았습니다. 잠시 후 다시 시도해주세요.");
-      return;
-    }
     try {
       await downloadSlides();
       clearAudienceSession();
