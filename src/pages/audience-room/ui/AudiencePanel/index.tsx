@@ -141,6 +141,9 @@ const AudiencePanel = ({
   };
 
   const handleKeyPress = async (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Ignore Enter while an IME composition is in progress (e.g. Korean/Japanese input),
+    // otherwise the trailing composing syllable leaks back into the field after submit.
+    if (e.nativeEvent.isComposing) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       await handleSubmit();
