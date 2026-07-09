@@ -1,0 +1,1 @@
+export const DEFAULT_AUDIENCE_CAPACITY = 200;

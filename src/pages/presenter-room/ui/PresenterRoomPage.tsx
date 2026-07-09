@@ -20,6 +20,7 @@ import QuestionSortDropdown from "./QuestionSortDropdown";
 import { QuestionScrollArea } from "./QuestionList.styles";
 import websocketService from "@/shared/api/websocket";
 import { useBroadcastPublisher, useBroadcastReactionVisibility } from "@/shared/lib/broadcast";
+import { DEFAULT_AUDIENCE_CAPACITY } from "@/shared/config/audience";
 import { usePdfDownloadPolicy } from "@/entities/session";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { useEmojiReactions, useStickerLoader } from "@/entities/reaction";
@@ -145,7 +146,8 @@ const PresenterRoomPage = () => {
     editable: false,
   });
 
-  const audienceCapacity = locationState.count ?? storedRoomData.count ?? 50;
+  const audienceCapacity =
+    locationState.count ?? storedRoomData.count ?? DEFAULT_AUDIENCE_CAPACITY;
 
   const initialAudienceCount = useMemo(() => {
     const candidate = locationState.audienceCount ?? storedRoomData.audienceCount ?? null;
