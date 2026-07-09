@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { MEDIA } from "@/shared/config/breakpoints";
 import type { FeedbackQuestion } from "@/shared/api/feedback-questions";
 
 interface QuestionAnswerListProps {
@@ -46,6 +47,14 @@ const List = styled.div`
   min-height: 0;
   overflow-y: auto;
   padding-right: 0.5vw;
+
+  /* 모바일: 내부 스크롤 대신 페이지 스크롤로 자연 확장 */
+  @media ${MEDIA.mobile} {
+    flex: none;
+    overflow-y: visible;
+    padding-right: 0;
+    gap: 12px;
+  }
 `;
 
 const Field = styled.div`
@@ -73,5 +82,13 @@ const AnswerInput = styled.input`
   }
   &::placeholder {
     color: #767676;
+  }
+
+  /* iOS: 16px 미만 입력창 포커스 시 자동 확대 방지 */
+  @media ${MEDIA.mobile} {
+    border: 1px solid #e5e5ec;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 16px;
   }
 `;

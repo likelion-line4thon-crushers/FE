@@ -1,5 +1,14 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import type { ComponentType, ReactNode, SyntheticEvent } from "react";
 import { createLogger } from "@/shared/lib/logger";
+import {
+  slideContentFractions,
+  stampBoxStyle,
+  imageNaturalRatio,
+  SLIDE_BOX_ASPECT,
+} from "@/shared/lib/slide-geometry";
+import type { SlideContentFractions } from "@/shared/lib/slide-geometry";
+import { useElementAspectRatio } from "@/shared/lib/use-element-aspect-ratio";
 
 const log = createLogger("ai-report");
 import {
@@ -33,6 +42,48 @@ interface ReactionSlideReportItem {
 interface EmojiOption {
   id: EmojiId;
 }
+
+/* 슬라이드 박스가 min-height 로 16:9 에서 벗어날 수 있어 실측 비율로 콘텐츠 영역을 계산,
+   레터박스를 제외한 실제 슬라이드 위에 스탬프를 배치한다 */
+const StampedSlideBox = ({
+  Box,
+  src,
+  alt,
+  renderStamps,
+}: {
+  Box: ComponentType<any>;
+  src: string | null;
+  alt: string;
+  renderStamps: (fractions: SlideContentFractions) => ReactNode;
+}) => {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const boxRatio = useElementAspectRatio(boxRef);
+  const [naturalRatio, setNaturalRatio] = useState<number | null>(null);
+
+  return (
+    <Box ref={boxRef}>
+      {src ? (
+        <>
+          <img
+            key={src}
+            ref={(img) => {
+              // 캐시된 이미지는 onLoad 를 놓칠 수 있어 ref 시점에 complete 여부도 확인
+              if (img && img.complete) setNaturalRatio(imageNaturalRatio(img));
+            }}
+            src={src}
+            alt={alt}
+            onLoad={(e: SyntheticEvent<HTMLImageElement>) =>
+              setNaturalRatio(imageNaturalRatio(e.currentTarget))
+            }
+          />
+          {renderStamps(slideContentFractions(naturalRatio, boxRatio ?? SLIDE_BOX_ASPECT))}
+        </>
+      ) : (
+        <SlideSkeleton width="100%" height="100%" />
+      )}
+    </Box>
+  );
+};
 
 const EMOJI_NAMES: Record<number, string> = {
   1: "재미있는",
@@ -121,16 +172,13 @@ const PopularSlide = ({ roomId, deckId }: { roomId?: any; deckId?: any }) => {
   );
   const stampSrc = SELECTED_EMOJI_ICONS[selectedEmojiId as EmojiId];
 
-  const renderStamps = (stamps: SlideSticker[]) =>
+  const renderStamps = (stamps: SlideSticker[], fractions: SlideContentFractions) =>
     stampSrc
-      ? stamps.map((stamp) => (
-          <StampImage
-            key={stamp.id}
-            src={stampSrc}
-            alt="sticker"
-            style={{ top: `${stamp.yPct}%`, left: `${stamp.xPct}%` }}
-          />
-        ))
+      ? stamps.map((stamp) => {
+          // 위치만 콘텐츠 기준으로 보정하고, 크기는 리포트 고유 clamp 스타일 유지
+          const { left, top } = stampBoxStyle(stamp.xPct, stamp.yPct, fractions);
+          return <StampImage key={stamp.id} src={stampSrc} alt="sticker" style={{ left, top }} />;
+        })
       : null;
 
   return (
@@ -157,16 +205,12 @@ const PopularSlide = ({ roomId, deckId }: { roomId?: any; deckId?: any }) => {
             ) : (
               <>
                 <SlideWrapper>
-                  <LargeSlide>
-                    {firstSlideUrl ? (
-                      <>
-                        <img src={firstSlideUrl} alt="Most popular slide" />
-                        {renderStamps(firstSlideStamps)}
-                      </>
-                    ) : (
-                      <SlideSkeleton width="100%" height="100%" />
-                    )}
-                  </LargeSlide>
+                  <StampedSlideBox
+                    Box={LargeSlide}
+                    src={firstSlideUrl}
+                    alt="Most popular slide"
+                    renderStamps={(fractions) => renderStamps(firstSlideStamps, fractions)}
+                  />
                   <SlideNumber
                     slideNumber={
                       primarySlideNumber && primarySlideNumber > 0 ? primarySlideNumber : "-"
@@ -180,16 +224,12 @@ const PopularSlide = ({ roomId, deckId }: { roomId?: any; deckId?: any }) => {
                 </SlideWrapper>
                 {hasSecondSlide && (
                   <SlideWrapper>
-                    <SmallSlide>
-                      {secondSlideUrl ? (
-                        <>
-                          <img src={secondSlideUrl} alt="Second popular slide" />
-                          {renderStamps(secondSlideStamps)}
-                        </>
-                      ) : (
-                        <SlideSkeleton width="100%" height="100%" />
-                      )}
-                    </SmallSlide>
+                    <StampedSlideBox
+                      Box={SmallSlide}
+                      src={secondSlideUrl}
+                      alt="Second popular slide"
+                      renderStamps={(fractions) => renderStamps(secondSlideStamps, fractions)}
+                    />
                     <SlideNumber
                       slideNumber={selectedData?.secondSlide ? selectedData.secondSlide : "-"}
                       emojiCount={

@@ -4,7 +4,15 @@ import { useParams } from "react-router";
 import { useAtomValue } from "jotai";
 import AudiencePanel from "./AudiencePanel";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
-import { PageContainer, CenterContainer, RightPanelContainer } from "./AudienceRoomPage.styles";
+import {
+  PageContainer,
+  CenterContainer,
+  RightPanelContainer,
+  MobileStampHint,
+} from "./AudienceRoomPage.styles";
+import { useIsMobile } from "@/shared/lib/use-media-query";
+import { useVisualViewportHeight } from "@/shared/lib/use-visual-viewport-height";
+import { useImmersiveMode } from "@/shared/lib/use-immersive-mode";
 import SlideViewer from "./SlideViewerAudience/SlideViewer_audience";
 import { EmojiPanel, useEmojiReactions, useStickerLoader } from "@/entities/reaction";
 import { WebSocketService } from "@/shared/api/websocket";
@@ -27,15 +35,6 @@ import SessionEndedAudience from "./SessionEndedAudience";
 import { roomIdAtom, deckIdAtom, totalPagesAtom, wsUrlAtom } from "@/entities/room";
 import { quickSettingsAtom, unlockSettingsAtom } from "@/entities/session";
 
-type FullscreenElement = HTMLDivElement & {
-  webkitRequestFullscreen?: () => Promise<void>;
-};
-
-type FullscreenDocument = Document & {
-  webkitFullscreenElement?: Element | null;
-  webkitExitFullscreen?: () => Promise<void>;
-};
-
 const FULLSCREEN_CONTROLS_IDLE_MS = 5000;
 
 const AudienceRoomPage = () => {
@@ -51,15 +50,27 @@ const AudienceRoomPage = () => {
   const quickSettings = useAtomValue(quickSettingsAtom);
   const unlockSettings = useAtomValue(unlockSettingsAtom);
 
+  const isMobile = useIsMobile();
+
+  // * 모바일 키보드가 열릴 때 질문 입력창이 가려지지 않도록 앱 높이를 동기화
+  useVisualViewportHeight(isMobile);
+
   // Local UI state
   const [selectedEmoji, setSelectedEmoji] = useState<any>(null);
   const [showStamps, setShowStamps] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasPlacedStamp, setHasPlacedStamp] = useState(false);
   const [areFullscreenControlsVisible, setAreFullscreenControlsVisible] = useState(false);
   const [isFullscreenSlideChipVisible, setIsFullscreenSlideChipVisible] = useState(false);
   const [showAudienceJoinWarning, setShowAudienceJoinWarning] = useState(false);
   const lastPresenterPageRef = useRef(0);
-  const centerContainerRef = useRef<FullscreenElement | null>(null);
+  const centerContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // * 네이티브 전체화면(데스크톱/안드로이드) 또는 pseudo-fullscreen(아이폰) 통합 토글
+  const {
+    isImmersive: isFullscreen,
+    isPseudoFullscreen,
+    toggleImmersive: handleToggleFullscreen,
+  } = useImmersiveMode(centerContainerRef);
   const fullscreenControlsTimerRef = useRef<number | null>(null);
   const fullscreenSlideChipTimerRef = useRef<number | null>(null);
   const shouldConsumeFullscreenClickRef = useRef(false);
@@ -226,29 +237,14 @@ const AudienceRoomPage = () => {
     scheduleFullscreenControlsHide();
   }, [isFullscreen, scheduleFullscreenControlsHide]);
 
+  // * 몰입 모드 진입/이탈 시 컨트롤 표시 상태 초기화 (네이티브/pseudo 공통)
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      const fullscreenDocument = document as FullscreenDocument;
-      const isCurrentContainerFullscreen =
-        document.fullscreenElement === centerContainerRef.current ||
-        fullscreenDocument.webkitFullscreenElement === centerContainerRef.current;
-
-      setIsFullscreen(isCurrentContainerFullscreen);
-      setAreFullscreenControlsVisible(false);
-      setIsFullscreenSlideChipVisible(false);
-      clearFullscreenControlsTimer();
-      clearFullscreenSlideChipTimer();
-      shouldConsumeFullscreenClickRef.current = false;
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
-    };
-  }, [clearFullscreenControlsTimer, clearFullscreenSlideChipTimer]);
+    setAreFullscreenControlsVisible(false);
+    setIsFullscreenSlideChipVisible(false);
+    clearFullscreenControlsTimer();
+    clearFullscreenSlideChipTimer();
+    shouldConsumeFullscreenClickRef.current = false;
+  }, [isFullscreen, clearFullscreenControlsTimer, clearFullscreenSlideChipTimer]);
 
   useEffect(() => clearFullscreenControlsTimer, [clearFullscreenControlsTimer]);
   useEffect(() => clearFullscreenSlideChipTimer, [clearFullscreenSlideChipTimer]);
@@ -282,36 +278,6 @@ const AudienceRoomPage = () => {
     event.stopPropagation();
   };
 
-  const handleToggleFullscreen = async () => {
-    const fullscreenDocument = document as FullscreenDocument;
-    const activeFullscreenElement =
-      document.fullscreenElement || fullscreenDocument.webkitFullscreenElement;
-
-    if (activeFullscreenElement) {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-        return;
-      }
-
-      if (fullscreenDocument.webkitExitFullscreen) {
-        await fullscreenDocument.webkitExitFullscreen();
-      }
-      return;
-    }
-
-    const fullscreenElement = centerContainerRef.current;
-    if (!fullscreenElement) return;
-
-    if (fullscreenElement.requestFullscreen) {
-      await fullscreenElement.requestFullscreen();
-      return;
-    }
-
-    if (fullscreenElement.webkitRequestFullscreen) {
-      await fullscreenElement.webkitRequestFullscreen();
-    }
-  };
-
   // Audience opened the session URL after it already ended: same layout as the
   // "live waiting" screen, only the message differs.
   if (isSessionEnded) {
@@ -337,20 +303,31 @@ const AudienceRoomPage = () => {
     );
   }
 
+  const handlePlaceStampWithHint = (coords: { xPct: number; yPct: number }) => {
+    if (!hasPlacedStamp) setHasPlacedStamp(true);
+    handlePlaceStamp(coords);
+  };
+
+  const showMobileStampHint =
+    isMobile && !isFullscreen && quickSettings.sticker && Boolean(selectedEmoji) && !hasPlacedStamp;
+
   return (
     <PageContainer>
-      <SlidesSidebar
-        slides={slides}
-        currentSlide={currentSlide}
-        setCurrentSlide={handleAudienceSelectSlide}
-        isWaiting={showSlidesPlaceholder}
-        placeholderCount={totalPages || 10}
-        maxRevealedPage={unlockSettings.maxRevealedPage}
-        revealAllSlides={unlockSettings.revealAllSlides}
-      />
+      {!isMobile && (
+        <SlidesSidebar
+          slides={slides}
+          currentSlide={currentSlide}
+          setCurrentSlide={handleAudienceSelectSlide}
+          isWaiting={showSlidesPlaceholder}
+          placeholderCount={totalPages || 10}
+          maxRevealedPage={unlockSettings.maxRevealedPage}
+          revealAllSlides={unlockSettings.revealAllSlides}
+        />
+      )}
       <CenterContainer
         ref={centerContainerRef}
         $isFullscreen={isFullscreen}
+        $isPseudoFullscreen={isPseudoFullscreen}
         onPointerMove={handleFullscreenPointerMove}
         onPointerDownCapture={handleFullscreenPointerDownCapture}
         onClickCapture={handleFullscreenClickCapture}
@@ -360,7 +337,7 @@ const AudienceRoomPage = () => {
           slides={slides}
           currentSlide={currentSlide}
           stamps={stampsBySlide[String(currentSlide)] || []}
-          onPlace={handlePlaceStamp}
+          onPlace={handlePlaceStampWithHint}
           followPresenter={followPresenter}
           onToggleFollow={handleToggleFollowPresenter}
           showStamps={showStamps}
@@ -372,6 +349,7 @@ const AudienceRoomPage = () => {
           fullscreenControlsVisible={!isFullscreen || areFullscreenControlsVisible}
           fullscreenSlideChipVisible={isFullscreen && isFullscreenSlideChipVisible}
           onToggleFullscreen={handleToggleFullscreen}
+          onNavigate={(delta) => handleAudienceSelectSlide(currentSlide + delta)}
           reactionBar={
             quickSettings.sticker ? (
               <EmojiPanel selectedId={selectedEmoji?.id} onSelect={handleSelectEmoji} />
@@ -409,6 +387,9 @@ const AudienceRoomPage = () => {
         {/* 전체화면에서는 슬라이드 위 오버레이로 리액션 바를 띄운다 (일반 화면은 SlideViewer 내부 컨트롤 줄에 배치) */}
         {quickSettings.sticker && isFullscreen && areFullscreenControlsVisible && (
           <EmojiPanel selectedId={selectedEmoji?.id} onSelect={handleSelectEmoji} />
+        )}
+        {showMobileStampHint && (
+          <MobileStampHint>슬라이드를 탭해 스티커를 남겨보세요</MobileStampHint>
         )}
       </CenterContainer>
       <RightPanelContainer>
