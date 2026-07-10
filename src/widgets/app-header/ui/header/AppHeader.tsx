@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useAtomValue } from "jotai";
 import BoiniLogo from "@/shared/assets/images/Boini_logo.svg";
 import LiveIcon from "@/shared/assets/images/live.png";
+import SessionQuestionFace from "@/shared/assets/images/session-question-face.svg";
 import { ShareModal } from "../share";
 import {
   ShareButton,
@@ -22,7 +23,12 @@ import {
 } from "@/entities/room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { SessionWarningModal } from "@/shared/ui/session-warning-modal";
-import { useHeaderRoomData, useHeaderSessionAction, resolveShareJoinUrl } from "../../model";
+import {
+  useHeaderRoomData,
+  useHeaderSessionAction,
+  useFeedbackQuestionGuard,
+  resolveShareJoinUrl,
+} from "../../model";
 
 const HeaderWrapper = styled.header`
   width: 100%;
@@ -121,6 +127,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showFeedbackQuestionModal, setShowFeedbackQuestionModal] = useState(false);
   const [showPresenterStartWarning, setShowPresenterStartWarning] = useState(false);
+  const [showFeedbackWarning, setShowFeedbackWarning] = useState(false);
   const [sessionStatus, setSessionStatus] = useState("waiting");
   const [csvDownloading, setCsvDownloading] = useState(false);
 
@@ -130,6 +137,10 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   // 진입 시점엔 항상 false 로 리셋한다.
   const resolvedCanStartSession = useAtomValue(canStartSessionAtom);
   const csvEnabled = useAtomValue(audienceVoiceCsvEnabledAtom);
+
+  // 준비 화면에서 후기 질문 존재 여부를 미리 조회해 세션 시작 시 경고 판단에 사용.
+  const { hasQuestions: hasFeedbackQuestions, refresh: refreshFeedbackQuestions } =
+    useFeedbackQuestionGuard(roomData?.roomId, isPrep);
 
   const { isSessionEnding, showLandingPage, landingMessage, handleSessionAction } =
     useHeaderSessionAction({
@@ -197,6 +208,11 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
   const handleStartSessionClick = () => {
     if (isPrep) {
+      // 후기 질문을 하나도 만들지 않았다면 스크린샷 경고 전에 먼저 안내.
+      if (hasFeedbackQuestions === false) {
+        setShowFeedbackWarning(true);
+        return;
+      }
       setShowPresenterStartWarning(true);
       return;
     }
@@ -207,6 +223,22 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const handleConfirmStartSession = () => {
     setShowPresenterStartWarning(false);
     handleSessionAction();
+  };
+
+  // 후기 질문 경고: "질문 작성하기" → 질문 작성 모달, "건너뛰기" → 스크린샷 경고로 이어짐.
+  const handleWriteFeedbackQuestions = () => {
+    setShowFeedbackWarning(false);
+    setShowFeedbackQuestionModal(true);
+  };
+
+  const handleSkipFeedbackQuestions = () => {
+    setShowFeedbackWarning(false);
+    setShowPresenterStartWarning(true);
+  };
+
+  const handleFeedbackQuestionModalClose = () => {
+    setShowFeedbackQuestionModal(false);
+    refreshFeedbackQuestions();
   };
 
   const handleExitClick = async () => {
@@ -308,7 +340,22 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
         <FeedbackQuestionModal
           roomId={roomData?.roomId}
           isOpen={showFeedbackQuestionModal}
-          onClose={() => setShowFeedbackQuestionModal(false)}
+          onClose={handleFeedbackQuestionModalClose}
+        />
+      )}
+      {showFeedbackWarning && (
+        <SessionWarningModal
+          mascot={SessionQuestionFace}
+          title="후기 질문을 아직 안 만들었어요!"
+          description={[
+            "질문을 작성하면 세션이 끝난 뒤,",
+            "참여자의 생생한 피드백을 받을 수 있어요.",
+          ]}
+          secondaryLabel="건너뛰기"
+          confirmLabel="질문 작성하기"
+          onSecondary={handleSkipFeedbackQuestions}
+          onConfirm={handleWriteFeedbackQuestions}
+          onClose={() => setShowFeedbackWarning(false)}
         />
       )}
       {showPresenterStartWarning && (
