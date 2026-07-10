@@ -17,6 +17,7 @@ import { useQuickSettingsStorage, usePdfDownloadPolicy } from "@/entities/sessio
 import { canStartSessionAtom } from "@/entities/room";
 import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
 import { storageKeys } from "@/shared/config/storage-keys";
+import { DEFAULT_AUDIENCE_CAPACITY } from "@/shared/config/audience";
 import { useChunkedPdfUpload } from "../model/useChunkedPdfUpload";
 import { usePdfStream } from "../model/usePdfStream";
 import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
@@ -524,7 +525,7 @@ const PresentationPrepPage = () => {
           <AudienceCount
             variant="chip"
             roomId={roomId}
-            audienceCapacity={roomData?.count ?? 50}
+            audienceCapacity={roomData?.count ?? DEFAULT_AUDIENCE_CAPACITY}
             isWsReady={isPresenterWsReady}
           />
         }

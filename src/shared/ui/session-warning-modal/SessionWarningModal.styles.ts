@@ -92,11 +92,22 @@ export const Description = styled.p`
   letter-spacing: -0.025em;
 `;
 
-export const Footer = styled.div`
+export const Footer = styled.div<{ $hasSecondary?: boolean }>`
   display: flex;
   justify-content: center;
-  padding: 20px 50px 32px;
+  padding: ${({ $hasSecondary }) => ($hasSecondary ? "20px 32px 32px" : "20px 50px 32px")};
   background: #fff;
+`;
+
+export const ButtonRow = styled.div`
+  display: flex;
+  gap: 8px;
+  inline-size: 100%;
+
+  > button {
+    flex: 1 1 0;
+    min-inline-size: 0;
+  }
 `;
 
 export const ConfirmButton = styled.button`
@@ -107,6 +118,20 @@ export const ConfirmButton = styled.button`
   border-radius: 3px;
   background: #303030;
   color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.025em;
+  cursor: pointer;
+`;
+
+export const SecondaryButton = styled.button`
+  min-block-size: 36px;
+  padding: 8px 12px;
+  border: 1px solid #eaeaea;
+  border-radius: 3px;
+  background: #fff;
+  color: #303030;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.45;

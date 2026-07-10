@@ -36,5 +36,12 @@ playwright/.cache
 
 docs/
 .omc/
-playwright/
+.omx/
 .playwright-mcp
+
+# Local screenshot / test output artifacts
+output/
+
+# Local k6 upload fixtures
+tests/k6/fixtures/*
+!tests/k6/fixtures/.gitkeep

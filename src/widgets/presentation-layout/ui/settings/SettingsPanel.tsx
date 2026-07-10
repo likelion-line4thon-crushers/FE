@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import type { ChangeEventHandler } from "react";
 import type { QuickSettings } from "@/entities/session";
 import websocketService from "@/shared/api/websocket";
+import { DEFAULT_AUDIENCE_CAPACITY } from "@/shared/config/audience";
 import AudienceSVG from "@/shared/assets/images/people.svg";
 import ChevronIcon from "@/shared/assets/images/chevron-down.svg";
 import {
@@ -179,7 +180,7 @@ const SessionSettingsSection = ({
 
 const AudienceCount = ({
   roomId,
-  audienceCapacity = 50,
+  audienceCapacity = DEFAULT_AUDIENCE_CAPACITY,
   isWsReady = false,
   initialAudienceCount = null,
   variant = "panel",

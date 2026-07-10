@@ -1,0 +1,55 @@
+services:
+  k6:
+    image: grafana/k6:latest
+    working_dir: /work
+    volumes:
+      - ./tests/k6:/scripts:ro
+    environment:
+      K6_BASE_URL: ${K6_BASE_URL:-http://host.docker.internal:8080}
+      K6_PROFILE: ${K6_PROFILE:-smoke}
+      K6_AUDIENCES: ${K6_AUDIENCES:-}
+      K6_ROOM_CAPACITY: ${K6_ROOM_CAPACITY:-200}
+      K6_TOTAL_PAGES: ${K6_TOTAL_PAGES:-10}
+      K6_CODE: ${K6_CODE:-}
+      K6_ROOM_ID: ${K6_ROOM_ID:-}
+      K6_PRESENTER_TOKEN: ${K6_PRESENTER_TOKEN:-}
+      K6_PRESENTER_WS_URL: ${K6_PRESENTER_WS_URL:-}
+      K6_AUDIENCE_WS_URL: ${K6_AUDIENCE_WS_URL:-}
+      K6_START_SESSION: ${K6_START_SESSION:-true}
+      K6_DISABLE_PRESENTER: ${K6_DISABLE_PRESENTER:-false}
+      K6_REACTION_PROBABILITY: ${K6_REACTION_PROBABILITY:-}
+      K6_QUESTION_PROBABILITY: ${K6_QUESTION_PROBABILITY:-}
+      K6_AUDIENCE_BROWSE_PROBABILITY: ${K6_AUDIENCE_BROWSE_PROBABILITY:-}
+      K6_SLIDE_INTERVAL_MS: ${K6_SLIDE_INTERVAL_MS:-3000}
+      K6_REACTION_INTERVAL_MS: ${K6_REACTION_INTERVAL_MS:-5000}
+      K6_QUESTION_INTERVAL_MS: ${K6_QUESTION_INTERVAL_MS:-10000}
+      K6_AUDIENCE_BROWSE_INTERVAL_MS: ${K6_AUDIENCE_BROWSE_INTERVAL_MS:-7000}
+      K6_STOMP_HEARTBEAT_MS: ${K6_STOMP_HEARTBEAT_MS:-4000}
+      K6_SLIDE_SYNC_GRACE_MS: ${K6_SLIDE_SYNC_GRACE_MS:-15000}
+      K6_EXPECT_CLUSTER_UPDATES: ${K6_EXPECT_CLUSTER_UPDATES:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["run", "/scripts/live-session.js"]
+  k6-upload:
+    image: grafana/k6:latest
+    working_dir: /work
+    volumes:
+      - ./tests/k6:/scripts:ro
+      - ${K6_UPLOAD_FIXTURE_DIR:-./tests/k6/fixtures}:/fixtures:ro
+    environment:
+      K6_BASE_URL: ${K6_BASE_URL:-http://host.docker.internal:8080}
+      K6_PROFILE: ${K6_PROFILE:-upload-smoke}
+      K6_ROOM_CAPACITY: ${K6_ROOM_CAPACITY:-200}
+      K6_UPLOAD_FILE: ${K6_UPLOAD_FILE:-/fixtures/light_medium.pdf}
+      K6_UPLOAD_FILES: ${K6_UPLOAD_FILES:-}
+      K6_UPLOAD_FILE_NAME: ${K6_UPLOAD_FILE_NAME:-}
+      K6_UPLOAD_MIME_TYPE: ${K6_UPLOAD_MIME_TYPE:-}
+      K6_UPLOAD_CHUNK_SIZE: ${K6_UPLOAD_CHUNK_SIZE:-2097152}
+      K6_UPLOAD_CHUNK_CONCURRENCY: ${K6_UPLOAD_CHUNK_CONCURRENCY:-4}
+      K6_UPLOAD_VUS: ${K6_UPLOAD_VUS:-}
+      K6_UPLOAD_ITERATIONS: ${K6_UPLOAD_ITERATIONS:-}
+      K6_UPLOAD_DURATION_SECONDS: ${K6_UPLOAD_DURATION_SECONDS:-}
+      K6_UPLOAD_MAX_DURATION_SECONDS: ${K6_UPLOAD_MAX_DURATION_SECONDS:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["run", "/scripts/upload-presentation.js"]

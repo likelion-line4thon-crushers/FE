@@ -206,6 +206,7 @@ pnpm format:check
 - `Vitest`: 순수 로직, 저장소 복원, 상태 파싱 같은 단위 테스트
 - `Playwright Component Testing`: 브라우저 환경에서 UI 조각 단위 검증
 - `Playwright E2E`: Presenter / Audience 전체 라이프사이클 검증
+- `Grafana k6`: Docker 기반 REST + WebSocket/STOMP 부하 테스트
 
 ### 테스트 파일 위치
 
@@ -214,6 +215,7 @@ tests/
 ├── unit/          # Vitest 단위 테스트
 ├── component/     # Playwright CT
 ├── e2e/           # Playwright E2E
+├── k6/            # Grafana k6 부하 테스트
 └── setup/         # 테스트 공통 설정
 ```
 
@@ -250,6 +252,15 @@ E2E 테스트:
 ```bash
 pnpm test:e2e
 ```
+
+부하 테스트:
+
+```bash
+pnpm k6:smoke
+pnpm k6:target
+```
+
+자세한 실행 옵션은 [`tests/k6/README.md`](./tests/k6/README.md) 를 참고하세요.
 
 전체 검증 시 자주 사용하는 순서:
 
