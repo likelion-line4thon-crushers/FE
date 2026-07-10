@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Create a well-formed commit on the current branch following this repo's Conventional Commits style. Use when the user says "commit", "커밋", "커밋해", or wants to save the current working changes. Before committing, it conservatively syncs project docs (CLAUDE.md/AGENTS.md/README.md/src/AGENTS.md/tests/AGENTS.md) and .claude/rules/*.md — but ONLY when the change actually outdates a documented fact — folding any doc edits into the same commit. Stages all changes and prefers a single commit. Commits on the current branch; never creates a branch and never pushes unless asked.
+description: Create a well-formed commit on the current branch following this repo's Conventional Commits style. Use when the user says "commit", "커밋", "커밋해", or wants to save the current working changes. Before committing, it conservatively syncs project docs (CLAUDE.md/AGENTS.md/README.md/src/AGENTS.md/tests/AGENTS.md) and .claude/rules/*.md — but ONLY when the change actually outdates a documented fact — folding any doc edits into the same commit. Stages only changes relevant to the current work — if unrelated changes are mixed in, it asks or excludes them rather than blindly running git add -A — and prefers a single commit. Commits on the current branch; never creates a branch and never pushes unless asked.
 ---
 
 # commit — 컨벤션 준수 커밋 + 문서 싱크
@@ -41,11 +41,17 @@ diff가 **문서에 명시적으로 적힌 사실을 낡게 만들 때만** 해�
 
 문서/규칙을 고쳤다면 그 파일도 이번 커밋에 함께 포함한다 (별도 커밋으로 분리하지 않음).
 
-### 3. 스테이징
-```bash
-git add -A            # 변경·추가·삭제 전체
-```
-- 세션 맥락을 활용해 **되도록 하나의 커밋**으로 전체 변경을 담는다.
+### 3. 스테이징 — 작업 맥락에 맞는 변경만
+
+**`git add -A`를 무조건 하지 않는다.** 먼저 변경된 파일들이 **이번 작업 맥락과 관련 있는지**
+판단한다.
+
+- 모든 변경이 이번 작업과 관련되면 → 관련 파일 전체를 스테이징한다.
+- 이번 작업과 **무관해 보이는 변경이 섞여 있으면** (다른 기능의 수정, 실수로 남은 파일,
+  관련 없는 설정 변경 등):
+  - 사용자에게 그 파일을 포함할지 물어보거나,
+  - 무관한 것은 **제외하고** 관련 파일만 골라 스테이징한다 (`git add <경로>` 로 명시적으로).
+- 세션 맥락을 활용해 관련 변경은 **되도록 하나의 커밋**에 담는다.
 - 워킹 트리에 명백히 무관한 변경 묶음이 섞여 있고 히스토리상 나누는 게 확실히 나을 때만 분리한다.
 
 ### 4. 커밋 메시지 — 영문 Conventional Commits
