@@ -182,7 +182,7 @@ export const AudienceNum = styled.span`
   color: #5c5c5c;
 `;
 
-/* 정원(/50)은 흐린 회색으로 (Figma) */
+/* 정원(/capacity)은 흐린 회색으로 (Figma) */
 export const AudienceCap = styled.span`
   font-weight: 500;
   color: #999;

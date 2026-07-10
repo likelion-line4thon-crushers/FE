@@ -7,7 +7,16 @@ import tseslint from "typescript-eslint";
 import boundaries from "eslint-plugin-boundaries";
 
 export default [
-  { ignores: ["dist", "playwright/.cache", "test-results", "playwright-report", "blob-report"] },
+  {
+    ignores: [
+      "dist",
+      "playwright/.cache",
+      "test-results",
+      "playwright-report",
+      "blob-report",
+      "tests/k6",
+    ],
+  },
   {
     files: ["**/*.{js,jsx}"],
     languageOptions: {

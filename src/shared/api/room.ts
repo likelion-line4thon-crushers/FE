@@ -1,11 +1,12 @@
 import api from "./api";
 import type { RoomData, JoinRoomResponse } from "@/entities/room";
 import { createLogger } from "@/shared/lib/logger";
+import { DEFAULT_AUDIENCE_CAPACITY } from "@/shared/config/audience";
 
 const log = createLogger("room");
 
 export async function createRoom(totalPages = 10): Promise<RoomData> {
-  const requestData = { count: 50, totalPages };
+  const requestData = { count: DEFAULT_AUDIENCE_CAPACITY, totalPages };
   log.log("Creating room", requestData);
 
   const res = await api.post("/api/rooms", requestData);
