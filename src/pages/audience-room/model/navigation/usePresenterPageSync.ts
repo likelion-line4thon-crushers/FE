@@ -22,8 +22,18 @@ const usePresenterPageSync = ({
   useEffect(() => {
     if (slides.length === 0) return;
 
+    // Only auto-jump to the presenter's page (and enable follow) while the audience
+    // is actually following. `lastPresenterPageRef` is kept up-to-date by the pageChange
+    // handler even when follow is off, and `slides` changes reference on every slideReady
+    // patch — without this guard those re-runs would drag a browsing audience back to the
+    // presenter and re-enable follow, ignoring their "발표자와 함께 보기" toggle.
     const targetPage = lastPresenterPageRef.current;
-    if (Number.isFinite(targetPage) && targetPage >= 0 && targetPage < slides.length) {
+    if (
+      followPresenterRef.current &&
+      Number.isFinite(targetPage) &&
+      targetPage >= 0 &&
+      targetPage < slides.length
+    ) {
       setCurrentSlide(targetPage);
       prevSlideRef.current = targetPage;
       setFollowPresenter(true);
