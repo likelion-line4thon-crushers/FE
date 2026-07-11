@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { presentationKeys, slideUrlsQuery } from "@/shared/api/presentation";
 
 interface UseSlideLoaderParams {
   roomId: string | null;
@@ -27,61 +28,40 @@ export const useSlideLoader = ({
   deckId,
   totalPages,
 }: UseSlideLoaderParams): UseSlideLoaderReturn => {
-  const [slides, setSlides] = useState<(string | null)[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
+  const enabled = Boolean(roomId && deckId && totalPages);
 
-  const loadSlides = useCallback(
-    async ({ signal }: { signal?: AbortSignal } = {}) => {
-      if (!roomId || !deckId || !totalPages) return;
-      if (signal?.aborted) return;
+  const { data, isFetching, error, refetch } = useQuery({
+    ...slideUrlsQuery(roomId ?? "", deckId ?? "", totalPages ?? 0),
+    enabled,
+  });
 
-      setLoading(true);
-      setError(null);
-
-      try {
-        const urls = await fetchAllOriginalSlideUrls(roomId, deckId, totalPages);
-        if (signal?.aborted) return;
-        setSlides(urls);
-      } catch (err: any) {
-        if (signal?.aborted) return;
-        setError(err instanceof Error ? err : new Error(String(err)));
-      } finally {
-        if (!signal?.aborted) {
-          setLoading(false);
-        }
-      }
-    },
-    [roomId, deckId, totalPages]
-  );
-
-  useEffect(() => {
-    if (!roomId || !deckId || !totalPages) return;
-
-    const controller = new AbortController();
-    loadSlides({ signal: controller.signal });
-
-    return () => {
-      controller.abort();
-    };
-  }, [roomId, deckId, totalPages, loadSlides]);
+  const slides = useMemo(() => data ?? [], [data]);
+  const loading = isFetching;
 
   const retry = useCallback(() => {
     if (!roomId || !deckId || !totalPages) return;
-    loadSlides();
-  }, [roomId, deckId, totalPages, loadSlides]);
+    refetch();
+  }, [roomId, deckId, totalPages, refetch]);
 
   const applySlideReady = useCallback(
     (pageIndex: number, imageUrl: string) => {
-      setSlides((prev) => {
-        const len = Math.max(prev.length, totalPages ?? 0, pageIndex + 1);
-        const next =
-          prev.length === len ? [...prev] : Array.from({ length: len }, (_, i) => prev[i] ?? null);
-        if (!next[pageIndex]) next[pageIndex] = imageUrl;
-        return next;
-      });
+      queryClient.setQueryData<(string | null)[]>(
+        presentationKeys.slides(roomId ?? "", deckId ?? "", totalPages ?? 0),
+        (prev) => {
+          // The slideReady patch can arrive before the initial fetch resolves, so prev may be undefined.
+          const base = prev ?? [];
+          const len = Math.max(base.length, totalPages ?? 0, pageIndex + 1);
+          const next =
+            base.length === len
+              ? [...base]
+              : Array.from({ length: len }, (_, i) => base[i] ?? null);
+          if (!next[pageIndex]) next[pageIndex] = imageUrl;
+          return next;
+        }
+      );
     },
-    [totalPages]
+    [queryClient, roomId, deckId, totalPages]
   );
 
   const hasReadySlide = slides.some((s) => !!s);

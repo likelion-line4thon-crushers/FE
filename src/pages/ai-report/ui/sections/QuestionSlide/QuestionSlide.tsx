@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useLocation } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("ai-report");
@@ -13,7 +14,7 @@ import {
 import faceImage from "@/shared/assets/images/emoji1_black.svg";
 import rectangleImage from "@/shared/assets/images/AI/Rectangle.png";
 import { ContentBox, AITitle, SlideNumber } from "../../summary";
-import { fetchTopSlideReport } from "@/shared/api/ai-report";
+import { topSlideReportQuery } from "@/shared/api/ai-report";
 import { loadStoredRoomData, computeRoomInfo } from "../../../model/room-info";
 import { useSlideImage } from "@/entities/slide";
 
@@ -26,9 +27,6 @@ interface QuestionSlideReport {
 
 const QuestionSlide = () => {
   const location = useLocation();
-  const [report, setReport] = useState<QuestionSlideReport | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
 
@@ -39,58 +37,24 @@ const QuestionSlide = () => {
 
   const { roomId, deckId, totalPages } = roomInfo;
 
+  const reportQuery = useQuery({ ...topSlideReportQuery(roomId ?? "", true), enabled: !!roomId });
+  const report: QuestionSlideReport | null = reportQuery.data ?? null;
+  const loading = reportQuery.isLoading;
+  const error = roomId ? reportQuery.error : new Error("방 정보를 찾을 수 없습니다.");
+
   useEffect(() => {
-    let cancelled = false;
-
-    if (!roomId) {
-      setReport(null);
-      setError(new Error("방 정보를 찾을 수 없습니다."));
-      setLoading(false);
-      return undefined;
+    if (
+      report &&
+      totalPages &&
+      Number.isFinite(Number(report.slide)) &&
+      Number(report.slide) > Number(totalPages)
+    ) {
+      log.warn("보고된 슬라이드 번호가 총 페이지 수를 초과합니다:", {
+        slideNumber: report.slide,
+        totalPages,
+      });
     }
-
-    const loadReport = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const result = await fetchTopSlideReport(roomId, {
-          latestFirst: true,
-        });
-
-        if (cancelled) return;
-
-        setReport(result);
-
-        if (
-          result &&
-          totalPages &&
-          Number.isFinite(Number(result.slide)) &&
-          Number(result.slide) > Number(totalPages)
-        ) {
-          log.warn("보고된 슬라이드 번호가 총 페이지 수를 초과합니다:", {
-            slideNumber: result.slide,
-            totalPages,
-          });
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setReport(null);
-          setError(err as any);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadReport();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId, totalPages]);
+  }, [report, totalPages]);
 
   const slideNumber =
     report && Number.isFinite(Number(report.slide)) && Number(report.slide) > 0

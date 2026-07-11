@@ -1,12 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import styled from "styled-components";
 import { QRCodeSVG } from "qrcode.react";
 import CopyIcon from "@/shared/assets/images/copy.svg";
-import { createRoom } from "@/shared/api/room";
-import { createLogger } from "@/shared/lib/logger";
-import { resolveShareJoinUrl } from "../../model";
-
-const log = createLogger("share");
+import { useShareRoomInit } from "../../model";
 
 const Overlay = styled.div`
   position: fixed;
@@ -144,40 +140,7 @@ interface ShareModalProps {
 }
 
 const ShareModal = ({ roomData, totalPages = 10, onClose }: ShareModalProps) => {
-  const [sessionLink, setSessionLink] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (roomData) {
-      const resolvedJoinUrl = resolveShareJoinUrl(roomData);
-      if (!resolvedJoinUrl) {
-        setError("공유 링크를 생성할 수 없습니다.");
-      } else {
-        setSessionLink(resolvedJoinUrl);
-        setError("");
-      }
-      setLoading(false);
-      return;
-    }
-
-    const initRoom = async () => {
-      try {
-        const data = await createRoom(totalPages);
-        const resolvedJoinUrl = resolveShareJoinUrl(data);
-        if (!resolvedJoinUrl) {
-          throw new Error("joinUrl resolve failed");
-        }
-        setSessionLink(resolvedJoinUrl);
-      } catch (err) {
-        log.error("방 생성 실패:", err);
-        setError("방 생성 중 오류가 발생했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    initRoom();
-  }, [roomData, totalPages]);
+  const { sessionLink, loading, error } = useShareRoomInit({ roomData, totalPages });
 
   const handleCopy = () => {
     if (!sessionLink) return;

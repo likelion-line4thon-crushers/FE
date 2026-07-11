@@ -1,36 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { getFeedbackQuestions, type FeedbackQuestion } from "@/shared/api/feedback-questions";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { feedbackQuestionsQuery, type FeedbackQuestion } from "@/shared/api/feedback-questions";
+
+const selectValidSorted = (questions: FeedbackQuestion[]): FeedbackQuestion[] =>
+  questions.filter((q) => typeof q.id === "number").sort((a, b) => a.orderIndex - b.orderIndex);
 
 export function useAudienceFeedbackForm(roomId: string | null) {
-  const [questions, setQuestions] = useState<FeedbackQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [loading, setLoading] = useState<boolean>(Boolean(roomId));
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!roomId) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    getFeedbackQuestions(roomId)
-      .then((loaded) => {
-        if (cancelled) return;
-        const valid = loaded.filter((q) => typeof q.id === "number");
-        const sorted = [...valid].sort((a, b) => a.orderIndex - b.orderIndex);
-        setQuestions(sorted);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setError("질문을 불러오지 못했어요.");
-        setQuestions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId]);
+  const { data, isLoading, isError } = useQuery({
+    ...feedbackQuestionsQuery(roomId ?? ""),
+    enabled: !!roomId,
+    select: selectValidSorted,
+    // 세션 종료 직후 청중 전원이 동시에 진입하는 경로 — 재시도로 요청을 배가시키지 않는다.
+    retry: false,
+  });
+
+  const questions = useMemo(() => data ?? [], [data]);
+  const error = isError ? "질문을 불러오지 못했어요." : null;
 
   const setAnswer = useCallback((questionId: number, value: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
@@ -56,7 +43,7 @@ export function useAudienceFeedbackForm(roomId: string | null) {
 
   return {
     questions,
-    loading,
+    loading: isLoading,
     error,
     answers,
     setAnswer,

@@ -1,3 +1,4 @@
+import { queryOptions } from "@tanstack/react-query";
 import api from "./api";
 import type { AudienceStats } from "@/entities/slide";
 
@@ -217,4 +218,44 @@ export async function fetchLiveFeedback({
     if (error?.response?.status === 404) return null;
     throw error;
   }
+}
+
+export const presentationKeys = {
+  slides: (roomId: string, deckId: string, totalPages: number) =>
+    ["slides", roomId, deckId, totalPages] as const,
+  slideImage: (roomId: string, deckId: string, page: number) =>
+    ["slide-image", roomId, deckId, page] as const,
+  // presenterToken 은 queryFn 의 Authorization 에 쓰이므로 키에도 포함해야
+  // 토큰 재발급 시 이전 자격으로 받은 캐시가 재사용되지 않는다.
+  slideNotes: (roomId: string, deckId: string, presenterToken: string) =>
+    ["slide-notes", roomId, deckId, presenterToken] as const,
+};
+
+export function slideUrlsQuery(roomId: string, deckId: string, totalPages: number) {
+  return queryOptions({
+    queryKey: presentationKeys.slides(roomId, deckId, totalPages),
+    queryFn: () => fetchAllOriginalSlideUrls(roomId, deckId, totalPages),
+  });
+}
+
+export function slideImageQuery(roomId: string, deckId: string, page: number) {
+  return queryOptions({
+    queryKey: presentationKeys.slideImage(roomId, deckId, page),
+    queryFn: () => getOriginalSlideUrl(roomId, deckId, page),
+  });
+}
+
+export function slideNotesQuery({
+  roomId,
+  deckId,
+  presenterToken,
+}: {
+  roomId: string;
+  deckId: string;
+  presenterToken: string;
+}) {
+  return queryOptions({
+    queryKey: presentationKeys.slideNotes(roomId, deckId, presenterToken),
+    queryFn: ({ signal }) => fetchSlideNotes({ roomId, deckId, presenterToken, signal }),
+  });
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { getAllStickers } from "@/shared/api/sticker";
+import { useQueryClient } from "@tanstack/react-query";
+import { roomStickersQuery } from "@/shared/api/sticker";
 import { SELECTED_EMOJI_ICONS } from "@/entities/reaction";
 import { createLogger } from "@/shared/lib/logger";
 
@@ -16,6 +17,7 @@ interface UseStickerLoaderParams {
 }
 
 const useStickerLoader = ({ roomId, addLocalStamp, reactionsReady }: UseStickerLoaderParams) => {
+  const queryClient = useQueryClient();
   const stickersLoadedRef = useRef<string | false>(false);
 
   useEffect(() => {
@@ -30,7 +32,7 @@ const useStickerLoader = ({ roomId, addLocalStamp, reactionsReady }: UseStickerL
 
     const loadStickers = async () => {
       try {
-        const stickers = await getAllStickers(roomId);
+        const stickers = await queryClient.fetchQuery(roomStickersQuery(roomId));
 
         if (!Array.isArray(stickers) || stickers.length === 0) {
           stickersLoadedRef.current = loadKey;
@@ -79,7 +81,7 @@ const useStickerLoader = ({ roomId, addLocalStamp, reactionsReady }: UseStickerL
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [roomId, addLocalStamp, reactionsReady]);
+  }, [roomId, addLocalStamp, reactionsReady, queryClient]);
 };
 
 export default useStickerLoader;

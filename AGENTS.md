@@ -24,7 +24,9 @@ FSD layers, lowest → highest: `shared` → `entities` → `features` → `widg
 Imports flow strictly toward lower layers; each slice's public API is its `index.ts`.
 Details: `src/AGENTS.md` and `.claude/rules/`.
 
-- Global state: Jotai atoms (not React Context)
+- Client/UI state: Jotai atoms (not React Context); server state: TanStack Query v5
+  (`queryOptions` factories co-located with the axios fns in `src/shared/api/`,
+  provider in `src/app/main.tsx`)
 - Styling: styled-components v6, co-located `.styles.ts` files
 - All backend I/O in `src/shared/api/` — axios instances plus the `WebSocketService`
   singleton (STOMP over SockJS) in `src/shared/api/websocket.ts`

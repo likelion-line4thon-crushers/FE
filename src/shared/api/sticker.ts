@@ -1,3 +1,4 @@
+import { queryOptions } from "@tanstack/react-query";
 import api from "./api";
 import { createLogger } from "@/shared/lib/logger";
 
@@ -23,4 +24,15 @@ export async function getStickersByAudience(sessionId: string, audienceId: strin
     log.error("Failed to fetch audience stickers", error);
     return [];
   }
+}
+
+export const stickerKeys = {
+  all: (roomId: string) => ["stickers", roomId] as const,
+};
+
+export function roomStickersQuery(roomId: string) {
+  return queryOptions({
+    queryKey: stickerKeys.all(roomId),
+    queryFn: () => getAllStickers(roomId),
+  });
 }

@@ -139,8 +139,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const csvEnabled = useAtomValue(audienceVoiceCsvEnabledAtom);
 
   // 준비 화면에서 후기 질문 존재 여부를 미리 조회해 세션 시작 시 경고 판단에 사용.
-  const { hasQuestions: hasFeedbackQuestions, refresh: refreshFeedbackQuestions } =
-    useFeedbackQuestionGuard(roomData?.roomId, isPrep);
+  const { hasQuestions: hasFeedbackQuestions } = useFeedbackQuestionGuard(roomData?.roomId, isPrep);
 
   const { isSessionEnding, showLandingPage, landingMessage, handleSessionAction } =
     useHeaderSessionAction({
@@ -236,9 +235,9 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
     setShowPresenterStartWarning(true);
   };
 
+  // 저장(save)이 feedback-questions 캐시를 무효화하므로 닫을 때 별도 재조회는 불필요.
   const handleFeedbackQuestionModalClose = () => {
     setShowFeedbackQuestionModal(false);
-    refreshFeedbackQuestions();
   };
 
   const handleExitClick = async () => {

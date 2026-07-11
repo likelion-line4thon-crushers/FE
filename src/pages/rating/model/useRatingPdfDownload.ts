@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   downloadPdfSlides,
-  fetchPdfDownloadAvailability,
+  pdfDownloadAvailabilityQuery,
   type PdfDownloadAvailability,
 } from "@/shared/api/pdf-download";
 import { createLogger } from "@/shared/lib/logger";
@@ -26,59 +27,50 @@ const saveBlob = (blob: Blob, fileName: string) => {
 };
 
 export function useRatingPdfDownload({ roomId, audienceId, enabled }: UseRatingPdfDownloadParams) {
-  const [availability, setAvailability] = useState<PdfDownloadAvailability | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  // Availability + download share one error field; last failure wins.
   const [error, setError] = useState<string | null>(null);
 
-  const refreshAvailability = useCallback(async () => {
-    if (!enabled || !roomId || !audienceId) {
-      setAvailability(null);
-      return null;
-    }
+  const { data, isLoading, refetch } = useQuery({
+    ...pdfDownloadAvailabilityQuery(roomId ?? "", audienceId ?? ""),
+    enabled: enabled && !!roomId && !!audienceId,
+    // 세션 종료 직후 청중 전원이 동시에 진입하는 경로 — 재시도로 요청을 배가시키지 않는다.
+    retry: false,
+  });
 
-    setLoading(true);
+  const availability = data ?? null;
+
+  const refreshAvailability = useCallback(async (): Promise<PdfDownloadAvailability | null> => {
     setError(null);
-    try {
-      const nextAvailability = await fetchPdfDownloadAvailability(roomId, audienceId);
-      setAvailability(nextAvailability);
-      return nextAvailability;
-    } catch (availabilityError) {
-      log.warn("Failed to fetch PDF download availability", availabilityError);
-      setAvailability(null);
+    const result = await refetch();
+    if (result.isError) {
+      log.warn("Failed to fetch PDF download availability", result.error);
       setError("다운로드 가능 여부를 확인하지 못했습니다.");
       return null;
-    } finally {
-      setLoading(false);
     }
-  }, [audienceId, enabled, roomId]);
+    return result.data ?? null;
+  }, [refetch]);
 
-  useEffect(() => {
-    void refreshAvailability();
-  }, [refreshAvailability]);
+  const { mutateAsync: runDownload, isPending: downloading } = useMutation({
+    mutationFn: (params: { roomId: string; audienceId: string }) =>
+      downloadPdfSlides(params.roomId, params.audienceId),
+    onError: (downloadError) => {
+      log.error("Failed to download PDF slides", downloadError);
+      setError("슬라이드 다운로드에 실패했습니다.");
+    },
+  });
 
   const downloadSlides = useCallback(async () => {
     if (!roomId || !audienceId) {
       throw new Error("roomId and audienceId are required");
     }
-
-    setDownloading(true);
     setError(null);
-    try {
-      const file = await downloadPdfSlides(roomId, audienceId);
-      saveBlob(file.blob, file.fileName ?? "boini-slides.pdf");
-    } catch (downloadError) {
-      log.error("Failed to download PDF slides", downloadError);
-      setError("슬라이드 다운로드에 실패했습니다.");
-      throw downloadError;
-    } finally {
-      setDownloading(false);
-    }
-  }, [audienceId, roomId]);
+    const file = await runDownload({ roomId, audienceId });
+    saveBlob(file.blob, file.fileName ?? "boini-slides.pdf");
+  }, [audienceId, roomId, runDownload]);
 
   return {
     availability,
-    loading,
+    loading: isLoading,
     downloading,
     error,
     refreshAvailability,

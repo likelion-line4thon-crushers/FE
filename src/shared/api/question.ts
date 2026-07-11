@@ -1,7 +1,18 @@
+import { queryOptions } from "@tanstack/react-query";
 import api from "./api";
 import type { QuestionCluster } from "@/entities/question";
 import websocketService from "./websocket";
 import { v4 as uuidv4 } from "uuid";
+
+// * 청중 질문 관리 API 응답 단건 (Spring 백엔드 CreateQuestionResponse)
+export interface QuestionItemResponse {
+  id: string;
+  roomId: string;
+  slide: number;
+  audienceId: string;
+  content: string;
+  ts: number;
+}
 
 interface FetchQuestionsOptions {
   fromTs?: number;
@@ -39,10 +50,18 @@ export async function deleteQuestion(roomId: string, questionId: string): Promis
   await api.patch(`/api/questions/${roomId}/${questionId}/delete`);
 }
 
-export async function fetchCompletedQuestions(roomId: string) {
+// * 답변 완료 처리된 질문 목록 (ts 오름차순)
+export async function fetchCompletedQuestions(roomId: string): Promise<QuestionItemResponse[]> {
   if (!roomId) throw new Error("roomId is required");
   const response = await api.get(`/api/questions/rooms/${roomId}/completed`);
   return Array.isArray(response?.data?.data) ? response.data.data : [];
+}
+
+// * 미답변(활성) 질문 목록 - 백엔드 목록 조회는 completed/deleted를 제외하므로 미답변과 동일
+export async function fetchUnansweredQuestions(roomId: string): Promise<QuestionItemResponse[]> {
+  if (!roomId) throw new Error("roomId is required");
+  const response = await api.get(`/api/questions/rooms/${roomId}`);
+  return response?.data?.data ?? [];
 }
 
 export async function fetchCurrentClusters(roomId: string): Promise<QuestionCluster[]> {
@@ -76,4 +95,24 @@ export function sendQuestionLike({
     },
     { "Idempotency-Key": uuidv4() }
   );
+}
+
+// 프레젠터 룸과 AI 리포트 페이지가 같은 캐시 엔트리를 공유하도록 키를 통일한다.
+export const questionKeys = {
+  completed: (roomId: string) => ["questions", roomId, "completed"] as const,
+  unanswered: (roomId: string) => ["questions", roomId, "unanswered"] as const,
+};
+
+export function completedQuestionsQuery(roomId: string) {
+  return queryOptions({
+    queryKey: questionKeys.completed(roomId),
+    queryFn: () => fetchCompletedQuestions(roomId),
+  });
+}
+
+export function unansweredQuestionsQuery(roomId: string) {
+  return queryOptions({
+    queryKey: questionKeys.unanswered(roomId),
+    queryFn: () => fetchUnansweredQuestions(roomId),
+  });
 }
