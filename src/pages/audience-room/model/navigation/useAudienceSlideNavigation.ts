@@ -117,9 +117,12 @@ const useAudienceSlideNavigation = ({
       setFollowPresenter(checked);
 
       if (checked) {
-        const target = Number.isFinite(lastPresenterPageRef.current)
-          ? lastPresenterPageRef.current
-          : prevSlideRef.current;
+        // Require >= 0: a bare Number.isFinite check lets a -1 sentinel through and clamps
+        // the audience to slide 0 instead of the presenter's current page.
+        const target =
+          Number.isFinite(lastPresenterPageRef.current) && lastPresenterPageRef.current >= 0
+            ? lastPresenterPageRef.current
+            : prevSlideRef.current;
 
         changeCurrentSlide(target, {
           source: "presenter",

@@ -38,7 +38,11 @@ const usePresenterPageSync = ({
       prevSlideRef.current = targetPage;
       setFollowPresenter(true);
       followPresenterRef.current = true;
-      lastPresenterPageRef.current = -1;
+      // Intentionally NOT reset to -1: this ref must keep holding the presenter's live page
+      // so re-enabling "발표자와 함께 보기" can jump to the presenter's current slide. The
+      // followPresenterRef guard above (not a stale sentinel) is what prevents re-yanking a
+      // browsing audience. A -1 here would leak into handleToggleFollowPresenter, where
+      // Number.isFinite(-1) is true, and clamp the audience back to slide 0 on toggle-on.
     } else {
       setCurrentSlide((prev) => {
         const next = prev >= slides.length ? slides.length - 1 : prev < 0 ? 0 : prev;
