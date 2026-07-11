@@ -1,3 +1,4 @@
+import { queryOptions } from "@tanstack/react-query";
 import api from "./api";
 
 export interface PdfDownloadAvailability {
@@ -69,4 +70,16 @@ export async function downloadPdfSlides(
     blob: response.data,
     fileName: fileName ? decodeURIComponent(fileName) : null,
   };
+}
+
+export const pdfDownloadKeys = {
+  availability: (roomId: string, audienceId: string) =>
+    ["pdf-download-availability", roomId, audienceId] as const,
+};
+
+export function pdfDownloadAvailabilityQuery(roomId: string, audienceId: string) {
+  return queryOptions({
+    queryKey: pdfDownloadKeys.availability(roomId, audienceId),
+    queryFn: () => fetchPdfDownloadAvailability(roomId, audienceId),
+  });
 }

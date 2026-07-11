@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import type { ComponentType, ReactNode, SyntheticEvent } from "react";
-import { createLogger } from "@/shared/lib/logger";
+import { useQuery } from "@tanstack/react-query";
 import {
   slideContentFractions,
   stampBoxStyle,
@@ -9,8 +9,6 @@ import {
 } from "@/shared/lib/slide-geometry";
 import type { SlideContentFractions } from "@/shared/lib/slide-geometry";
 import { useElementAspectRatio } from "@/shared/lib/use-element-aspect-ratio";
-
-const log = createLogger("ai-report");
 import {
   PopularSlideContainer,
   EmojiPanelWrapper,
@@ -25,7 +23,7 @@ import {
 import { EmojiPanel, SELECTED_EMOJI_ICONS } from "@/entities/reaction";
 import { ContentBox, AITitle, SlideNumber, SlideSkeleton } from "../../summary";
 import NoSlideImage from "@/shared/assets/images/AI/NoSlide.png";
-import { fetchMostReactionSticker } from "@/shared/api/ai-report";
+import { mostReactionStickerQuery } from "@/shared/api/ai-report";
 import { useSlideImage } from "@/entities/slide";
 import type { EmojiId } from "@/entities/reaction";
 import useRoomStickers from "../../../model/useRoomStickers";
@@ -97,32 +95,15 @@ const EMOJI_NAMES: Record<number, string> = {
 };
 
 const PopularSlide = ({ roomId, deckId }: { roomId?: any; deckId?: any }) => {
-  const [reactionData, setReactionData] = useState<ReactionSlideReportItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<any>(null);
   const [selectedEmojiId, setSelectedEmojiId] = useState(1); // 기본값: 재미있는 이모지
 
-  // API 호출
-  useEffect(() => {
-    if (!roomId) return;
-
-    const loadData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchMostReactionSticker(roomId);
-        setReactionData(data || []);
-      } catch (err) {
-        log.error("이모지별 인기 슬라이드 데이터 로드 실패:", err);
-        setError(err);
-        setReactionData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [roomId]);
+  const reactionQuery = useQuery({ ...mostReactionStickerQuery(roomId ?? ""), enabled: !!roomId });
+  const reactionData = useMemo(
+    () => (reactionQuery.data ?? []) as ReactionSlideReportItem[],
+    [reactionQuery.data]
+  );
+  const loading = reactionQuery.isLoading;
+  const error = reactionQuery.error;
 
   // 선택된 이모지의 데이터 찾기
   const selectedData = useMemo(() => {

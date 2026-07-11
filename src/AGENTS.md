@@ -43,4 +43,5 @@ from outside the slice.
 - `widgets/` — app-header, presentation-layout, slides-sidebar
 - `styles/` — single `global.css`
 
-Styling: styled-components v6, co-located `.styles.ts`. Global state: Jotai atoms.
+Styling: styled-components v6, co-located `.styles.ts`. Client/UI state: Jotai atoms.
+Server state: TanStack Query v5 (`queryOptions` factories in `src/shared/api/`).

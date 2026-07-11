@@ -1,3 +1,4 @@
+import { queryOptions } from "@tanstack/react-query";
 import aiApi from "./ai-api";
 import api from "./api";
 import { createLogger } from "@/shared/lib/logger";
@@ -17,30 +18,6 @@ export async function fetchTopQuestionsReport(roomId: string) {
   if (!roomId) throw new Error("roomId is required");
   const response = await aiApi.get(`/report/questions/rooms/${roomId}/top3`);
   return response?.data?.data ?? null;
-}
-
-// * 청중 질문 관리 API 응답 단건 (Spring 백엔드 CreateQuestionResponse)
-export interface QuestionItemResponse {
-  id: string;
-  roomId: string;
-  slide: number;
-  audienceId: string;
-  content: string;
-  ts: number;
-}
-
-// * 답변 완료 처리된 질문 목록 (ts 오름차순)
-export async function fetchCompletedQuestions(roomId: string): Promise<QuestionItemResponse[]> {
-  if (!roomId) throw new Error("roomId is required");
-  const response = await api.get(`/api/questions/rooms/${roomId}/completed`);
-  return response?.data?.data ?? [];
-}
-
-// * 미답변(활성) 질문 목록 - 백엔드 목록 조회는 completed/deleted를 제외하므로 미답변과 동일
-export async function fetchUnansweredQuestions(roomId: string): Promise<QuestionItemResponse[]> {
-  if (!roomId) throw new Error("roomId is required");
-  const response = await api.get(`/api/questions/rooms/${roomId}`);
-  return response?.data?.data ?? [];
 }
 
 export async function fetchMostRevisitSlide(roomId: string) {
@@ -146,4 +123,64 @@ export async function downloadAudienceVoiceCsv(
   anchor.click();
   anchor.remove();
   setTimeout(() => window.URL.revokeObjectURL(url), 0);
+}
+
+export const aiReportKeys = {
+  stored: (roomId: string) => ["ai-report", roomId, "stored"] as const,
+  mostRevisit: (roomId: string) => ["ai-report", roomId, "most-revisit"] as const,
+  topSlide: (roomId: string, latestFirst?: boolean) =>
+    ["ai-report", roomId, "top-slide", latestFirst ?? null] as const,
+  topQuestions: (roomId: string) => ["ai-report", roomId, "top-questions"] as const,
+  reactionSticker: (roomId: string) => ["ai-report", roomId, "reaction-sticker"] as const,
+  feedback: (roomId: string) => ["ai-report", roomId, "feedback"] as const,
+  audienceVoice: (roomId: string) => ["ai-report", roomId, "audience-voice"] as const,
+};
+
+export function storedAiReportQuery(roomId: string) {
+  return queryOptions({
+    queryKey: aiReportKeys.stored(roomId),
+    queryFn: () => fetchStoredAiReport(roomId),
+  });
+}
+
+export function mostRevisitSlideQuery(roomId: string) {
+  return queryOptions({
+    queryKey: aiReportKeys.mostRevisit(roomId),
+    queryFn: () => fetchMostRevisitSlide(roomId),
+  });
+}
+
+export function topSlideReportQuery(roomId: string, latestFirst?: boolean) {
+  return queryOptions({
+    queryKey: aiReportKeys.topSlide(roomId, latestFirst),
+    queryFn: () => fetchTopSlideReport(roomId, { latestFirst }),
+  });
+}
+
+export function topQuestionsReportQuery(roomId: string) {
+  return queryOptions({
+    queryKey: aiReportKeys.topQuestions(roomId),
+    queryFn: () => fetchTopQuestionsReport(roomId),
+  });
+}
+
+export function mostReactionStickerQuery(roomId: string) {
+  return queryOptions({
+    queryKey: aiReportKeys.reactionSticker(roomId),
+    queryFn: () => fetchMostReactionSticker(roomId),
+  });
+}
+
+export function feedbackReportQuery(roomId: string) {
+  return queryOptions({
+    queryKey: aiReportKeys.feedback(roomId),
+    queryFn: () => fetchFeedbackReport(roomId),
+  });
+}
+
+export function audienceVoiceReportQuery(roomId: string) {
+  return queryOptions({
+    queryKey: aiReportKeys.audienceVoice(roomId),
+    queryFn: () => fetchAudienceVoiceReport(roomId),
+  });
 }

@@ -37,6 +37,7 @@ Boini는 발표자와 청중이 실시간으로 상호작용할 수 있는 프�
 주요 라이브러리:
 
 - `axios`
+- `@tanstack/react-query`
 - `@stomp/stompjs`, `sockjs-client`
 - `qrcode.react`
 - `uuid`
