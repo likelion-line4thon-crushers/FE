@@ -36,6 +36,16 @@ export interface ChunkUploadNeedsFonts {
   fontReport: FontReportEntry[];
 }
 
+// POST /api/upload/{uploadId}/fonts 응답
+export interface FontUploadResponse {
+  report: FontReportEntry[];
+  // targetFont 를 함께 보낸 경우, 방금 올린 파일이 그 요구 폰트와 실제로 일치하는지. 아니면 null/undefined.
+  matched?: boolean | null;
+  targetFont?: string | null;
+  // 방금 올린 파일들의 내부 패밀리명(사용자에게 무엇이 올라갔는지 보여주기 위함)
+  uploadedFamilies?: string[];
+}
+
 export type ChunkUploadTerminal = ChunkUploadReady | ChunkUploadNeedsFonts;
 
 export type ChunkUploadResult =

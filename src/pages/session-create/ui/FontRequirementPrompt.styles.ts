@@ -93,7 +93,25 @@ export const FontList = styled.ul`
   inline-size: 100%;
   border: 1px solid #eaeaea;
   border-radius: 10px;
-  overflow: hidden;
+  max-block-size: 264px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  /* 디자인 시스템에 맞춘 얇은 스크롤바 */
+  scrollbar-width: thin;
+  scrollbar-color: #d9d9d9 transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 999px;
+    border: 2px solid #fff;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 `;
 
 export const FontRow = styled.li`
@@ -102,9 +120,14 @@ export const FontRow = styled.li`
   gap: 4px;
   padding: 10px 14px;
   border-block-end: 1px solid #f2f2f2;
+  transition: background 0.12s;
 
   &:last-child {
     border-block-end: 0;
+  }
+
+  &:hover {
+    background: #fafafa;
   }
 `;
 
@@ -117,6 +140,13 @@ export const FontRowMain = styled.div`
 
 export const SubstituteNote = styled.span`
   color: #8a8a8a;
+  font-size: 12px;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+`;
+
+export const WarningNote = styled.span`
+  color: #c23c0a;
   font-size: 12px;
   letter-spacing: -0.02em;
   word-break: break-word;

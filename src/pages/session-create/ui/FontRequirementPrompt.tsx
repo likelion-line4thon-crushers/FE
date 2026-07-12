@@ -25,12 +25,14 @@ import {
   TextGroup,
   Title,
   UploadButton,
+  WarningNote,
 } from "./FontRequirementPrompt.styles";
 
 interface Props {
   fontReport: FontReportEntry[];
   busy: boolean; // 변환(finalize) 진행 중
   uploadingName: string | null; // 현재 업로드 중인 폰트명
+  warnings: Record<string, string>; // 폰트명 → 방금 올렸지만 이름이 다른 폰트의 패밀리명
   error: string | null;
   onUploadFont: (fontName: string, file: File) => void;
   onContinue: () => void;
@@ -41,6 +43,7 @@ export default function FontRequirementPrompt({
   fontReport,
   busy,
   uploadingName,
+  warnings,
   error,
   onUploadFont,
   onContinue,
@@ -104,7 +107,14 @@ export default function FontRequirementPrompt({
                       )}
                     </RowRight>
                   </FontRowMain>
-                  {missing && f.substitute && <SubstituteNote>대체 글꼴: {f.substitute}</SubstituteNote>}
+                  {missing && warnings[f.name] !== undefined ? (
+                    <WarningNote>
+                      업로드한 파일이 이 폰트와 달라요
+                      {warnings[f.name] ? ` (올린 폰트: ${warnings[f.name]})` : ""}.
+                    </WarningNote>
+                  ) : (
+                    missing && f.substitute && <SubstituteNote>대체 글꼴: {f.substitute}</SubstituteNote>
+                  )}
                 </FontRow>
               );
             })}

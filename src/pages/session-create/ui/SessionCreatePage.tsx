@@ -46,6 +46,7 @@ const PresentationPrepPage = () => {
   const [pendingFonts, setPendingFonts] = useState<{ uploadId: string; fontReport: FontReportEntry[] } | null>(null);
   const [fontBusy, setFontBusy] = useState(false);
   const [uploadingName, setUploadingName] = useState<string | null>(null);
+  const [fontWarnings, setFontWarnings] = useState<Record<string, string>>({});
   const [fontError, setFontError] = useState<string | null>(null);
   const pendingRoomRef = useRef<any>(null);
 
@@ -359,8 +360,15 @@ const PresentationPrepPage = () => {
       setUploadingName(fontName);
       setFontError(null);
       try {
-        const report = await uploadFonts(pendingFonts.uploadId, [file]);
-        setPendingFonts((prev) => (prev ? { ...prev, fontReport: report } : prev));
+        const res = await uploadFonts(pendingFonts.uploadId, [file], fontName);
+        setPendingFonts((prev) => (prev ? { ...prev, fontReport: res.report } : prev));
+        setFontWarnings((prev) => {
+          const next = { ...prev };
+          // 방금 올린 파일이 이 요구 폰트와 이름이 다르면 경고를 남기고, 일치하면 지운다.
+          if (res.matched === false) next[fontName] = res.uploadedFamilies?.[0] ?? "";
+          else delete next[fontName];
+          return next;
+        });
       } catch {
         setFontError("폰트 업로드에 실패했습니다. 다시 시도해주세요.");
       } finally {
@@ -567,6 +575,7 @@ const PresentationPrepPage = () => {
           fontReport={pendingFonts.fontReport}
           busy={fontBusy}
           uploadingName={uploadingName}
+          warnings={fontWarnings}
           error={fontError}
           onUploadFont={handleUploadFont}
           onContinue={handleContinue}

@@ -13,6 +13,7 @@ function renderPrompt(overrides: Partial<ComponentProps<typeof FontRequirementPr
     fontReport: report,
     busy: false,
     uploadingName: null,
+    warnings: {},
     error: null,
     onUploadFont: () => {},
     onContinue: () => {},
@@ -70,5 +71,10 @@ describe("FontRequirementPrompt", () => {
       fontReport: [{ name: "Arial", status: "AVAILABLE", embedded: false, installed: true }],
     });
     expect(screen.getByText(/모두 준비되었어요/)).toBeInTheDocument();
+  });
+
+  it("shows a mismatch warning when the uploaded file did not match the font", () => {
+    renderPrompt({ warnings: { "Malgun Gothic": "Yoon Mokryn" } });
+    expect(screen.getByText(/올린 폰트: Yoon Mokryn/)).toBeInTheDocument();
   });
 });
