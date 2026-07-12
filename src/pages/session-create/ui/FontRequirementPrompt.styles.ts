@@ -12,6 +12,18 @@ export const Overlay = styled.div`
   background: rgba(0, 0, 0, 0.6);
 `;
 
+// 확인 모달은 폰트 모달(Overlay, z-index 10000) 위에 뜬다.
+export const ConfirmOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+`;
+
 export const Dialog = styled.div`
   inline-size: min(440px, 100%);
   max-block-size: min(88vh, 760px);
@@ -84,6 +96,23 @@ export const Resolved = styled.p`
   font-weight: 500;
   line-height: 1.45;
   letter-spacing: -0.025em;
+`;
+
+export const ListWrap = styled.div`
+  position: relative;
+  inline-size: 100%;
+`;
+
+// 목록이 넘칠 때 하단에 살짝 겹쳐, 더 스크롤할 내용이 있음을 알리는 그라데이션.
+export const ScrollFade = styled.div`
+  position: absolute;
+  inset-inline: 1px;
+  inset-block-end: 1px;
+  block-size: 44px;
+  border-end-start-radius: 10px;
+  border-end-end-radius: 10px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), #fff);
+  pointer-events: none;
 `;
 
 export const FontList = styled.ul`

@@ -361,14 +361,26 @@ const PresentationPrepPage = () => {
       setFontError(null);
       try {
         const res = await uploadFonts(pendingFonts.uploadId, [file], fontName);
-        setPendingFonts((prev) => (prev ? { ...prev, fontReport: res.report } : prev));
-        setFontWarnings((prev) => {
-          const next = { ...prev };
-          // 방금 올린 파일이 이 요구 폰트와 이름이 다르면 경고를 남기고, 일치하면 지운다.
-          if (res.matched === false) next[fontName] = res.uploadedFamilies?.[0] ?? "";
-          else delete next[fontName];
-          return next;
-        });
+        // 서버는 전체 리포트를 재분석하지 않으므로, 일치하면 해당 폰트만 로컬에서 '사용 가능'으로 바꾼다.
+        if (res.matched) {
+          setPendingFonts((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  fontReport: prev.fontReport.map((e) =>
+                    e.name === fontName ? { ...e, status: "AVAILABLE" as const, installed: true } : e
+                  ),
+                }
+              : prev
+          );
+          setFontWarnings((prev) => {
+            const next = { ...prev };
+            delete next[fontName];
+            return next;
+          });
+        } else {
+          setFontWarnings((prev) => ({ ...prev, [fontName]: res.uploadedFamilies?.[0] ?? "" }));
+        }
       } catch {
         setFontError("폰트 업로드에 실패했습니다. 다시 시도해주세요.");
       } finally {

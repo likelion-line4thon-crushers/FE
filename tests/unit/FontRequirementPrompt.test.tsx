@@ -55,14 +55,29 @@ describe("FontRequirementPrompt", () => {
     expect(screen.getByRole("button", { name: "업로드 중…" })).toBeInTheDocument();
   });
 
-  it("fires onContinue and onProceedWithout", () => {
+  it("confirms before continuing when fonts are still missing", () => {
     const onContinue = vi.fn();
-    const onProceedWithout = vi.fn();
-    renderPrompt({ onContinue, onProceedWithout });
-
+    renderPrompt({ onContinue }); // 기본 report 에 MISSING 폰트가 있음
     fireEvent.click(screen.getByRole("button", { name: "변환 시작" }));
-    fireEvent.click(screen.getByRole("button", { name: "그냥 진행" }));
+    expect(onContinue).not.toHaveBeenCalled(); // 바로 진행하지 않고 확인 모달을 띄운다
+    fireEvent.click(screen.getByRole("button", { name: "네, 시작할게요" }));
     expect(onContinue).toHaveBeenCalledOnce();
+  });
+
+  it("continues immediately when nothing is missing", () => {
+    const onContinue = vi.fn();
+    renderPrompt({
+      fontReport: [{ name: "Arial", status: "AVAILABLE", embedded: false, installed: true }],
+      onContinue,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "변환 시작" }));
+    expect(onContinue).toHaveBeenCalledOnce();
+  });
+
+  it("fires onProceedWithout", () => {
+    const onProceedWithout = vi.fn();
+    renderPrompt({ onProceedWithout });
+    fireEvent.click(screen.getByRole("button", { name: "그냥 진행" }));
     expect(onProceedWithout).toHaveBeenCalledOnce();
   });
 

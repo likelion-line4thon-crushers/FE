@@ -36,9 +36,8 @@ export interface ChunkUploadNeedsFonts {
   fontReport: FontReportEntry[];
 }
 
-// POST /api/upload/{uploadId}/fonts 응답
+// POST /api/upload/{uploadId}/fonts 응답 (개별 폰트 검증 — 전체 리포트는 돌려주지 않는다)
 export interface FontUploadResponse {
-  report: FontReportEntry[];
   // targetFont 를 함께 보낸 경우, 방금 올린 파일이 그 요구 폰트와 실제로 일치하는지. 아니면 null/undefined.
   matched?: boolean | null;
   targetFont?: string | null;
