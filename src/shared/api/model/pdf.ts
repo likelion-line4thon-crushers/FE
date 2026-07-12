@@ -18,7 +18,28 @@ export interface ChunkUploadReady {
   streamUrl: string;
 }
 
-export type ChunkUploadResult = ChunkUploadInProgress | ChunkUploadReady;
+export type FontStatus = 'AVAILABLE' | 'MISSING';
+
+export interface FontReportEntry {
+  name: string;
+  status: FontStatus;
+  embedded: boolean;
+  installed: boolean;
+}
+
+// 청크 업로드 완료, 단, 누락 폰트 존재 (HTTP 201, status=NEEDS_FONTS)
+export interface ChunkUploadNeedsFonts {
+  status: 'NEEDS_FONTS';
+  uploadId: string;
+  fontReport: FontReportEntry[];
+}
+
+export type ChunkUploadTerminal = ChunkUploadReady | ChunkUploadNeedsFonts;
+
+export type ChunkUploadResult =
+  | ChunkUploadInProgress
+  | ChunkUploadReady
+  | ChunkUploadNeedsFonts;
 
 // SSE: event=page
 export interface SsePageEvent {

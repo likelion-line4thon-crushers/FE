@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import api from './api';
 import type {
-  ChunkUploadReady,
   ChunkUploadResult,
+  ChunkUploadTerminal,
 } from './model/pdf';
 
 // 2MB 고정 (백엔드 스펙)
@@ -57,7 +57,7 @@ interface UploadOptions {
 export async function uploadPdfInChunks(
   file: File,
   opts: UploadOptions,
-): Promise<ChunkUploadReady> {
+): Promise<ChunkUploadTerminal> {
   const uploadId = uuidv4();
   const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
   const concurrency = Math.min(opts.concurrency ?? DEFAULT_CONCURRENCY, totalChunks);
@@ -108,11 +108,12 @@ export async function uploadPdfInChunks(
     opts.signal?.removeEventListener('abort', onExternalAbort);
   }
 
-  const ready = results.find(
-    (r): r is ChunkUploadReady => !!r && r.status === 'READY',
+  const terminal = results.find(
+    (r): r is ChunkUploadTerminal =>
+      !!r && (r.status === 'READY' || r.status === 'NEEDS_FONTS'),
   );
-  if (!ready) {
-    throw new Error('청크 업로드가 완료되었지만 READY 응답을 받지 못했습니다.');
+  if (!terminal) {
+    throw new Error('청크 업로드가 완료되었지만 종료 응답(READY/NEEDS_FONTS)을 받지 못했습니다.');
   }
-  return ready;
+  return terminal;
 }

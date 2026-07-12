@@ -343,7 +343,13 @@ const PresentationPrepPage = () => {
         // BE 는 totalPages >= 1 을 요구하므로 placeholder 로 1 을 보낸다.
         // 실제 총 페이지는 업로드 조립 완료 응답(ready.totalPages) 에서 확정된다.
         const room = await createRoom(1);
-        const ready = await uploadPdf(sourceFile, room.roomId, room.deckId);
+        const terminal = await uploadPdf(sourceFile, room.roomId, room.deckId);
+        // NEEDS_FONTS 분기(폰트 업로드 프롬프트)는 별도 작업에서 연결 예정이므로,
+        // 현재는 READY 가 아니면 업로드 실패로 처리한다.
+        if (terminal.status !== "READY") {
+          throw new Error("이 발표 자료에 필요한 폰트가 서버에 없습니다.");
+        }
+        const ready = terminal;
 
         const nextRoomData = {
           ...room,

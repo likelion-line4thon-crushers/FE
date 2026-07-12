@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { ChunkUploadReady } from '@/shared/api/model/pdf';
+import type { ChunkUploadTerminal } from '@/shared/api/model/pdf';
 import { uploadPdfInChunks } from '@/shared/api/pdfUpload';
 
 interface UploadProgress {
@@ -12,7 +12,7 @@ interface UploadProgress {
 export function useChunkedPdfUpload() {
   const [progress, setProgress] = useState<UploadProgress>({ sent: 0, total: 0 });
   const [error, setError] = useState<Error | null>(null);
-  const [result, setResult] = useState<ChunkUploadReady | null>(null);
+  const [result, setResult] = useState<ChunkUploadTerminal | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const upload = useCallback(
@@ -21,20 +21,20 @@ export function useChunkedPdfUpload() {
       roomId: string,
       deckId: string,
       signal?: AbortSignal,
-    ): Promise<ChunkUploadReady> => {
+    ): Promise<ChunkUploadTerminal> => {
       setError(null);
       setResult(null);
       setProgress({ sent: 0, total: 0 });
       setIsUploading(true);
       try {
-        const ready = await uploadPdfInChunks(file, {
+        const terminal = await uploadPdfInChunks(file, {
           roomId,
           deckId,
           signal,
           onProgress: setProgress,
         });
-        setResult(ready);
-        return ready;
+        setResult(terminal);
+        return terminal;
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e));
         setError(err);
