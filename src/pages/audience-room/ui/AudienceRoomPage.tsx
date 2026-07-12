@@ -85,7 +85,13 @@ const AudienceRoomPage = () => {
     hasError: hasSlidesError,
     retry: handleRetryFetchSlides,
     applySlideReady,
-  } = useSlideLoader({ roomId, deckId, totalPages });
+  } = useSlideLoader({
+    roomId,
+    deckId,
+    totalPages,
+    revealAllSlides: unlockSettings.revealAllSlides,
+    maxRevealedPage: unlockSettings.maxRevealedPage,
+  });
 
   const {
     currentSlide,
