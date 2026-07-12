@@ -12,6 +12,7 @@ import {
   FontList,
   FontName,
   FontRow,
+  FontRowMain,
   HiddenInput,
   Mascot,
   Overlay,
@@ -22,6 +23,7 @@ import {
   Resolved,
   SecondaryButton,
   StatusChip,
+  SubstituteNote,
   TextGroup,
   Title,
 } from "./FontRequirementPrompt.styles";
@@ -73,10 +75,13 @@ export default function FontRequirementPrompt({
               const missing = f.status === "MISSING";
               return (
                 <FontRow key={f.name}>
-                  <FontName>{f.name}</FontName>
-                  <StatusChip $missing={missing} aria-label={missing ? "없음" : "사용 가능"}>
-                    {missing ? "없음" : "사용 가능"}
-                  </StatusChip>
+                  <FontRowMain>
+                    <FontName>{f.name}</FontName>
+                    <StatusChip $missing={missing} aria-label={missing ? "없음" : "사용 가능"}>
+                      {missing ? "없음" : "사용 가능"}
+                    </StatusChip>
+                  </FontRowMain>
+                  {missing && f.substitute && <SubstituteNote>대체 글꼴: {f.substitute}</SubstituteNote>}
                 </FontRow>
               );
             })}
@@ -93,7 +98,7 @@ export default function FontRequirementPrompt({
             <PickButton type="button" onClick={() => inputRef.current?.click()}>
               {hasPicked ? `${picked.length}개 폰트 선택됨` : "폰트 파일 선택"}
             </PickButton>
-            <PickHint>.ttf · .otf · .ttc · 최대 20MB</PickHint>
+            <PickHint>.ttf · .otf · .ttc · 최대 15MB</PickHint>
             <RecheckButton type="button" disabled={busy || !hasPicked} onClick={() => onCheckFonts(picked)}>
               선택한 폰트로 다시 확인
             </RecheckButton>

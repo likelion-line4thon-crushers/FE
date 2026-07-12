@@ -98,15 +98,28 @@ export const FontList = styled.ul`
 
 export const FontRow = styled.li`
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 4px;
   padding: 10px 14px;
   border-block-end: 1px solid #f2f2f2;
 
   &:last-child {
     border-block-end: 0;
   }
+`;
+
+export const FontRowMain = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`;
+
+export const SubstituteNote = styled.span`
+  color: #8a8a8a;
+  font-size: 12px;
+  letter-spacing: -0.02em;
+  word-break: break-word;
 `;
 
 export const FontName = styled.span`

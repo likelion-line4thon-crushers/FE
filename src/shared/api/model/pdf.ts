@@ -25,6 +25,8 @@ export interface FontReportEntry {
   status: FontStatus;
   embedded: boolean;
   installed: boolean;
+  // 누락 폰트를 업로드 없이 변환할 때 서버가 실제로 사용할 대체 폰트(fc-match). 알 수 없으면 null.
+  substitute?: string | null;
 }
 
 // 청크 업로드 완료, 단, 누락 폰트 존재 (HTTP 201, status=NEEDS_FONTS)
