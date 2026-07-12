@@ -25,7 +25,7 @@ import { createRoom } from "@/shared/api/room";
 import { fetchSlidesMeta, fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import websocketService from "@/shared/api/websocket";
 import { useBroadcastPublisher, useBroadcastReactionVisibility } from "@/shared/lib/broadcast";
-import { uploadFonts, finalizeUpload } from "@/shared/api/pdfFonts";
+import { useFontMutations } from "../model/useFontMutations";
 import FontRequirementPrompt from "./FontRequirementPrompt";
 import type { ChunkUploadReady, FontReportEntry } from "@/shared/api/model/pdf";
 
@@ -44,8 +44,6 @@ const PresentationPrepPage = () => {
   const [restoredSlides, setRestoredSlides] = useState<(string | null)[] | null>(null);
   const [fatalMessage, setFatalMessage] = useState<string | null>(null);
   const [pendingFonts, setPendingFonts] = useState<{ uploadId: string; fontReport: FontReportEntry[] } | null>(null);
-  const [fontBusy, setFontBusy] = useState(false);
-  const [uploadingName, setUploadingName] = useState<string | null>(null);
   const [fontWarnings, setFontWarnings] = useState<Record<string, string>>({});
   const [fontError, setFontError] = useState<string | null>(null);
   const pendingRoomRef = useRef<any>(null);
@@ -353,71 +351,56 @@ const PresentationPrepPage = () => {
     [navigate, roomIdParam, location.state]
   );
 
-  // 개별 폰트를 업로드해 서버에 등록하고, 갱신된 리포트로 배지를 바꾼다(변환은 하지 않음).
-  const handleUploadFont = useCallback(
-    async (fontName: string, file: File) => {
-      if (!pendingFonts) return;
-      setUploadingName(fontName);
+  // 폰트 업로드 / 변환 시작은 React Query mutation 으로 처리한다(청크 업로드는 raw axios 유지).
+  const { uploadFont, finalize: runFinalize, uploadingName, busy: fontBusy } = useFontMutations({
+    onUploaded: (fontName, res) => {
       setFontError(null);
-      try {
-        const res = await uploadFonts(pendingFonts.uploadId, [file], fontName);
-        // 서버는 전체 리포트를 재분석하지 않으므로, 일치하면 해당 폰트만 로컬에서 '사용 가능'으로 바꾼다.
-        if (res.matched) {
-          setPendingFonts((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  fontReport: prev.fontReport.map((e) =>
-                    e.name === fontName ? { ...e, status: "AVAILABLE" as const, installed: true } : e
-                  ),
-                }
-              : prev
-          );
-          setFontWarnings((prev) => {
-            const next = { ...prev };
-            delete next[fontName];
-            return next;
-          });
-        } else {
-          setFontWarnings((prev) => ({ ...prev, [fontName]: res.uploadedFamilies?.[0] ?? "" }));
-        }
-      } catch {
-        setFontError("폰트 업로드에 실패했습니다. 다시 시도해주세요.");
-      } finally {
-        setUploadingName(null);
+      // 서버는 전체 리포트를 재분석하지 않으므로, 일치하면 해당 폰트만 로컬에서 '사용 가능'으로 바꾼다.
+      if (res.matched) {
+        setPendingFonts((prev) =>
+          prev
+            ? {
+                ...prev,
+                fontReport: prev.fontReport.map((e) =>
+                  e.name === fontName ? { ...e, status: "AVAILABLE" as const, installed: true } : e
+                ),
+              }
+            : prev
+        );
+        setFontWarnings((prev) => {
+          const next = { ...prev };
+          delete next[fontName];
+          return next;
+        });
+      } else {
+        setFontWarnings((prev) => ({ ...prev, [fontName]: res.uploadedFamilies?.[0] ?? "" }));
       }
     },
-    [pendingFonts]
+    onUploadError: () => setFontError("폰트 업로드에 실패했습니다. 다시 시도해주세요."),
+    onFinalized: (ready) => applyReady(pendingRoomRef.current, ready),
+    onFinalizeError: () => setFontError("변환을 시작하지 못했습니다. 다시 시도해주세요."),
+  });
+
+  const handleUploadFont = useCallback(
+    (fontName: string, file: File) => {
+      if (!pendingFonts) return;
+      setFontError(null);
+      uploadFont(pendingFonts.uploadId, fontName, file);
+    },
+    [pendingFonts, uploadFont]
   );
 
-  const handleProceedWithout = useCallback(async () => {
+  const handleContinue = useCallback(() => {
     if (!pendingFonts) return;
-    setFontBusy(true);
     setFontError(null);
-    try {
-      const ready = await finalizeUpload(pendingFonts.uploadId, true);
-      applyReady(pendingRoomRef.current, ready);
-    } catch {
-      setFontError("변환을 시작하지 못했습니다. 다시 시도해주세요.");
-    } finally {
-      setFontBusy(false);
-    }
-  }, [pendingFonts, applyReady]);
+    runFinalize(pendingFonts.uploadId, false);
+  }, [pendingFonts, runFinalize]);
 
-  // 업로드한 폰트로 변환을 시작한다(finalize).
-  const handleContinue = useCallback(async () => {
+  const handleProceedWithout = useCallback(() => {
     if (!pendingFonts) return;
-    setFontBusy(true);
     setFontError(null);
-    try {
-      const ready = await finalizeUpload(pendingFonts.uploadId, false);
-      applyReady(pendingRoomRef.current, ready);
-    } catch {
-      setFontError("변환을 시작하지 못했습니다. 다시 시도해주세요.");
-    } finally {
-      setFontBusy(false);
-    }
-  }, [pendingFonts, applyReady]);
+    runFinalize(pendingFonts.uploadId, true);
+  }, [pendingFonts, runFinalize]);
 
   // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
   useEffect(() => {
