@@ -1,5 +1,30 @@
 import { useRef, useState } from "react";
 import type { FontReportEntry } from "@/shared/api/model/pdf";
+import FontMascot from "@/shared/assets/images/session-warning-face.svg";
+import {
+  Body,
+  ConfirmButton,
+  Content,
+  Description,
+  Dialog,
+  ErrorText,
+  Footer,
+  FontList,
+  FontName,
+  FontRow,
+  HiddenInput,
+  Mascot,
+  Overlay,
+  PickButton,
+  PickHint,
+  Picker,
+  RecheckButton,
+  Resolved,
+  SecondaryButton,
+  StatusChip,
+  TextGroup,
+  Title,
+} from "./FontRequirementPrompt.styles";
 
 interface Props {
   fontReport: FontReportEntry[];
@@ -22,53 +47,70 @@ export default function FontRequirementPrompt({
   const [picked, setPicked] = useState<File[]>([]);
   const missingCount = fontReport.filter((f) => f.status === "MISSING").length;
   const allResolved = missingCount === 0;
+  const hasPicked = picked.length > 0;
 
   return (
-    <div role="dialog" aria-label="폰트 업로드" style={{ maxWidth: 560, margin: "10vh auto", padding: 24 }}>
-      <h2>이 발표 자료에 필요한 폰트가 서버에 없어요</h2>
-      {allResolved ? (
-        <p style={{ color: "#1a7f37" }}>✅ 모든 폰트가 준비되었어요. 계속 진행하세요.</p>
-      ) : (
-        <p>
-          정확한 글꼴로 변환하려면 아래 <b>{missingCount}</b>개의 폰트를 업로드하세요.
-        </p>
-      )}
-      <ul>
-        {fontReport.map((f) => (
-          <li key={f.name}>
-            <span>{f.name}</span>{" "}
-            <span aria-label={f.status}>{f.status === "MISSING" ? "❌ 없음" : "✅ 사용 가능"}</span>
-          </li>
-        ))}
-      </ul>
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".ttf,.otf,.ttc"
-        multiple
-        onChange={(e) => setPicked(Array.from(e.target.files ?? []))}
-      />
-      {picked.length > 0 && <p>{picked.length}개 선택됨</p>}
-      <button
-        type="button"
-        disabled={busy || picked.length === 0}
-        onClick={() => onCheckFonts(picked)}
-      >
-        선택한 폰트로 다시 확인
-      </button>
-      {error && (
-        <p role="alert" style={{ color: "#e8541e" }}>
-          {error}
-        </p>
-      )}
-      <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-        <button type="button" disabled={busy || picked.length === 0} onClick={() => onUploadFonts(picked)}>
-          이 폰트로 계속
-        </button>
-        <button type="button" disabled={busy} onClick={onProceedWithout}>
-          그냥 진행
-        </button>
-      </div>
-    </div>
+    <Overlay>
+      <Dialog role="dialog" aria-modal="true" aria-labelledby="font-modal-title">
+        <Content>
+          <Body>
+            <Mascot src={FontMascot} alt="" aria-hidden="true" />
+            <TextGroup>
+              <Title id="font-modal-title">발표에 사용된 폰트를 확인해 주세요</Title>
+              {allResolved ? (
+                <Resolved>필요한 폰트가 모두 준비되었어요. 이대로 계속 진행하세요.</Resolved>
+              ) : (
+                <Description>
+                  정확한 글꼴로 변환하려면 아래 <b>{missingCount}</b>개의 폰트를 업로드하세요. 업로드하지
+                  않으면 서버의 기본 글꼴로 대체돼요.
+                </Description>
+              )}
+            </TextGroup>
+          </Body>
+
+          <FontList aria-label="필요한 폰트 목록">
+            {fontReport.map((f) => {
+              const missing = f.status === "MISSING";
+              return (
+                <FontRow key={f.name}>
+                  <FontName>{f.name}</FontName>
+                  <StatusChip $missing={missing} aria-label={missing ? "없음" : "사용 가능"}>
+                    {missing ? "없음" : "사용 가능"}
+                  </StatusChip>
+                </FontRow>
+              );
+            })}
+          </FontList>
+
+          <Picker>
+            <HiddenInput
+              ref={inputRef}
+              type="file"
+              accept=".ttf,.otf,.ttc"
+              multiple
+              onChange={(e) => setPicked(Array.from(e.target.files ?? []))}
+            />
+            <PickButton type="button" onClick={() => inputRef.current?.click()}>
+              {hasPicked ? `${picked.length}개 폰트 선택됨` : "폰트 파일 선택"}
+            </PickButton>
+            <PickHint>.ttf · .otf · .ttc · 최대 20MB</PickHint>
+            <RecheckButton type="button" disabled={busy || !hasPicked} onClick={() => onCheckFonts(picked)}>
+              선택한 폰트로 다시 확인
+            </RecheckButton>
+          </Picker>
+
+          {error && <ErrorText role="alert">{error}</ErrorText>}
+        </Content>
+
+        <Footer>
+          <SecondaryButton type="button" disabled={busy} onClick={onProceedWithout}>
+            그냥 진행
+          </SecondaryButton>
+          <ConfirmButton type="button" disabled={busy || !hasPicked} onClick={() => onUploadFonts(picked)}>
+            이 폰트로 계속
+          </ConfirmButton>
+        </Footer>
+      </Dialog>
+    </Overlay>
   );
 }

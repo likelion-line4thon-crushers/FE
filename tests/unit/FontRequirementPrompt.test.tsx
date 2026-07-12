@@ -78,6 +78,6 @@ describe("FontRequirementPrompt", () => {
         onProceedWithout={() => {}}
       />
     );
-    expect(screen.getByText(/모든 폰트가 준비되었어요/)).toBeInTheDocument();
+    expect(screen.getByText(/모두 준비되었어요/)).toBeInTheDocument();
   });
 });

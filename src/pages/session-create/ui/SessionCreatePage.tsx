@@ -563,14 +563,17 @@ const PresentationPrepPage = () => {
 
   if (pendingFonts) {
     return (
-      <FontRequirementPrompt
-        fontReport={pendingFonts.fontReport}
-        busy={fontBusy}
-        error={fontError}
-        onCheckFonts={handleCheckFonts}
-        onUploadFonts={handleUploadFonts}
-        onProceedWithout={handleProceedWithout}
-      />
+      <>
+        <SessionLoadingOverlay message="발표 자료 준비 중..." />
+        <FontRequirementPrompt
+          fontReport={pendingFonts.fontReport}
+          busy={fontBusy}
+          error={fontError}
+          onCheckFonts={handleCheckFonts}
+          onUploadFonts={handleUploadFonts}
+          onProceedWithout={handleProceedWithout}
+        />
+      </>
     );
   }
 
