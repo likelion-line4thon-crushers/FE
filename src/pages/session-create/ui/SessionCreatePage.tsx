@@ -25,6 +25,9 @@ import { createRoom } from "@/shared/api/room";
 import { fetchSlidesMeta, fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import websocketService from "@/shared/api/websocket";
 import { useBroadcastPublisher, useBroadcastReactionVisibility } from "@/shared/lib/broadcast";
+import { uploadFonts, finalizeUpload } from "@/shared/api/pdfFonts";
+import FontRequirementPrompt from "./FontRequirementPrompt";
+import type { ChunkUploadReady, FontReportEntry } from "@/shared/api/model/pdf";
 
 const log = createLogger("session-create");
 
@@ -40,6 +43,10 @@ const PresentationPrepPage = () => {
   const [roomData, setRoomData] = useState<any>(initialRoomData);
   const [restoredSlides, setRestoredSlides] = useState<(string | null)[] | null>(null);
   const [fatalMessage, setFatalMessage] = useState<string | null>(null);
+  const [pendingFonts, setPendingFonts] = useState<{ uploadId: string; fontReport: FontReportEntry[] } | null>(null);
+  const [fontBusy, setFontBusy] = useState(false);
+  const [fontError, setFontError] = useState<string | null>(null);
+  const pendingRoomRef = useRef<any>(null);
 
   const roomId = useMemo(() => roomIdParam || roomData?.roomId || null, [roomIdParam, roomData]);
   const quickSettingsStorageKey = roomId ? storageKeys.quickSettings(String(roomId)) : null;
@@ -311,6 +318,71 @@ const PresentationPrepPage = () => {
     restoredSlides,
   ]);
 
+  const applyReady = useCallback(
+    (room: any, ready: ChunkUploadReady) => {
+      const nextRoomData = {
+        ...room,
+        deckId: room.deckId,
+        totalPages: ready.totalPages,
+        pdfId: ready.pdfId,
+        fileName: ready.fileName,
+        canStartSession: false,
+        pdfDownloadEnabled: false,
+      };
+      setRoomData(nextRoomData);
+      setTotalPages(ready.totalPages);
+      setStreamUrl(ready.streamUrl);
+      sessionStorage.setItem("boini_room", JSON.stringify(nextRoomData));
+      setPendingFonts(null);
+
+      if (roomIdParam !== room.roomId) {
+        navigate(`/rooms/${room.roomId}`, {
+          replace: true,
+          state: {
+            ...(location.state || {}),
+            roomData: nextRoomData,
+            roomId: room.roomId,
+            deckId: room.deckId,
+            totalPages: ready.totalPages,
+          },
+        });
+      }
+    },
+    [navigate, roomIdParam, location.state]
+  );
+
+  const handleUploadFonts = useCallback(
+    async (files: File[]) => {
+      if (!pendingFonts) return;
+      setFontBusy(true);
+      setFontError(null);
+      try {
+        await uploadFonts(pendingFonts.uploadId, files);
+        const ready = await finalizeUpload(pendingFonts.uploadId, false);
+        applyReady(pendingRoomRef.current, ready);
+      } catch {
+        setFontError("폰트 업로드에 실패했습니다. 다시 시도해주세요.");
+      } finally {
+        setFontBusy(false);
+      }
+    },
+    [pendingFonts, applyReady]
+  );
+
+  const handleProceedWithout = useCallback(async () => {
+    if (!pendingFonts) return;
+    setFontBusy(true);
+    setFontError(null);
+    try {
+      const ready = await finalizeUpload(pendingFonts.uploadId, true);
+      applyReady(pendingRoomRef.current, ready);
+    } catch {
+      setFontError("변환을 시작하지 못했습니다. 다시 시도해주세요.");
+    } finally {
+      setFontBusy(false);
+    }
+  }, [pendingFonts, applyReady]);
+
   // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
   useEffect(() => {
     if (hasInitializedRef.current) return;
@@ -343,41 +415,13 @@ const PresentationPrepPage = () => {
         // BE 는 totalPages >= 1 을 요구하므로 placeholder 로 1 을 보낸다.
         // 실제 총 페이지는 업로드 조립 완료 응답(ready.totalPages) 에서 확정된다.
         const room = await createRoom(1);
+        pendingRoomRef.current = room;
         const terminal = await uploadPdf(sourceFile, room.roomId, room.deckId);
-        // NEEDS_FONTS 분기(폰트 업로드 프롬프트)는 별도 작업에서 연결 예정이므로,
-        // 현재는 READY 가 아니면 업로드 실패로 처리한다.
-        if (terminal.status !== "READY") {
-          throw new Error("이 발표 자료에 필요한 폰트가 서버에 없습니다.");
+        if (terminal.status === "NEEDS_FONTS") {
+          setPendingFonts({ uploadId: terminal.uploadId, fontReport: terminal.fontReport });
+          return; // Phase B는 사용자 액션(폰트 업로드/그냥 진행)으로 트리거됨
         }
-        const ready = terminal;
-
-        const nextRoomData = {
-          ...room,
-          deckId: room.deckId,
-          totalPages: ready.totalPages,
-          pdfId: ready.pdfId,
-          fileName: ready.fileName,
-          canStartSession: false,
-          pdfDownloadEnabled: false,
-        };
-
-        setRoomData(nextRoomData);
-        setTotalPages(ready.totalPages);
-        setStreamUrl(ready.streamUrl);
-        sessionStorage.setItem("boini_room", JSON.stringify(nextRoomData));
-
-        if (roomIdParam !== room.roomId) {
-          navigate(`/rooms/${room.roomId}`, {
-            replace: true,
-            state: {
-              ...(location.state || {}),
-              roomData: nextRoomData,
-              roomId: room.roomId,
-              deckId: room.deckId,
-              totalPages: ready.totalPages,
-            },
-          });
-        }
+        applyReady(room, terminal);
       } catch (err) {
         log.error("발표 자료 업로드/스트림 준비 실패:", err);
         hasInitializedRef.current = false;
@@ -394,6 +438,7 @@ const PresentationPrepPage = () => {
     location.state,
     uploadPdf,
     setCanStartSessionAtomValue,
+    applyReady,
   ]);
 
   // canStartSession 이 true 가 되면 atom + roomData + sessionStorage 를 모두 동기화.
@@ -496,6 +541,18 @@ const PresentationPrepPage = () => {
 
   if (fatalMessage) {
     return <SessionLoadingOverlay message={`⚠️ ${fatalMessage}`} />;
+  }
+
+  if (pendingFonts) {
+    return (
+      <FontRequirementPrompt
+        fontReport={pendingFonts.fontReport}
+        busy={fontBusy}
+        error={fontError}
+        onUploadFonts={handleUploadFonts}
+        onProceedWithout={handleProceedWithout}
+      />
+    );
   }
 
   // 오버레이는 "아직 대시보드를 그릴 근거가 없는 동안"에만 띄운다.
