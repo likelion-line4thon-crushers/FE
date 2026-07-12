@@ -89,6 +89,44 @@ export const Description = styled.p`
   }
 `;
 
+// 업로드 가능한 파일 조건(형식/용량)을 보여주는 간단한 스펙 표.
+export const SpecTable = styled.table`
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #eaeaea;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 12px;
+  letter-spacing: -0.02em;
+
+  th,
+  td {
+    padding: 8px 12px;
+    text-align: start;
+    vertical-align: middle;
+  }
+
+  tr:not(:last-child) th,
+  tr:not(:last-child) td {
+    border-block-end: 1px solid #f2f2f2;
+  }
+`;
+
+export const SpecLabel = styled.th`
+  inline-size: 92px;
+  color: #8a8a8a;
+  font-weight: 500;
+  white-space: nowrap;
+  background: #fafafa;
+  border-inline-end: 1px solid #f2f2f2;
+`;
+
+export const SpecValue = styled.td`
+  color: #303030;
+  font-weight: 500;
+`;
+
 export const Resolved = styled.p`
   margin: 0;
   color: #1a7f37;
@@ -123,10 +161,10 @@ export const FontList = styled.ul`
   border: 1px solid #eaeaea;
   border-radius: 10px;
   max-block-size: 264px;
-  overflow-y: auto;
+  overflow-y: scroll; /* 항상 얇은 스크롤바를 노출한다(overflow 시에만 뜨지 않도록). */
   overscroll-behavior: contain;
 
-  /* 디자인 시스템에 맞춘 얇은 스크롤바 */
+  /* 디자인 시스템에 맞춘 얇은 스크롤바 (항상 표시) */
   scrollbar-width: thin;
   scrollbar-color: #d9d9d9 transparent;
 
@@ -140,6 +178,7 @@ export const FontList = styled.ul`
   }
   &::-webkit-scrollbar-track {
     background: transparent;
+    margin-block: 4px;
   }
 `;
 

@@ -566,16 +566,19 @@ const PresentationPrepPage = () => {
     return (
       <>
         <SessionLoadingOverlay message="발표 자료 준비 중..." />
-        <FontRequirementPrompt
-          fontReport={pendingFonts.fontReport}
-          busy={fontBusy}
-          uploadingName={uploadingName}
-          warnings={fontWarnings}
-          error={fontError}
-          onUploadFont={handleUploadFont}
-          onContinue={handleContinue}
-          onProceedWithout={handleProceedWithout}
-        />
+        {/* 변환(finalize) 시작하면 모달을 닫아, 사용자가 '준비 중' 로딩 화면을 보게 한다. */}
+        {!fontBusy && (
+          <FontRequirementPrompt
+            fontReport={pendingFonts.fontReport}
+            busy={fontBusy}
+            uploadingName={uploadingName}
+            warnings={fontWarnings}
+            error={fontError}
+            onUploadFont={handleUploadFont}
+            onContinue={handleContinue}
+            onProceedWithout={handleProceedWithout}
+          />
+        )}
       </>
     );
   }

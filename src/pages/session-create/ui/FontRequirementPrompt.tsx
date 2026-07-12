@@ -14,7 +14,6 @@ import {
   FontName,
   FontRow,
   FontRowMain,
-  Hint,
   HiddenInput,
   ListWrap,
   Mascot,
@@ -23,6 +22,9 @@ import {
   RowRight,
   ScrollFade,
   SecondaryButton,
+  SpecLabel,
+  SpecTable,
+  SpecValue,
   StatusChip,
   SubstituteNote,
   TextGroup,
@@ -106,12 +108,29 @@ export default function FontRequirementPrompt({
                   <Resolved>필요한 폰트가 모두 준비되었어요.</Resolved>
                 ) : (
                   <Description>
-                    정확한 폰트로 변환하려면 각 폰트 오른쪽의 <b>업로드</b>를 눌러 파일을 올려주세요. 올리지
-                    않은 폰트는 대체 글꼴로 대체돼요.
+                    PPT를 원본 그대로 가져오려면 아래 목록에서 오른쪽의 <b>업로드</b>를 눌러 필요한
+                    폰트 파일을 올려주세요.
+                    <br />
+                    올리지 않은 폰트는 비슷한 글꼴로 대체돼요.
                   </Description>
                 )}
               </TextGroup>
             </Body>
+
+            {!allResolved && (
+              <SpecTable aria-label="업로드 가능한 폰트 파일 조건">
+                <tbody>
+                  <tr>
+                    <SpecLabel scope="row">파일 형식</SpecLabel>
+                    <SpecValue>.ttf, .otf, .ttc</SpecValue>
+                  </tr>
+                  <tr>
+                    <SpecLabel scope="row">최대 용량</SpecLabel>
+                    <SpecValue>파일당 15MB, 전체 60MB</SpecValue>
+                  </tr>
+                </tbody>
+              </SpecTable>
+            )}
 
             <ListWrap>
               <FontList ref={listRef} onScroll={syncFade} aria-label="필요한 폰트 목록">
@@ -123,11 +142,18 @@ export default function FontRequirementPrompt({
                       <FontRowMain>
                         <FontName>{f.name}</FontName>
                         <RowRight>
-                          <StatusChip $missing={missing} aria-label={missing ? "없음" : "사용 가능"}>
+                          <StatusChip
+                            $missing={missing}
+                            aria-label={missing ? "없음" : "사용 가능"}
+                          >
                             {missing ? "없음" : "사용 가능"}
                           </StatusChip>
                           {missing && (
-                            <UploadButton type="button" disabled={anyBusy} onClick={() => openPicker(f.name)}>
+                            <UploadButton
+                              type="button"
+                              disabled={anyBusy}
+                              onClick={() => openPicker(f.name)}
+                            >
                               {isUploading ? "업로드 중…" : "업로드"}
                             </UploadButton>
                           )}
@@ -139,7 +165,8 @@ export default function FontRequirementPrompt({
                           {warnings[f.name] ? ` (올린 폰트: ${warnings[f.name]})` : ""}.
                         </WarningNote>
                       ) : (
-                        missing && f.substitute && <SubstituteNote>대체 글꼴: {f.substitute}</SubstituteNote>
+                        missing &&
+                        f.substitute && <SubstituteNote>대체 글꼴: {f.substitute}</SubstituteNote>
                       )}
                     </FontRow>
                   );
@@ -147,19 +174,23 @@ export default function FontRequirementPrompt({
               </FontList>
               {showFade && <ScrollFade aria-hidden="true" />}
             </ListWrap>
-            <Hint>.ttf · .otf · .ttc · 최대 15MB</Hint>
 
-            <HiddenInput ref={inputRef} type="file" accept=".ttf,.otf,.ttc" onChange={handleFileChange} />
+            <HiddenInput
+              ref={inputRef}
+              type="file"
+              accept=".ttf,.otf,.ttc"
+              onChange={handleFileChange}
+            />
 
             {error && <ErrorText role="alert">{error}</ErrorText>}
           </Content>
 
           <Footer>
             <SecondaryButton type="button" disabled={anyBusy} onClick={onProceedWithout}>
-              그냥 진행
+              건너뛰기
             </SecondaryButton>
             <ConfirmButton type="button" disabled={anyBusy} onClick={handleContinueClick}>
-              변환 시작
+              진행하기
             </ConfirmButton>
           </Footer>
         </Dialog>
@@ -173,15 +204,16 @@ export default function FontRequirementPrompt({
                 <TextGroup>
                   <Title id="font-confirm-title">아직 준비되지 않은 폰트가 있어요</Title>
                   <Description>
-                    남은 <b>{missingCount}</b>개의 폰트는 서버의 대체 글꼴로 대체돼요. 그래도 변환을
-                    시작할까요?
+                    남은 <b>{missingCount}</b>개의 폰트는 비슷한 글꼴로 대체돼요.
+                    <br />
+                    그래도 계속 진행할까요?
                   </Description>
                 </TextGroup>
               </Body>
             </Content>
             <Footer>
               <SecondaryButton type="button" onClick={() => setConfirmOpen(false)}>
-                취소
+                취소하기
               </SecondaryButton>
               <ConfirmButton
                 type="button"
@@ -190,7 +222,7 @@ export default function FontRequirementPrompt({
                   onContinue();
                 }}
               >
-                네, 시작할게요
+                네, 진행할게요.
               </ConfirmButton>
             </Footer>
           </Dialog>
