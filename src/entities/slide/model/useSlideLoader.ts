@@ -10,6 +10,12 @@ interface UseSlideLoaderParams {
   revealAllSlides?: boolean;
   /** 공개된 최대 페이지의 0-based 인덱스 (maxSlide - 1). */
   maxRevealedPage?: number | null;
+  /**
+   * 발표자(=따라보는 청중)의 현재 페이지 0-based 인덱스. 공개 경계에 함께 포함해,
+   * 발표자가 앞으로 건너뛸 때 pageChange 가 먼저 오고 maxRevealedPage 갱신이 뒤늦게 와도
+   * 현재 슬라이드가 잠깐 경계 밖(빈칸)이 되지 않게 한다. (사이드바/네비 잠금 로직과 정렬)
+   */
+  presenterIndex?: number | null;
 }
 
 interface UseSlideLoaderReturn {
@@ -36,6 +42,7 @@ export const useSlideLoader = ({
   totalPages,
   revealAllSlides = true,
   maxRevealedPage = null,
+  presenterIndex = null,
 }: UseSlideLoaderParams): UseSlideLoaderReturn => {
   const queryClient = useQueryClient();
   const pages = totalPages ?? 0;
@@ -43,10 +50,14 @@ export const useSlideLoader = ({
 
   // 공개 상태가 명확히 "잠금"일 때만 요청 범위를 제한한다. 그 외(발표자/브로드캐스트/리포트,
   // 그리고 공개 ON 상태의 청중, 공개 상태 미확정)는 전체 페이지를 로드한다.
+  // 경계는 maxRevealedPage 와 현재 페이지 중 큰 값 — 발표자가 건너뛰어 이동해 maxRevealedPage 가
+  // 아직 따라오지 못한 순간에도 현재 슬라이드는 항상 요청 가능하게 한다.
   const inLockMode = !revealAllSlides && maxRevealedPage !== null;
-  const allowedCount = inLockMode
-    ? Math.min(pages, Math.max(0, (maxRevealedPage ?? -1) + 1))
-    : pages;
+  const boundaryIndex = Math.max(
+    maxRevealedPage ?? -1,
+    Number.isFinite(presenterIndex) ? (presenterIndex as number) : -1
+  );
+  const allowedCount = inLockMode ? Math.min(pages, Math.max(0, boundaryIndex + 1)) : pages;
 
   const results = useQueries({
     queries: Array.from({ length: pages }, (_, i) => ({

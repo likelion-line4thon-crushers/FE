@@ -78,6 +78,27 @@ const AudienceRoomPage = () => {
 
   const { sessionStatus } = useAudienceInitialState({ code, roomId });
 
+  // Navigation runs before the slide loader so the loader can include the audience's current
+  // page in its fetch boundary (see `presenterIndex` below). slideCount uses totalPages — the
+  // incremental loader always returns an array of length totalPages.
+  const {
+    currentSlide,
+    setCurrentSlide,
+    followPresenter,
+    setFollowPresenter,
+    followPresenterRef,
+    prevSlideRef,
+    changeCurrentSlide,
+    handleToggleFollowPresenter,
+    handleAudienceSelectSlide,
+  } = useAudienceSlideNavigation({
+    code,
+    slideCount: totalPages ?? 0,
+    roomId,
+    audienceId,
+    lastPresenterPageRef,
+  });
+
   const {
     slides,
     showPlaceholder: showSlidesPlaceholder,
@@ -91,24 +112,7 @@ const AudienceRoomPage = () => {
     totalPages,
     revealAllSlides: unlockSettings.revealAllSlides,
     maxRevealedPage: unlockSettings.maxRevealedPage,
-  });
-
-  const {
-    currentSlide,
-    setCurrentSlide,
-    followPresenter,
-    setFollowPresenter,
-    followPresenterRef,
-    prevSlideRef,
-    changeCurrentSlide,
-    handleToggleFollowPresenter,
-    handleAudienceSelectSlide,
-  } = useAudienceSlideNavigation({
-    code,
-    slideCount: slides.length,
-    roomId,
-    audienceId,
-    lastPresenterPageRef,
+    presenterIndex: currentSlide,
   });
 
   const { showFocusHighlight, triggerFocusHighlight } = useAudienceFocusHighlight();
