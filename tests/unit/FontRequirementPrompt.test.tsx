@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import type { ComponentProps } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import FontRequirementPrompt from "@/pages/session-create/ui/FontRequirementPrompt";
 
@@ -7,77 +8,67 @@ const report = [
   { name: "Arial", status: "AVAILABLE" as const, embedded: false, installed: true },
 ];
 
+function renderPrompt(overrides: Partial<ComponentProps<typeof FontRequirementPrompt>> = {}) {
+  const props = {
+    fontReport: report,
+    busy: false,
+    uploadingName: null,
+    error: null,
+    onUploadFont: () => {},
+    onContinue: () => {},
+    onProceedWithout: () => {},
+    ...overrides,
+  };
+  return { props, ...render(<FontRequirementPrompt {...props} />) };
+}
+
 describe("FontRequirementPrompt", () => {
   it("lists fonts with status", () => {
-    render(
-      <FontRequirementPrompt
-        fontReport={report}
-        busy={false}
-        error={null}
-        onCheckFonts={() => {}}
-        onUploadFonts={() => {}}
-        onProceedWithout={() => {}}
-      />
-    );
+    renderPrompt();
     expect(screen.getByText("Malgun Gothic")).toBeInTheDocument();
     expect(screen.getByText("Arial")).toBeInTheDocument();
   });
 
-  it("fires onProceedWithout", () => {
-    const onProceed = vi.fn();
-    render(
-      <FontRequirementPrompt
-        fontReport={report}
-        busy={false}
-        error={null}
-        onCheckFonts={() => {}}
-        onUploadFonts={() => {}}
-        onProceedWithout={onProceed}
-      />
-    );
-    fireEvent.click(screen.getByRole("button", { name: "그냥 진행" }));
-    expect(onProceed).toHaveBeenCalledOnce();
+  it("shows an upload button only on missing rows", () => {
+    renderPrompt();
+    // Only Malgun Gothic (MISSING) has an upload button; Arial (AVAILABLE) does not.
+    expect(screen.getAllByRole("button", { name: "업로드" })).toHaveLength(1);
   });
 
-  it("re-check button is disabled until files are picked, then fires onCheckFonts with them", () => {
-    const onCheck = vi.fn();
-    const { container } = render(
-      <FontRequirementPrompt
-        fontReport={report}
-        busy={false}
-        error={null}
-        onCheckFonts={onCheck}
-        onUploadFonts={() => {}}
-        onProceedWithout={() => {}}
-      />
-    );
+  it("uploads a file for the specific font row", () => {
+    const onUploadFont = vi.fn();
+    const { container } = renderPrompt({ onUploadFont });
 
-    const checkBtn = screen.getByRole("button", { name: "선택한 폰트로 다시 확인" });
-    expect(checkBtn).toBeDisabled();
-
+    fireEvent.click(screen.getByRole("button", { name: "업로드" }));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File([new Uint8Array([1, 2, 3])], "MyFont.ttf");
+    const file = new File([new Uint8Array([1, 2, 3])], "malgun.ttf");
     fireEvent.change(input, { target: { files: [file] } });
 
-    expect(checkBtn).not.toBeDisabled();
-    fireEvent.click(checkBtn);
-    expect(onCheck).toHaveBeenCalledTimes(1);
-    expect(onCheck.mock.calls[0][0]).toHaveLength(1);
-    expect(onCheck.mock.calls[0][0][0].name).toBe("MyFont.ttf");
+    expect(onUploadFont).toHaveBeenCalledTimes(1);
+    expect(onUploadFont.mock.calls[0][0]).toBe("Malgun Gothic");
+    expect(onUploadFont.mock.calls[0][1].name).toBe("malgun.ttf");
+  });
+
+  it("shows an uploading state on the row being uploaded", () => {
+    renderPrompt({ uploadingName: "Malgun Gothic" });
+    expect(screen.getByRole("button", { name: "업로드 중…" })).toBeInTheDocument();
+  });
+
+  it("fires onContinue and onProceedWithout", () => {
+    const onContinue = vi.fn();
+    const onProceedWithout = vi.fn();
+    renderPrompt({ onContinue, onProceedWithout });
+
+    fireEvent.click(screen.getByRole("button", { name: "변환 시작" }));
+    fireEvent.click(screen.getByRole("button", { name: "그냥 진행" }));
+    expect(onContinue).toHaveBeenCalledOnce();
+    expect(onProceedWithout).toHaveBeenCalledOnce();
   });
 
   it("shows an all-resolved message when nothing is missing", () => {
-    const resolved = [{ name: "Arial", status: "AVAILABLE" as const, embedded: false, installed: true }];
-    render(
-      <FontRequirementPrompt
-        fontReport={resolved}
-        busy={false}
-        error={null}
-        onCheckFonts={() => {}}
-        onUploadFonts={() => {}}
-        onProceedWithout={() => {}}
-      />
-    );
+    renderPrompt({
+      fontReport: [{ name: "Arial", status: "AVAILABLE", embedded: false, installed: true }],
+    });
     expect(screen.getByText(/모두 준비되었어요/)).toBeInTheDocument();
   });
 });

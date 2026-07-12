@@ -144,60 +144,48 @@ export const StatusChip = styled.span<{ $missing: boolean }>`
   background: ${({ $missing }) => ($missing ? "#fdeee7" : "#eaf6ec")};
 `;
 
-export const Picker = styled.div`
+export const RowRight = styled.div`
+  flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
-  inline-size: 100%;
+`;
+
+export const UploadButton = styled.button`
+  min-block-size: 28px;
+  padding: 4px 10px;
+  border: 1px solid #303030;
+  border-radius: 3px;
+  background: #fff;
+  color: #303030;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #303030;
+    color: #fff;
+  }
+
+  &:disabled {
+    border-color: #dcdcdc;
+    color: #b8b8b8;
+    cursor: not-allowed;
+  }
 `;
 
 export const HiddenInput = styled.input`
   display: none;
 `;
 
-export const PickButton = styled.button`
-  min-block-size: 40px;
-  padding: 10px 12px;
-  border: 1px dashed #cfcfcf;
-  border-radius: 10px;
-  background: #fafafa;
-  color: #303030;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-
-  &:hover {
-    border-color: #e74d07;
-    background: #fff7f3;
-  }
-`;
-
-export const PickHint = styled.p`
+export const Hint = styled.p`
   margin: 0;
   color: #8a8a8a;
   font-size: 12px;
   letter-spacing: -0.02em;
   text-align: center;
-`;
-
-export const RecheckButton = styled.button`
-  min-block-size: 36px;
-  padding: 8px 12px;
-  border: 1px solid #eaeaea;
-  border-radius: 3px;
-  background: #fff;
-  color: #303030;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  cursor: pointer;
-
-  &:disabled {
-    color: #b8b8b8;
-    cursor: not-allowed;
-  }
 `;
 
 export const ErrorText = styled.p`

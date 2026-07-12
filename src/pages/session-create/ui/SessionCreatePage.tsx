@@ -45,6 +45,7 @@ const PresentationPrepPage = () => {
   const [fatalMessage, setFatalMessage] = useState<string | null>(null);
   const [pendingFonts, setPendingFonts] = useState<{ uploadId: string; fontReport: FontReportEntry[] } | null>(null);
   const [fontBusy, setFontBusy] = useState(false);
+  const [uploadingName, setUploadingName] = useState<string | null>(null);
   const [fontError, setFontError] = useState<string | null>(null);
   const pendingRoomRef = useRef<any>(null);
 
@@ -351,22 +352,22 @@ const PresentationPrepPage = () => {
     [navigate, roomIdParam, location.state]
   );
 
-  const handleUploadFonts = useCallback(
-    async (files: File[]) => {
+  // 개별 폰트를 업로드해 서버에 등록하고, 갱신된 리포트로 배지를 바꾼다(변환은 하지 않음).
+  const handleUploadFont = useCallback(
+    async (fontName: string, file: File) => {
       if (!pendingFonts) return;
-      setFontBusy(true);
+      setUploadingName(fontName);
       setFontError(null);
       try {
-        await uploadFonts(pendingFonts.uploadId, files);
-        const ready = await finalizeUpload(pendingFonts.uploadId, false);
-        applyReady(pendingRoomRef.current, ready);
+        const report = await uploadFonts(pendingFonts.uploadId, [file]);
+        setPendingFonts((prev) => (prev ? { ...prev, fontReport: report } : prev));
       } catch {
         setFontError("폰트 업로드에 실패했습니다. 다시 시도해주세요.");
       } finally {
-        setFontBusy(false);
+        setUploadingName(null);
       }
     },
-    [pendingFonts, applyReady]
+    [pendingFonts]
   );
 
   const handleProceedWithout = useCallback(async () => {
@@ -383,23 +384,20 @@ const PresentationPrepPage = () => {
     }
   }, [pendingFonts, applyReady]);
 
-  // 선택한 폰트를 업로드해 서버에 등록하고, 새 리포트로 배지를 갱신한다(변환은 하지 않음).
-  const handleCheckFonts = useCallback(
-    async (files: File[]) => {
-      if (!pendingFonts) return;
-      setFontBusy(true);
-      setFontError(null);
-      try {
-        const report = await uploadFonts(pendingFonts.uploadId, files);
-        setPendingFonts((prev) => (prev ? { ...prev, fontReport: report } : prev));
-      } catch {
-        setFontError("폰트 확인에 실패했습니다. 다시 시도해주세요.");
-      } finally {
-        setFontBusy(false);
-      }
-    },
-    [pendingFonts]
-  );
+  // 업로드한 폰트로 변환을 시작한다(finalize).
+  const handleContinue = useCallback(async () => {
+    if (!pendingFonts) return;
+    setFontBusy(true);
+    setFontError(null);
+    try {
+      const ready = await finalizeUpload(pendingFonts.uploadId, false);
+      applyReady(pendingRoomRef.current, ready);
+    } catch {
+      setFontError("변환을 시작하지 못했습니다. 다시 시도해주세요.");
+    } finally {
+      setFontBusy(false);
+    }
+  }, [pendingFonts, applyReady]);
 
   // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
   useEffect(() => {
@@ -568,9 +566,10 @@ const PresentationPrepPage = () => {
         <FontRequirementPrompt
           fontReport={pendingFonts.fontReport}
           busy={fontBusy}
+          uploadingName={uploadingName}
           error={fontError}
-          onCheckFonts={handleCheckFonts}
-          onUploadFonts={handleUploadFonts}
+          onUploadFont={handleUploadFont}
+          onContinue={handleContinue}
           onProceedWithout={handleProceedWithout}
         />
       </>
