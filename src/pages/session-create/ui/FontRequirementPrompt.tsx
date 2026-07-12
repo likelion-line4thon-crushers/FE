@@ -5,6 +5,7 @@ interface Props {
   fontReport: FontReportEntry[];
   busy: boolean;
   error: string | null;
+  onCheckFonts: (files: File[]) => void;
   onUploadFonts: (files: File[]) => void;
   onProceedWithout: () => void;
 }
@@ -13,19 +14,25 @@ export default function FontRequirementPrompt({
   fontReport,
   busy,
   error,
+  onCheckFonts,
   onUploadFonts,
   onProceedWithout,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [picked, setPicked] = useState<File[]>([]);
   const missingCount = fontReport.filter((f) => f.status === "MISSING").length;
+  const allResolved = missingCount === 0;
 
   return (
     <div role="dialog" aria-label="폰트 업로드" style={{ maxWidth: 560, margin: "10vh auto", padding: 24 }}>
       <h2>이 발표 자료에 필요한 폰트가 서버에 없어요</h2>
-      <p>
-        정확한 글꼴로 변환하려면 아래 <b>{missingCount}</b>개의 폰트를 업로드하세요.
-      </p>
+      {allResolved ? (
+        <p style={{ color: "#1a7f37" }}>✅ 모든 폰트가 준비되었어요. 계속 진행하세요.</p>
+      ) : (
+        <p>
+          정확한 글꼴로 변환하려면 아래 <b>{missingCount}</b>개의 폰트를 업로드하세요.
+        </p>
+      )}
       <ul>
         {fontReport.map((f) => (
           <li key={f.name}>
@@ -42,6 +49,13 @@ export default function FontRequirementPrompt({
         onChange={(e) => setPicked(Array.from(e.target.files ?? []))}
       />
       {picked.length > 0 && <p>{picked.length}개 선택됨</p>}
+      <button
+        type="button"
+        disabled={busy || picked.length === 0}
+        onClick={() => onCheckFonts(picked)}
+      >
+        선택한 폰트로 다시 확인
+      </button>
       {error && (
         <p role="alert" style={{ color: "#e8541e" }}>
           {error}

@@ -383,6 +383,24 @@ const PresentationPrepPage = () => {
     }
   }, [pendingFonts, applyReady]);
 
+  // 선택한 폰트를 업로드해 서버에 등록하고, 새 리포트로 배지를 갱신한다(변환은 하지 않음).
+  const handleCheckFonts = useCallback(
+    async (files: File[]) => {
+      if (!pendingFonts) return;
+      setFontBusy(true);
+      setFontError(null);
+      try {
+        const report = await uploadFonts(pendingFonts.uploadId, files);
+        setPendingFonts((prev) => (prev ? { ...prev, fontReport: report } : prev));
+      } catch {
+        setFontError("폰트 확인에 실패했습니다. 다시 시도해주세요.");
+      } finally {
+        setFontBusy(false);
+      }
+    },
+    [pendingFonts]
+  );
+
   // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
   useEffect(() => {
     if (hasInitializedRef.current) return;
@@ -549,6 +567,7 @@ const PresentationPrepPage = () => {
         fontReport={pendingFonts.fontReport}
         busy={fontBusy}
         error={fontError}
+        onCheckFonts={handleCheckFonts}
         onUploadFonts={handleUploadFonts}
         onProceedWithout={handleProceedWithout}
       />
