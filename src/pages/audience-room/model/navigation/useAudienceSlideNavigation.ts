@@ -159,6 +159,34 @@ const useAudienceSlideNavigation = ({
     };
   }, [currentSlide, changeCurrentSlide]);
 
+  // 공개(다음 구간 공개하기)가 켜져 있을 때 발표자보다 앞서가 보던 청중은, 발표자가 공개를 끄는
+  // 순간 공개 경계 밖 슬라이드에 "갇힌다" — 인접 슬라이드도 전부 잠겨 키보드/이전·다음 이동이
+  // 모두 막히고, 발표자가 그 지점을 지날 때까지 되돌아올 수 없다. 이때 발표자의 현재 페이지로
+  // 데려와 갇힘만 푼다(follow 는 강제로 켜지 않아, 공개된 구간을 자유롭게 다시 둘러볼 수 있다).
+  useEffect(() => {
+    if (unlockSettings.revealAllSlides || unlockSettings.maxRevealedPage == null) return;
+
+    const presenterIdx = lastPresenterPageRef?.current;
+    const boundary = Math.max(
+      unlockSettings.maxRevealedPage,
+      Number.isFinite(presenterIdx) ? presenterIdx : -1
+    );
+    if (!Number.isFinite(currentSlide) || currentSlide <= boundary) return;
+
+    const target = Number.isFinite(presenterIdx) && presenterIdx >= 0 ? presenterIdx : boundary;
+    changeCurrentSlide(target, {
+      source: "presenter",
+      broadcast: false,
+      preserveFollowState: true,
+    });
+  }, [
+    unlockSettings.revealAllSlides,
+    unlockSettings.maxRevealedPage,
+    currentSlide,
+    changeCurrentSlide,
+    lastPresenterPageRef,
+  ]);
+
   return {
     currentSlide,
     setCurrentSlide,
