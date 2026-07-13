@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useLocation } from "react-router";
 import { useSetAtom } from "jotai";
+import { useQuery } from "@tanstack/react-query";
 import { audienceVoiceCsvEnabledAtom } from "@/entities/room";
-import { createLogger } from "@/shared/lib/logger";
 import {
   ReviewSlideContainer,
   TotalContainer,
@@ -24,15 +24,13 @@ import SatisfyImage from "@/shared/assets/images/AI/Satisfy.png";
 import StarImage from "@/shared/assets/images/AI/Star.png";
 import GrayFaceImage from "@/shared/assets/images/AI/reviewslide_face.png";
 import {
-  fetchFeedbackReport,
-  fetchAudienceVoiceReport,
+  audienceVoiceReportQuery,
+  feedbackReportQuery,
   type AudienceVoiceReport,
 } from "@/shared/api/ai-report";
 import { loadStoredRoomData, computeRoomInfo } from "../../../model/room-info";
 import { SatisfactionCard } from "./SatisfactionCard";
 import { QuestionVoiceCard } from "./QuestionVoiceCard";
-
-const log = createLogger("ai-report");
 
 interface FeedbackReport {
   averageRating?: number;
@@ -45,13 +43,6 @@ const POLL_INTERVAL_MS = 60 * 1000;
 
 const ReviewSlide = () => {
   const location = useLocation();
-  const [feedbackData, setFeedbackData] = useState<FeedbackReport | null>(null);
-  const [voiceData, setVoiceData] = useState<AudienceVoiceReport | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const mountedRef = useRef(true);
-  const requestIdRef = useRef(0);
-  const pendingRequestsRef = useRef(0);
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
 
@@ -62,106 +53,34 @@ const ReviewSlide = () => {
 
   const { roomId } = roomInfo;
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const voiceQuery = useQuery({
+    ...audienceVoiceReportQuery(roomId ?? ""),
+    enabled: !!roomId,
+    refetchInterval: POLL_INTERVAL_MS,
+  });
+  const voice = voiceQuery.data;
 
-  const loadFeedback = useCallback(
-    async (mode: "initial" | "poll") => {
-      if (!roomId) {
-        requestIdRef.current += 1;
-        setVoiceData(null);
-        setFeedbackData(null);
-        setError(new Error("roomId를 확인할 수 없습니다."));
-        setLoading(false);
-        return;
-      }
+  // 후기는 청중 질문이 없을 때만 조회하는 종속 쿼리다.
+  // isSuccess 대신 data 기준으로 게이트한다 — 폴링 한 번 실패해도(status 'error', data 유지)
+  // 후기 폴링이 멈추면 안 된다.
+  const feedbackQuery = useQuery({
+    ...feedbackReportQuery(roomId ?? ""),
+    enabled: voice !== undefined && !voice?.hasQuestions,
+    refetchInterval: POLL_INTERVAL_MS,
+  });
 
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
-      const canCommit = () => mountedRef.current && requestIdRef.current === requestId;
-      const isInitialLoad = mode === "initial";
-      pendingRequestsRef.current += 1;
+  const voiceData: AudienceVoiceReport | null = voice ?? null;
+  const feedbackData: FeedbackReport | null = feedbackQuery.data ?? null;
 
-      if (isInitialLoad) {
-        setLoading(true);
-      }
-
-      try {
-        const voice = await fetchAudienceVoiceReport(roomId);
-        if (canCommit()) {
-          setVoiceData(voice);
-          setError(null);
-        }
-
-        if (!voice || !voice.hasQuestions) {
-          try {
-            const data = await fetchFeedbackReport(roomId);
-            if (canCommit()) {
-              setFeedbackData(data);
-            }
-          } catch (feedbackErr) {
-            if (!canCommit()) {
-              return;
-            }
-            if (isInitialLoad) {
-              setFeedbackData(null);
-              setError(feedbackErr);
-            } else {
-              log.warn("후기 업데이트 실패 (기존 데이터 유지):", feedbackErr);
-            }
-          }
-        }
-      } catch (err) {
-        if (!canCommit()) {
-          return;
-        }
-        if (isInitialLoad) {
-          setVoiceData(null);
-          setError(err);
-        } else {
-          log.warn("청중의 목소리 업데이트 실패 (기존 데이터 유지):", err);
-        }
-      } finally {
-        pendingRequestsRef.current = Math.max(0, pendingRequestsRef.current - 1);
-        if (canCommit() && isInitialLoad) {
-          setLoading(false);
-        }
-      }
-    },
-    [roomId]
-  );
-
-  // 인터벌이 loadFeedback 정체성 변화로 재생성되지 않도록 ref로 최신 함수를 참조한다.
-  const loadFeedbackRef = useRef(loadFeedback);
-  useEffect(() => {
-    loadFeedbackRef.current = loadFeedback;
-  }, [loadFeedback]);
-
-  useEffect(() => {
-    if (!roomId) {
-      requestIdRef.current += 1;
-      setVoiceData(null);
-      setFeedbackData(null);
-      setError(new Error("roomId를 확인할 수 없습니다."));
-      setLoading(false);
-      return undefined;
-    }
-
-    loadFeedbackRef.current("initial");
-
-    // 60초마다 무조건 폴링한다. 오래된 응답은 requestId 가드로 무시되므로 중복 커밋은 없다.
-    const intervalId = window.setInterval(() => {
-      loadFeedbackRef.current("poll");
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [roomId]);
+  // 폴링 실패는 error 를 세팅하되 이전 데이터를 유지하므로, UI 에러는 아직 데이터가 없는
+  // 초기 로드 실패에서만 켠다. (초기 로딩은 isLoading 으로 판단)
+  const loading = voiceQuery.isLoading || feedbackQuery.isLoading;
+  const error = useMemo(() => {
+    if (!roomId) return new Error("roomId를 확인할 수 없습니다.");
+    if (voiceQuery.error && voiceQuery.data === undefined) return voiceQuery.error;
+    if (feedbackQuery.error && feedbackQuery.data === undefined) return feedbackQuery.error;
+    return null;
+  }, [roomId, voiceQuery.error, voiceQuery.data, feedbackQuery.error, feedbackQuery.data]);
 
   const averageRating = useMemo(() => {
     if (loading || error) {

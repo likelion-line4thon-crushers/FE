@@ -1,10 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
-import { fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
+import { useCallback, useMemo } from "react";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { presentationKeys, slideImageQuery } from "@/shared/api/presentation";
 
 interface UseSlideLoaderParams {
   roomId: string | null;
   deckId: string | null;
   totalPages: number | null;
+  /** 청중 전용: 공개가 꺼진 동안 아직 공개되지 않은 페이지는 아예 요청하지 않도록 제한한다. 발표자는 생략. */
+  revealAllSlides?: boolean;
+  /** 공개된 최대 페이지의 0-based 인덱스 (maxSlide - 1). */
+  maxRevealedPage?: number | null;
+  /**
+   * 발표자(=따라보는 청중)의 현재 페이지 0-based 인덱스. 공개 경계에 함께 포함해,
+   * 발표자가 앞으로 건너뛸 때 pageChange 가 먼저 오고 maxRevealedPage 갱신이 뒤늦게 와도
+   * 현재 슬라이드가 잠깐 경계 밖(빈칸)이 되지 않게 한다. (사이드바/네비 잠금 로직과 정렬)
+   */
+  presenterIndex?: number | null;
 }
 
 interface UseSlideLoaderReturn {
@@ -20,74 +31,83 @@ interface UseSlideLoaderReturn {
 }
 
 /**
- * ! Merged from useSlideLoader + useAudienceSlides
+ * 슬라이드 이미지를 페이지 단위로 로드한다.
+ * - 발표자/브로드캐스트/리포트: 경계 미지정 → 전체 페이지 로드(기존 동작).
+ * - 청중 + 공개 OFF: 공개 경계(maxRevealedPage)까지만 요청 → 미공개 슬라이드는 애초에 내려받지 않는다.
+ *   (한 번도 공개된 적 없는 슬라이드는 <img> 를 마운트하지 않아 크로미움 "유령" 깜빡임이 생기지 않는다.
+ *    단, 공개 ON→OFF 전환 시 ON 동안 마운트됐던 썸네일은 언마운트되므로 그 경우의 유령은 이 방식으로
+ *    완전히 커버되지 않는다 — 현재는 재발하지 않아 관찰 중, 필요시 mounted-hidden 보호를 다시 추가.)
  */
 export const useSlideLoader = ({
   roomId,
   deckId,
   totalPages,
+  revealAllSlides = true,
+  maxRevealedPage = null,
+  presenterIndex = null,
 }: UseSlideLoaderParams): UseSlideLoaderReturn => {
-  const [slides, setSlides] = useState<(string | null)[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const queryClient = useQueryClient();
+  const pages = totalPages ?? 0;
+  const baseEnabled = Boolean(roomId && deckId && pages);
 
-  const loadSlides = useCallback(
-    async ({ signal }: { signal?: AbortSignal } = {}) => {
-      if (!roomId || !deckId || !totalPages) return;
-      if (signal?.aborted) return;
+  // 공개 상태가 명확히 "잠금"일 때만 요청 범위를 제한한다. 그 외(발표자/브로드캐스트/리포트,
+  // 그리고 공개 ON 상태의 청중, 공개 상태 미확정)는 전체 페이지를 로드한다.
+  // 경계는 maxRevealedPage 와 현재 페이지 중 큰 값 — 발표자가 건너뛰어 이동해 maxRevealedPage 가
+  // 아직 따라오지 못한 순간에도 현재 슬라이드는 항상 요청 가능하게 한다.
+  const inLockMode = !revealAllSlides && maxRevealedPage !== null;
+  const boundaryIndex = Math.max(
+    maxRevealedPage ?? -1,
+    Number.isFinite(presenterIndex) ? (presenterIndex as number) : -1
+  );
+  const allowedCount = inLockMode ? Math.min(pages, Math.max(0, boundaryIndex + 1)) : pages;
 
-      setLoading(true);
-      setError(null);
+  const results = useQueries({
+    queries: Array.from({ length: pages }, (_, i) => ({
+      ...slideImageQuery(roomId ?? "", deckId ?? "", i + 1),
+      enabled: baseEnabled && i < allowedCount,
+    })),
+  });
 
-      try {
-        const urls = await fetchAllOriginalSlideUrls(roomId, deckId, totalPages);
-        if (signal?.aborted) return;
-        setSlides(urls);
-      } catch (err: any) {
-        if (signal?.aborted) return;
-        setError(err instanceof Error ? err : new Error(String(err)));
-      } finally {
-        if (!signal?.aborted) {
-          setLoading(false);
-        }
-      }
-    },
-    [roomId, deckId, totalPages]
+  // 경계 밖 페이지는 (slideReady 등으로 캐시가 채워졌더라도) null 로 강제해 노출을 막는다.
+  // useQueries 는 매 렌더마다 새 배열을 반환하므로, 실제 URL "값" 기준으로 memo 해
+  // slides 참조를 안정적으로 유지한다(그러지 않으면 usePresenterPageSync 가 매 렌더 재실행).
+  const slideValuesKey = results
+    .map((r, i) => (i < allowedCount ? ((r.data as string | undefined) ?? "") : ""))
+    .join("|");
+  const slides = useMemo(
+    () =>
+      results.map((r, i) => (i < allowedCount ? ((r.data as string | undefined) ?? null) : null)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slideValuesKey]
   );
 
-  useEffect(() => {
-    if (!roomId || !deckId || !totalPages) return;
-
-    const controller = new AbortController();
-    loadSlides({ signal: controller.signal });
-
-    return () => {
-      controller.abort();
-    };
-  }, [roomId, deckId, totalPages, loadSlides]);
+  const loading = results.some((r, i) => i < allowedCount && r.isFetching);
+  const error =
+    (results.find((r, i) => i < allowedCount && r.error)?.error as Error | undefined) ?? null;
 
   const retry = useCallback(() => {
-    if (!roomId || !deckId || !totalPages) return;
-    loadSlides();
-  }, [roomId, deckId, totalPages, loadSlides]);
+    results.forEach((r, i) => {
+      if (i < allowedCount) void r.refetch();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slideValuesKey, allowedCount]);
 
+  // slideReady(라이브 파싱)로 특정 페이지 URL 을 미리 채워, 별도 요청 없이 즉시 보이게 한다.
   const applySlideReady = useCallback(
     (pageIndex: number, imageUrl: string) => {
-      setSlides((prev) => {
-        const len = Math.max(prev.length, totalPages ?? 0, pageIndex + 1);
-        const next =
-          prev.length === len ? [...prev] : Array.from({ length: len }, (_, i) => prev[i] ?? null);
-        if (!next[pageIndex]) next[pageIndex] = imageUrl;
-        return next;
-      });
+      if (!roomId || !deckId || pageIndex < 0 || !imageUrl) return;
+      queryClient.setQueryData(
+        presentationKeys.slideImage(roomId, deckId, pageIndex + 1),
+        imageUrl
+      );
     },
-    [totalPages]
+    [queryClient, roomId, deckId]
   );
 
   const hasReadySlide = slides.some((s) => !!s);
   const isInitialLoading = loading && !hasReadySlide;
   const hasError = !loading && !!error && !hasReadySlide;
-  const waitingForSlides = !loading && !error && slides.length > 0 && !hasReadySlide;
+  const waitingForSlides = !loading && !error && allowedCount > 0 && !hasReadySlide;
   const showPlaceholder = isInitialLoading || hasError || waitingForSlides;
   const waitingMessage = hasError
     ? "슬라이드를 불러오는 중 오류가 발생했습니다."

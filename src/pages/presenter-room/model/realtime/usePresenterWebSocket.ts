@@ -37,7 +37,10 @@ export const usePresenterWebSocket = ({
       setIsPresenterWsReady(false);
     };
 
-    websocketService.connect(presenterWsUrl, presenterToken, onConnect, onError);
+    websocketService.connect(presenterWsUrl, presenterToken, onConnect, onError, {
+      channel: "presenter",
+      onDisconnect: () => setIsPresenterWsReady(false),
+    });
 
     return () => {
       setIsPresenterWsReady(false);
@@ -45,9 +48,9 @@ export const usePresenterWebSocket = ({
     };
   }, [roomId, presenterToken, presenterWsUrl, currentSlideRef]);
 
-  // 청중 페이지 변경 구독
+  // 청중 페이지 변경 구독 — isPresenterWsReady에 반응해야 재연결 후 새로 구독한다.
   useEffect(() => {
-    if (!roomId || !presenterToken || !presenterWsUrl) {
+    if (!roomId || !presenterToken || !presenterWsUrl || !isPresenterWsReady) {
       return undefined;
     }
 
@@ -72,7 +75,7 @@ export const usePresenterWebSocket = ({
         unsubscribe();
       }
     };
-  }, [roomId, presenterToken, presenterWsUrl, changeSlide]);
+  }, [roomId, presenterToken, presenterWsUrl, changeSlide, isPresenterWsReady]);
 
   return { isPresenterWsReady };
 };

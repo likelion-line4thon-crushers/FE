@@ -1,5 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSetAtom } from "jotai";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 import { joinRoom, getRoomInfo } from "@/shared/api/room";
 import { roomIdAtom, deckIdAtom, totalPagesAtom, wsUrlAtom } from "@/entities/room";
 import {
@@ -63,6 +65,7 @@ const useAudienceJoinRoom = ({
   setFollowPresenter?: any;
   changeCurrentSlide?: any;
 }) => {
+  const posthog = usePostHog();
   const setRoomId = useSetAtom(roomIdAtom);
   const setAudienceId = useSetAtom(audienceIdAtom);
   const setAudienceToken = useSetAtom(audienceTokenAtom);
@@ -72,6 +75,14 @@ const useAudienceJoinRoom = ({
   const setSessionStatus = useSetAtom(sessionStatusAtom);
   const setQuickSettings = useSetAtom(quickSettingsAtom);
   const setUnlockSettings = useSetAtom(unlockSettingsAtom);
+
+  // `changeCurrentSlide`'s identity churns whenever unlock/lock state changes (the presenter
+  // advancing to a new max slide broadcasts an option/unlock event → isLockedTarget →
+  // changeCurrentSlide). Keeping it in this join effect's deps made the one-time join/restore
+  // re-run on every forward move, re-snapping the audience to the presenter and flipping
+  // "발표자와 함께 보기" back on. Read it through a ref so the effect stays a once-per-room init.
+  const changeCurrentSlideRef = useRef(changeCurrentSlide);
+  changeCurrentSlideRef.current = changeCurrentSlide;
 
   useEffect(() => {
     if (!code) return;
@@ -169,8 +180,8 @@ const useAudienceJoinRoom = ({
                   if (Number.isFinite(presenterPage) && presenterPage > 0) {
                     const presenterIndex = presenterPage - 1;
                     lastPresenterPageRef.current = presenterIndex;
-                    if (changeCurrentSlide && typeof changeCurrentSlide === "function") {
-                      changeCurrentSlide(presenterIndex, {
+                    if (typeof changeCurrentSlideRef.current === "function") {
+                      changeCurrentSlideRef.current(presenterIndex, {
                         source: "presenter",
                         broadcast: false,
                         preserveFollowState: true,
@@ -331,16 +342,22 @@ const useAudienceJoinRoom = ({
         }
         setWsUrl(wsUrlValue);
       } catch (err) {
+        posthog?.capture(ANALYTICS_EVENTS.AUDIENCE_JOIN_FAILED, {
+          join_code: code,
+          error_message: err instanceof Error ? err.message : String(err),
+        });
         alert("방 입장에 실패했습니다. 코드를 확인해주세요.");
       }
     };
 
     handleJoinRoom();
   }, [
+    // `changeCurrentSlide` is intentionally omitted — read via changeCurrentSlideRef so this
+    // stays a once-per-room init (see ref comment above).
     code,
     lastPresenterPageRef,
     setFollowPresenter,
-    changeCurrentSlide,
+    posthog,
     setRoomId,
     setAudienceId,
     setAudienceToken,

@@ -44,7 +44,9 @@ Every slice exposes its API through `index.ts` only. Never deep-import slice int
 - Pure functions → `src/shared/lib/` · API calls → `src/shared/api/` · constants → `src/shared/config/` · generic components → `src/shared/ui/`
 - An entity owns its types, Jotai atoms, and pure domain logic. Page-specific orchestration stays in `pages/*/model/`
 - `src/shared/ui/` components must be generic — no business concepts (rooms, questions); those belong in `entities/*/ui/` or a page
-- Global state: Jotai atoms, not React Context
+- Global client/UI state: Jotai atoms, not React Context. Server state: TanStack Query —
+  `queryOptions` + key factories live beside the axios fns in `src/shared/api/`; consumers
+  apply only per-use policy (`enabled`, `select`, overrides)
 - `src/app/` only wires routes (`router.tsx`) and global providers (`App.tsx`) — no business logic
 
 ## Conventions

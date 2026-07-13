@@ -25,6 +25,9 @@ import { createRoom } from "@/shared/api/room";
 import { fetchSlidesMeta, fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import websocketService from "@/shared/api/websocket";
 import { useBroadcastPublisher, useBroadcastReactionVisibility } from "@/shared/lib/broadcast";
+import { useFontMutations } from "../model/useFontMutations";
+import FontRequirementPrompt from "./FontRequirementPrompt";
+import type { ChunkUploadReady, FontReportEntry } from "@/shared/api/model/pdf";
 
 const log = createLogger("session-create");
 
@@ -40,6 +43,10 @@ const PresentationPrepPage = () => {
   const [roomData, setRoomData] = useState<any>(initialRoomData);
   const [restoredSlides, setRestoredSlides] = useState<(string | null)[] | null>(null);
   const [fatalMessage, setFatalMessage] = useState<string | null>(null);
+  const [pendingFonts, setPendingFonts] = useState<{ uploadId: string; fontReport: FontReportEntry[] } | null>(null);
+  const [fontWarnings, setFontWarnings] = useState<Record<string, string>>({});
+  const [fontError, setFontError] = useState<string | null>(null);
+  const pendingRoomRef = useRef<any>(null);
 
   const roomId = useMemo(() => roomIdParam || roomData?.roomId || null, [roomIdParam, roomData]);
   const quickSettingsStorageKey = roomId ? storageKeys.quickSettings(String(roomId)) : null;
@@ -217,7 +224,10 @@ const PresentationPrepPage = () => {
       syncPendingFromLatest();
     };
 
-    websocketService.connect(presenterWsUrl, presenterToken, onConnect, onError);
+    websocketService.connect(presenterWsUrl, presenterToken, onConnect, onError, {
+      channel: "presenter",
+      onDisconnect: onError,
+    });
 
     return () => {
       setIsPresenterWsReady(false);
@@ -311,6 +321,90 @@ const PresentationPrepPage = () => {
     restoredSlides,
   ]);
 
+  const applyReady = useCallback(
+    (room: any, ready: ChunkUploadReady) => {
+      const nextRoomData = {
+        ...room,
+        deckId: room.deckId,
+        totalPages: ready.totalPages,
+        pdfId: ready.pdfId,
+        fileName: ready.fileName,
+        canStartSession: false,
+        pdfDownloadEnabled: false,
+      };
+      setRoomData(nextRoomData);
+      setTotalPages(ready.totalPages);
+      setStreamUrl(ready.streamUrl);
+      sessionStorage.setItem("boini_room", JSON.stringify(nextRoomData));
+      setPendingFonts(null);
+
+      if (roomIdParam !== room.roomId) {
+        navigate(`/rooms/${room.roomId}`, {
+          replace: true,
+          state: {
+            ...(location.state || {}),
+            roomData: nextRoomData,
+            roomId: room.roomId,
+            deckId: room.deckId,
+            totalPages: ready.totalPages,
+          },
+        });
+      }
+    },
+    [navigate, roomIdParam, location.state]
+  );
+
+  // 폰트 업로드 / 변환 시작은 React Query mutation 으로 처리한다(청크 업로드는 raw axios 유지).
+  const { uploadFont, finalize: runFinalize, uploadingName, busy: fontBusy } = useFontMutations({
+    onUploaded: (fontName, res) => {
+      setFontError(null);
+      // 서버는 전체 리포트를 재분석하지 않으므로, 일치하면 해당 폰트만 로컬에서 '사용 가능'으로 바꾼다.
+      if (res.matched) {
+        setPendingFonts((prev) =>
+          prev
+            ? {
+                ...prev,
+                fontReport: prev.fontReport.map((e) =>
+                  e.name === fontName ? { ...e, status: "AVAILABLE" as const, installed: true } : e
+                ),
+              }
+            : prev
+        );
+        setFontWarnings((prev) => {
+          const next = { ...prev };
+          delete next[fontName];
+          return next;
+        });
+      } else {
+        setFontWarnings((prev) => ({ ...prev, [fontName]: res.uploadedFamilies?.[0] ?? "" }));
+      }
+    },
+    onUploadError: () => setFontError("폰트 업로드에 실패했습니다. 다시 시도해주세요."),
+    onFinalized: (ready) => applyReady(pendingRoomRef.current, ready),
+    onFinalizeError: () => setFontError("변환을 시작하지 못했습니다. 다시 시도해주세요."),
+  });
+
+  const handleUploadFont = useCallback(
+    (fontName: string, file: File) => {
+      if (!pendingFonts) return;
+      setFontError(null);
+      uploadFont(pendingFonts.uploadId, fontName, file);
+    },
+    [pendingFonts, uploadFont]
+  );
+
+  const handleContinue = useCallback(() => {
+    if (!pendingFonts) return;
+    setFontError(null);
+    runFinalize(pendingFonts.uploadId, false);
+  }, [pendingFonts, runFinalize]);
+
+  const handleProceedWithout = useCallback(() => {
+    if (!pendingFonts) return;
+    setFontError(null);
+    runFinalize(pendingFonts.uploadId, true);
+  }, [pendingFonts, runFinalize]);
+
   // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
   useEffect(() => {
     if (hasInitializedRef.current) return;
@@ -343,35 +437,13 @@ const PresentationPrepPage = () => {
         // BE 는 totalPages >= 1 을 요구하므로 placeholder 로 1 을 보낸다.
         // 실제 총 페이지는 업로드 조립 완료 응답(ready.totalPages) 에서 확정된다.
         const room = await createRoom(1);
-        const ready = await uploadPdf(sourceFile, room.roomId, room.deckId);
-
-        const nextRoomData = {
-          ...room,
-          deckId: room.deckId,
-          totalPages: ready.totalPages,
-          pdfId: ready.pdfId,
-          fileName: ready.fileName,
-          canStartSession: false,
-          pdfDownloadEnabled: false,
-        };
-
-        setRoomData(nextRoomData);
-        setTotalPages(ready.totalPages);
-        setStreamUrl(ready.streamUrl);
-        sessionStorage.setItem("boini_room", JSON.stringify(nextRoomData));
-
-        if (roomIdParam !== room.roomId) {
-          navigate(`/rooms/${room.roomId}`, {
-            replace: true,
-            state: {
-              ...(location.state || {}),
-              roomData: nextRoomData,
-              roomId: room.roomId,
-              deckId: room.deckId,
-              totalPages: ready.totalPages,
-            },
-          });
+        pendingRoomRef.current = room;
+        const terminal = await uploadPdf(sourceFile, room.roomId, room.deckId);
+        if (terminal.status === "NEEDS_FONTS") {
+          setPendingFonts({ uploadId: terminal.uploadId, fontReport: terminal.fontReport });
+          return; // Phase B는 사용자 액션(폰트 업로드/그냥 진행)으로 트리거됨
         }
+        applyReady(room, terminal);
       } catch (err) {
         log.error("발표 자료 업로드/스트림 준비 실패:", err);
         hasInitializedRef.current = false;
@@ -388,6 +460,7 @@ const PresentationPrepPage = () => {
     location.state,
     uploadPdf,
     setCanStartSessionAtomValue,
+    applyReady,
   ]);
 
   // canStartSession 이 true 가 되면 atom + roomData + sessionStorage 를 모두 동기화.
@@ -490,6 +563,27 @@ const PresentationPrepPage = () => {
 
   if (fatalMessage) {
     return <SessionLoadingOverlay message={`⚠️ ${fatalMessage}`} />;
+  }
+
+  if (pendingFonts) {
+    return (
+      <>
+        <SessionLoadingOverlay message="발표 자료 준비 중..." />
+        {/* 변환(finalize) 시작하면 모달을 닫아, 사용자가 '준비 중' 로딩 화면을 보게 한다. */}
+        {!fontBusy && (
+          <FontRequirementPrompt
+            fontReport={pendingFonts.fontReport}
+            busy={fontBusy}
+            uploadingName={uploadingName}
+            warnings={fontWarnings}
+            error={fontError}
+            onUploadFont={handleUploadFont}
+            onContinue={handleContinue}
+            onProceedWithout={handleProceedWithout}
+          />
+        )}
+      </>
+    );
   }
 
   // 오버레이는 "아직 대시보드를 그릴 근거가 없는 동안"에만 띄운다.

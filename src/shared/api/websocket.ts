@@ -1,6 +1,8 @@
 import { Client, IFrame, IMessage, StompSubscription } from "@stomp/stompjs";
 import { v4 as uuidv4 } from "uuid";
 import SockJS from "sockjs-client";
+import posthog from "posthog-js";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 import type { QuickSettings } from "@/entities/session";
 import { createLogger } from "@/shared/lib/logger";
 
@@ -8,6 +10,21 @@ const log = createLogger("ws");
 
 type SubscriptionHandle = {
   unsubscribe: () => void;
+};
+
+type RetainedSubscription = {
+  handle: SubscriptionHandle | null;
+  // Raw STOMP frame handler, retained so an auto-reconnect can replay the
+  // subscription. Absent for test-transport subscriptions (never drop).
+  messageHandler?: (message: IMessage) => void;
+};
+
+type ConnectOptions = {
+  // Fired on an unexpected socket drop (not on intentional disconnect()), so
+  // consumers can flip readiness state and re-subscribe fresh after reconnect.
+  onDisconnect?: () => void;
+  // Telemetry label. Callers know their role; the URL sniff is only a fallback.
+  channel?: "presenter" | "audience";
 };
 
 type TestTransportKind = "json" | "text";
@@ -68,8 +85,12 @@ const getTestTransport = () =>
 export class WebSocketService {
   private client: Client | null = null;
   private _isConnected = false;
-  private subscriptions = new Map<string, SubscriptionHandle>();
+  private subscriptions = new Map<string, RetainedSubscription>();
   private readonly serviceId = `ws-service-${nextServiceId++}`;
+  // Telemetry: distinguish unexpected drops (analytics-worthy) from intentional disconnect().
+  private disconnectedAt: number | null = null;
+  private intentionalDisconnect = false;
+  private channel: "presenter" | "audience" = "presenter";
 
   get isConnected() {
     return this._isConnected;
@@ -79,8 +100,12 @@ export class WebSocketService {
     wsUrl: string,
     token: string,
     onConnect?: (frame: IFrame) => void,
-    onError?: (frame: IFrame) => void
+    onError?: (frame: IFrame) => void,
+    options?: ConnectOptions
   ) {
+    this.intentionalDisconnect = false;
+    this.channel = options?.channel ?? (wsUrl.includes("/audience") ? "audience" : "presenter");
+
     const testTransport = getTestTransport();
     if (testTransport) {
       if (this.getIsConnected()) return;
@@ -103,6 +128,13 @@ export class WebSocketService {
 
     if (this._isConnected) return;
 
+    // A previous client may still be auto-reconnecting after a drop — retire it
+    // so two live Clients can't double-subscribe.
+    if (this.client) {
+      this.client.deactivate().catch(() => {});
+      this.client = null;
+    }
+
     let httpUrl = wsUrl;
     const isSecure = window.location.protocol === "https:";
 
@@ -114,35 +146,62 @@ export class WebSocketService {
       httpUrl = wsUrl.replace("http://", "https://");
     }
 
-    const socket = new SockJS(httpUrl);
-
-    this.client = new Client({
-      webSocketFactory: () => socket,
+    // Callbacks close over `client` and bail when a newer connect() has replaced
+    // this.client — an orphaned client's async events must not clobber live state.
+    const client: Client = new Client({
+      // SockJS instances are single-use — a fresh one per (re)connect attempt,
+      // otherwise stompjs' auto-reconnect reuses a dead socket and never recovers.
+      webSocketFactory: () => new SockJS(httpUrl),
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: (frame) => {
+        if (this.client !== client) return;
         this._isConnected = true;
         log.log("Connected");
+        const resubscribed = this.resubscribeRetained();
+        if (this.disconnectedAt != null) {
+          posthog.capture(ANALYTICS_EVENTS.WS_RECONNECTED, {
+            channel: this.channel,
+            service_id: this.serviceId,
+            downtime_ms: Date.now() - this.disconnectedAt,
+            resubscribed_topics: resubscribed,
+          });
+          this.disconnectedAt = null;
+        }
         onConnect?.(frame);
       },
       onStompError: (frame) => {
+        if (this.client !== client) return;
         this._isConnected = false;
         log.error("STOMP error", frame);
         onError?.(frame);
       },
       onWebSocketClose: () => {
+        if (this.client !== client) return;
+        // Only report drops of an established connection; deactivate() closes are expected.
+        const wasConnected = this._isConnected && !this.intentionalDisconnect;
+        if (wasConnected) {
+          this.disconnectedAt = Date.now();
+          posthog.capture(ANALYTICS_EVENTS.WS_DISCONNECTED, {
+            channel: this.channel,
+            service_id: this.serviceId,
+          });
+        }
         this._isConnected = false;
-        this.subscriptions.clear();
+        this.invalidateSubscriptions();
+        if (wasConnected) options?.onDisconnect?.();
       },
       onDisconnect: () => {
+        if (this.client !== client) return;
         this._isConnected = false;
-        this.subscriptions.clear();
+        this.invalidateSubscriptions();
       },
     });
 
-    this.client.activate();
+    this.client = client;
+    client.activate();
   }
 
   // * Presenter: page change (0-based indices → 1-based for server)
@@ -222,6 +281,34 @@ export class WebSocketService {
     }
   }
 
+  // The socket died: STOMP subscription handles are gone with it. Keep the specs
+  // so resubscribeRetained() can replay them after auto-reconnect — unless the app
+  // disconnected on purpose, in which case drop everything.
+  private invalidateSubscriptions() {
+    if (this.intentionalDisconnect) {
+      this.subscriptions.clear();
+      return;
+    }
+    this.subscriptions.forEach((entry) => {
+      entry.handle = null;
+    });
+  }
+
+  // Replay retained subscriptions on a fresh STOMP session. Returns how many.
+  private resubscribeRetained(): number {
+    if (!this.client) return 0;
+    let count = 0;
+    this.subscriptions.forEach((entry, destination) => {
+      if (entry.handle || !entry.messageHandler) return;
+      entry.handle = toSubscriptionHandle(
+        this.client!.subscribe(destination, entry.messageHandler)
+      );
+      count += 1;
+    });
+    if (count > 0) log.log(`Resubscribed ${count} topics after reconnect`);
+    return count;
+  }
+
   subscribe<T = any>(destination: string, callback: (data: T) => void): () => void {
     const testTransport = getTestTransport();
     if (testTransport) {
@@ -240,17 +327,15 @@ export class WebSocketService {
         })
       );
 
-      this.subscriptions.set(destination, subscription);
+      this.subscriptions.set(destination, { handle: subscription });
       return () => this.unsubscribe(destination);
     }
-
-    if (!this._isConnected || !this.client) return () => {};
 
     if (this.subscriptions.has(destination)) {
       this.unsubscribe(destination);
     }
 
-    const subscription = this.client.subscribe(destination, (message: IMessage) => {
+    const messageHandler = (message: IMessage) => {
       try {
         const data = JSON.parse(message.body) as T;
         callback(data);
@@ -259,9 +344,16 @@ export class WebSocketService {
           callback(message.body as any);
         }
       }
-    });
+    };
 
-    this.subscriptions.set(destination, toSubscriptionHandle(subscription));
+    // While disconnected, retain the spec as pending — resubscribeRetained()
+    // replays it on (re)connect instead of silently dropping the subscription.
+    const handle =
+      this._isConnected && this.client
+        ? toSubscriptionHandle(this.client.subscribe(destination, messageHandler))
+        : null;
+
+    this.subscriptions.set(destination, { handle, messageHandler });
     return () => this.unsubscribe(destination);
   }
 
@@ -283,28 +375,31 @@ export class WebSocketService {
         })
       );
 
-      this.subscriptions.set(destination, subscription);
+      this.subscriptions.set(destination, { handle: subscription });
       return () => this.unsubscribe(destination);
     }
-
-    if (!this._isConnected || !this.client) return () => {};
 
     if (this.subscriptions.has(destination)) {
       this.unsubscribe(destination);
     }
 
-    const subscription = this.client.subscribe(destination, (message: IMessage) => {
+    const messageHandler = (message: IMessage) => {
       callback(message?.body ?? "");
-    });
+    };
 
-    this.subscriptions.set(destination, toSubscriptionHandle(subscription));
+    const handle =
+      this._isConnected && this.client
+        ? toSubscriptionHandle(this.client.subscribe(destination, messageHandler))
+        : null;
+
+    this.subscriptions.set(destination, { handle, messageHandler });
     return () => this.unsubscribe(destination);
   }
 
   unsubscribe(destination: string) {
-    const subscription = this.subscriptions.get(destination);
-    if (subscription) {
-      subscription.unsubscribe();
+    const entry = this.subscriptions.get(destination);
+    if (entry) {
+      entry.handle?.unsubscribe();
       this.subscriptions.delete(destination);
     }
   }
@@ -337,9 +432,12 @@ export class WebSocketService {
   }
 
   disconnect() {
+    this.intentionalDisconnect = true;
+    this.disconnectedAt = null;
+
     const testTransport = getTestTransport();
     if (testTransport) {
-      this.subscriptions.forEach((sub) => sub.unsubscribe());
+      this.subscriptions.forEach((entry) => entry.handle?.unsubscribe());
       this.subscriptions.clear();
       testTransport.disconnect(this.serviceId);
       this.client = null;
@@ -348,7 +446,7 @@ export class WebSocketService {
     }
 
     if (this.client) {
-      this.subscriptions.forEach((sub) => sub.unsubscribe());
+      this.subscriptions.forEach((entry) => entry.handle?.unsubscribe());
       this.subscriptions.clear();
       this.client.deactivate();
       this.client = null;

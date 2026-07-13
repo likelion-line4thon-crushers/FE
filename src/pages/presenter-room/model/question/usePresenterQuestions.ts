@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import websocketService from "@/shared/api/websocket";
 import { createLogger } from "@/shared/lib/logger";
 
@@ -7,6 +8,7 @@ import {
   fetchRoomQuestions,
   completeQuestion as apiComplete,
   deleteQuestion as apiDelete,
+  questionKeys,
 } from "@/shared/api/question";
 import {
   normalizeQuestion,
@@ -46,6 +48,7 @@ const usePresenterQuestions = ({
   enabled?: boolean;
   subscribe?: boolean;
 }) => {
+  const queryClient = useQueryClient();
   const [questions, setQuestions] = useState<NormalizedQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -113,11 +116,13 @@ const usePresenterQuestions = ({
       );
       try {
         await apiComplete(roomId, questionId);
+        // 완료 목록 캐시를 무효화해 완료 탭이 방금 완료된 질문을 놓치지 않게 한다.
+        void queryClient.invalidateQueries({ queryKey: questionKeys.completed(roomId) });
       } catch {
         // optimistic remove — no rollback
       }
     },
-    [roomId]
+    [roomId, queryClient]
   );
 
   const deleteQuestion = useCallback(

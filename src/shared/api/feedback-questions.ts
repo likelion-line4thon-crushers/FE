@@ -1,3 +1,4 @@
+import { queryOptions } from "@tanstack/react-query";
 import api from "./api";
 import { createLogger } from "@/shared/lib/logger";
 
@@ -34,4 +35,15 @@ export async function saveFeedbackQuestions(
     log.error("Failed to save feedback questions", error);
     throw error;
   }
+}
+
+export const feedbackQuestionsKeys = {
+  all: (roomId: string) => ["feedback-questions", roomId] as const,
+};
+
+export function feedbackQuestionsQuery(roomId: string) {
+  return queryOptions({
+    queryKey: feedbackQuestionsKeys.all(roomId),
+    queryFn: () => getFeedbackQuestions(roomId),
+  });
 }

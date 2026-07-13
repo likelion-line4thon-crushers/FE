@@ -1,14 +1,17 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import styled from "styled-components";
 import { MEDIA } from "@/shared/config/breakpoints";
 import { createLogger } from "@/shared/lib/logger";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 
 const log = createLogger("rating");
 import Emoji3 from "@/shared/assets/images/emoji3.svg";
 import StarIcon from "@/shared/assets/images/star.svg";
 import StarCheckedIcon from "@/shared/assets/images/star_checked.svg";
-import { getOriginalSlideUrl } from "@/shared/api/presentation";
+import { slideImageQuery } from "@/shared/api/presentation";
 import { resolveRatingSessionContext } from "../model/resolveRatingSessionContext";
 import { hasSubmittedFeedback } from "../model/feedbackSubmissionMarker";
 import { Skeleton } from "@/shared/ui/skeleton";
@@ -23,11 +26,10 @@ const RatingPage = () => {
   const { code } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const posthog = usePostHog();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [popoverDismissed, setPopoverDismissed] = useState(false);
-  const [firstSlideUrl, setFirstSlideUrl] = useState<string | null>(null);
-  const [loadingSlide, setLoadingSlide] = useState(false);
   const [identityWarningDismissed, setIdentityWarningDismissed] = useState(false);
 
   const clearAudienceSession = () => {
@@ -72,22 +74,12 @@ const RatingPage = () => {
   const isComplete = rating > 0 && (hasCustomQuestions ? allAnswered : comment.trim().length > 0);
 
   // 첫 번째 슬라이드 로드
-  useEffect(() => {
-    if (!roomId || !deckId) return;
-    const loadFirstSlide = async () => {
-      setLoadingSlide(true);
-      try {
-        const url = await getOriginalSlideUrl(roomId, deckId, 1);
-        setFirstSlideUrl(url);
-      } catch (error) {
-        log.error("첫 번째 슬라이드 로드 실패:", error);
-        setFirstSlideUrl(null);
-      } finally {
-        setLoadingSlide(false);
-      }
-    };
-    loadFirstSlide();
-  }, [roomId, deckId]);
+  const { data: firstSlideUrl, isLoading: loadingSlide } = useQuery({
+    ...slideImageQuery(roomId ?? "", deckId ?? "", 1),
+    enabled: Boolean(roomId && deckId),
+    // 세션 종료 직후 청중 전원이 동시에 진입하는 경로 — 재시도로 요청을 배가시키지 않는다.
+    retry: false,
+  });
 
   const buildPayload = () => ({
     rating,
@@ -100,6 +92,7 @@ const RatingPage = () => {
     if (!isComplete) return;
     const ok = await submit(buildPayload());
     if (ok) {
+      posthog?.capture(ANALYTICS_EVENTS.FEEDBACK_SUBMITTED, { room_id: roomId, rating });
       clearAudienceSession();
       navigate("/", { replace: true });
     }
@@ -111,6 +104,11 @@ const RatingPage = () => {
     if (!ok) return;
     try {
       await downloadSlides();
+      posthog?.capture(ANALYTICS_EVENTS.FEEDBACK_SUBMITTED, {
+        room_id: roomId,
+        rating,
+        with_download: true,
+      });
       clearAudienceSession();
       navigate("/", { replace: true });
     } catch (error) {
@@ -120,6 +118,7 @@ const RatingPage = () => {
   };
 
   const handleSkip = () => {
+    posthog?.capture(ANALYTICS_EVENTS.FEEDBACK_SKIPPED, { room_id: roomId });
     clearAudienceSession();
     navigate("/", { replace: true });
   };

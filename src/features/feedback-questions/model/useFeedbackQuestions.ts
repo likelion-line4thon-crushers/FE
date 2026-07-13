@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 import {
-  getFeedbackQuestions,
+  feedbackQuestionsKeys,
+  feedbackQuestionsQuery,
   saveFeedbackQuestions,
   type FeedbackQuestion,
 } from "@/shared/api/feedback-questions";
@@ -14,35 +18,34 @@ const padRows = (values: string[]): string[] => {
   return next;
 };
 
+const toRows = (questions: FeedbackQuestion[]): string[] => {
+  const sorted = [...questions].sort((a, b) => a.orderIndex - b.orderIndex);
+  return padRows(sorted.map((q) => q.questionText));
+};
+
 export function useFeedbackQuestions(roomId: string | undefined, isOpen: boolean) {
+  const posthog = usePostHog();
+  const queryClient = useQueryClient();
+  // rows stays local + editable, seeded from the query result.
   const [rows, setRows] = useState<string[]>(padRows([]));
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { data, isLoading, isError } = useQuery({
+    ...feedbackQuestionsQuery(roomId ?? ""),
+    enabled: isOpen && !!roomId,
+  });
+
   useEffect(() => {
-    if (!isOpen || !roomId) return;
-    let cancelled = false;
-    setLoading(true);
+    if (data === undefined) return;
+    setRows(toRows(data));
     setError(null);
-    getFeedbackQuestions(roomId)
-      .then((questions: FeedbackQuestion[]) => {
-        if (cancelled) return;
-        const sorted = [...questions].sort((a, b) => a.orderIndex - b.orderIndex);
-        setRows(padRows(sorted.map((q) => q.questionText)));
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setError("질문을 불러오지 못했어요. 새로 작성할 수 있습니다.");
-        setRows(padRows([]));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, roomId]);
+  }, [data]);
+
+  useEffect(() => {
+    if (!isError) return;
+    setError("질문을 불러오지 못했어요. 새로 작성할 수 있습니다.");
+    setRows(padRows([]));
+  }, [isError]);
 
   const setRow = useCallback((index: number, value: string) => {
     setRows((prev) => prev.map((row, i) => (i === index ? value : row)));
@@ -52,28 +55,38 @@ export function useFeedbackQuestions(roomId: string | undefined, isOpen: boolean
     setRows((prev) => (prev.length >= MAX_ROWS ? prev : [...prev, ""]));
   }, []);
 
+  const { mutateAsync, isPending: saving } = useMutation({
+    mutationFn: (questions: FeedbackQuestion[]) => saveFeedbackQuestions(roomId ?? "", questions),
+    onSuccess: () => {
+      if (roomId) {
+        queryClient.invalidateQueries({ queryKey: feedbackQuestionsKeys.all(roomId) });
+      }
+    },
+  });
+
   const save = useCallback(async (): Promise<boolean> => {
     if (!roomId) return false;
     const questions: FeedbackQuestion[] = rows
       .map((text) => text.trim())
       .filter((text) => text.length > 0)
       .map((questionText, orderIndex) => ({ orderIndex, questionText }));
-    setSaving(true);
     setError(null);
     try {
-      await saveFeedbackQuestions(roomId, questions);
+      await mutateAsync(questions);
+      posthog?.capture(ANALYTICS_EVENTS.FEEDBACK_QUESTIONS_SAVED, {
+        room_id: roomId,
+        question_count: questions.length,
+      });
       return true;
     } catch {
       setError("저장에 실패했어요. 다시 시도해주세요.");
       return false;
-    } finally {
-      setSaving(false);
     }
-  }, [roomId, rows]);
+  }, [roomId, rows, mutateAsync, posthog]);
 
   return {
     rows,
-    loading,
+    loading: isLoading,
     saving,
     error,
     canAddMore: rows.length < MAX_ROWS,

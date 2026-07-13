@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useLocation } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   SectionContainer,
   HeaderRow,
@@ -25,12 +26,12 @@ import {
   EmptyState,
 } from "./Top3.styles";
 import { loadStoredRoomData, computeRoomInfo } from "../../../model/room-info";
+import { topQuestionsReportQuery } from "@/shared/api/ai-report";
 import {
-  fetchTopQuestionsReport,
-  fetchCompletedQuestions,
-  fetchUnansweredQuestions,
+  completedQuestionsQuery,
+  unansweredQuestionsQuery,
   type QuestionItemResponse,
-} from "@/shared/api/ai-report";
+} from "@/shared/api/question";
 
 type TabKey = "top3" | "answered" | "unanswered";
 
@@ -100,13 +101,6 @@ const getQuestionText = (item?: TopQuestionReportItem | null) => {
 const Top3 = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabKey>("top3");
-  const [report, setReport] = useState<TopQuestionReport | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [answeredItems, setAnsweredItems] = useState<QuestionListItem[]>([]);
-  const [unansweredItems, setUnansweredItems] = useState<QuestionListItem[]>([]);
-  const [listLoading, setListLoading] = useState(false);
-  const [listError, setListError] = useState<Error | null>(null);
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
 
@@ -117,85 +111,29 @@ const Top3 = () => {
 
   const { roomId } = roomInfo;
 
-  useEffect(() => {
-    let cancelled = false;
+  const reportQuery = useQuery({ ...topQuestionsReportQuery(roomId ?? ""), enabled: !!roomId });
+  const report: TopQuestionReport | null = reportQuery.data ?? null;
+  const loading = reportQuery.isLoading;
+  const error = roomId ? reportQuery.error : new Error("방 정보를 찾을 수 없습니다.");
 
-    if (!roomId) {
-      setReport(null);
-      setError(new Error("방 정보를 찾을 수 없습니다."));
-      setLoading(false);
-      return undefined;
-    }
-
-    const loadReport = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const result = await fetchTopQuestionsReport(roomId);
-        if (!cancelled) {
-          setReport(result);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setReport(null);
-          setError(err as Error);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadReport();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!roomId) {
-      setAnsweredItems([]);
-      setUnansweredItems([]);
-      setListError(new Error("방 정보를 찾을 수 없습니다."));
-      setListLoading(false);
-      return undefined;
-    }
-
-    const loadLists = async () => {
-      setListLoading(true);
-      setListError(null);
-
-      // * 두 목록은 독립적으로 처리해, 한쪽 실패가 다른 탭을 비우지 않도록 한다
-      const [completed, unanswered] = await Promise.allSettled([
-        fetchCompletedQuestions(roomId),
-        fetchUnansweredQuestions(roomId),
-      ]);
-
-      if (cancelled) return;
-
-      setAnsweredItems(completed.status === "fulfilled" ? toListItems(completed.value) : []);
-      setUnansweredItems(unanswered.status === "fulfilled" ? toListItems(unanswered.value) : []);
-
-      // * 두 요청이 모두 실패한 경우에만 에러 상태로 전환
-      if (completed.status === "rejected" && unanswered.status === "rejected") {
-        setListError(completed.reason as Error);
-      } else {
-        setListError(null);
-      }
-      setListLoading(false);
-    };
-
-    loadLists();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId]);
+  // 두 목록은 독립 쿼리로, 한쪽 실패가 다른 탭을 비우지 않도록 한다.
+  const completedQuery = useQuery({
+    ...completedQuestionsQuery(roomId ?? ""),
+    enabled: !!roomId,
+    select: toListItems,
+  });
+  const unansweredQuery = useQuery({
+    ...unansweredQuestionsQuery(roomId ?? ""),
+    enabled: !!roomId,
+    select: toListItems,
+  });
+  const answeredItems = completedQuery.data ?? [];
+  const unansweredItems = unansweredQuery.data ?? [];
+  const listLoading = completedQuery.isLoading || unansweredQuery.isLoading;
+  // 두 요청이 모두 실패한 경우에만 에러 상태로 전환한다.
+  const listError = !roomId
+    ? new Error("방 정보를 찾을 수 없습니다.")
+    : (completedQuery.error && unansweredQuery.error) || null;
 
   const topItems = report?.top3 ?? [];
 

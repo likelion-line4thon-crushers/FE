@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS, ANALYTICS_GROUP_SESSION } from "@/shared/config/analytics-events";
 import { PageContainer, ContentContainer, FooterContainer } from "./AiReportPage.styles";
 import { SideHeader } from "./navigation";
 import {
@@ -12,11 +15,12 @@ import {
 } from "./sections";
 import FooterImage from "@/shared/assets/images/AI/AIFooter.png";
 import { loadStoredRoomData, computeRoomInfo } from "../model/room-info";
-import { fetchStoredAiReport, fetchMostRevisitSlide } from "@/shared/api/ai-report";
+import { storedAiReportQuery, mostRevisitSlideQuery } from "@/shared/api/ai-report";
 
 const AiReportPage = () => {
   const location = useLocation();
   const { roomId: roomIdParam } = useParams();
+  const posthog = usePostHog();
   const totalReactionRef = useRef<HTMLDivElement | null>(null);
   const top3Ref = useRef<HTMLDivElement | null>(null);
   const popularSlideRef = useRef<HTMLDivElement | null>(null);
@@ -24,12 +28,6 @@ const AiReportPage = () => {
   const replaySlideRef = useRef<HTMLDivElement | null>(null);
   const reviewRef = useRef<HTMLDivElement | null>(null);
   const contentContainerRef = useRef<HTMLDivElement | null>(null);
-  const [storedReport, setStoredReport] = useState<any>(null);
-  const [reportLoading, setReportLoading] = useState(false);
-  const [reportError, setReportError] = useState<Error | null>(null);
-  const [revisitReport, setRevisitReport] = useState<any>(null);
-  const [revisitLoading, setRevisitLoading] = useState(false);
-  const [revisitError, setRevisitError] = useState<Error | null>(null);
   const [activeSection, setActiveSection] = useState("totalReaction");
 
   const storedRoomData = useMemo(() => loadStoredRoomData(), []);
@@ -44,80 +42,21 @@ const AiReportPage = () => {
   const { deckId, fileName } = roomInfo;
 
   useEffect(() => {
-    let cancelled = false;
+    posthog?.capture(ANALYTICS_EVENTS.AI_REPORT_VIEWED, { room_id: roomId });
+    if (roomId) posthog?.group(ANALYTICS_GROUP_SESSION, roomId);
+  }, [roomId, posthog]);
 
-    if (!roomId) {
-      setStoredReport(null);
-      setReportError(new Error("roomId를 확인할 수 없습니다."));
-      setReportLoading(false);
-      return undefined;
-    }
+  const reportQuery = useQuery({ ...storedAiReportQuery(roomId ?? ""), enabled: !!roomId });
+  const revisitQuery = useQuery({ ...mostRevisitSlideQuery(roomId ?? ""), enabled: !!roomId });
 
-    const loadReport = async () => {
-      setReportLoading(true);
-      setReportError(null);
-
-      try {
-        const data = await fetchStoredAiReport(roomId);
-        if (!cancelled) {
-          setStoredReport(data);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setStoredReport(null);
-          setReportError(error as Error);
-        }
-      } finally {
-        if (!cancelled) {
-          setReportLoading(false);
-        }
-      }
-    };
-
-    loadReport();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!roomId) {
-      setRevisitReport(null);
-      setRevisitError(new Error("roomId를 확인할 수 없습니다."));
-      setRevisitLoading(false);
-      return undefined;
-    }
-
-    const loadRevisit = async () => {
-      setRevisitLoading(true);
-      setRevisitError(null);
-
-      try {
-        const data = await fetchMostRevisitSlide(roomId);
-        if (!cancelled) {
-          setRevisitReport(data);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setRevisitReport(null);
-          setRevisitError(error as Error);
-        }
-      } finally {
-        if (!cancelled) {
-          setRevisitLoading(false);
-        }
-      }
-    };
-
-    loadRevisit();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId]);
+  // roomId 부재는 쿼리 에러가 아니라 로컬 에러로 합성한다.
+  const missingRoomIdError = roomId ? null : new Error("roomId를 확인할 수 없습니다.");
+  const storedReport = reportQuery.data ?? null;
+  const reportLoading = reportQuery.isLoading;
+  const reportError = missingRoomIdError ?? reportQuery.error;
+  const revisitReport = revisitQuery.data ?? null;
+  const revisitLoading = revisitQuery.isLoading;
+  const revisitError = missingRoomIdError ?? revisitQuery.error;
 
   const scrollToSection = (sectionName: string) => {
     const refs: Record<string, React.RefObject<HTMLDivElement | null>> = {
