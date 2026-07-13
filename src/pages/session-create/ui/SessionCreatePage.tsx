@@ -224,7 +224,10 @@ const PresentationPrepPage = () => {
       syncPendingFromLatest();
     };
 
-    websocketService.connect(presenterWsUrl, presenterToken, onConnect, onError);
+    websocketService.connect(presenterWsUrl, presenterToken, onConnect, onError, {
+      channel: "presenter",
+      onDisconnect: onError,
+    });
 
     return () => {
       setIsPresenterWsReady(false);

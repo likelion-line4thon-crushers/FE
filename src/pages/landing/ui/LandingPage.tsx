@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import styled, { css } from "styled-components";
+import { usePostHog } from "@posthog/react";
 import TitleSVG from "@/shared/assets/images/title.svg";
 import Emoji1 from "@/shared/assets/images/emoji1.svg";
 import Emoji2 from "@/shared/assets/images/emoji2.svg";
 import Emoji3 from "@/shared/assets/images/emoji3.svg";
 import Emoji4 from "@/shared/assets/images/emoji4.svg";
 import {
+  getPresentationFileType,
   isSupportedPresentationFile,
   PRESENTATION_FILE_ACCEPT,
 } from "../lib/presentationFile";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 
 /* === 전체 레이아웃 === */
 const MainLayout = styled.div`
@@ -206,31 +209,39 @@ const MainPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const navigate = useNavigate();
+  const posthog = usePostHog();
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  // 클릭 선택과 드래그 앤 드롭이 완전히 같은 검증/계측 경로를 타도록 단일화.
+  const handleFileCandidate = (file: File | undefined, viaDragDrop?: boolean) => {
+    const props = {
+      file_type: getPresentationFileType(file),
+      ...(viaDragDrop ? { via_drag_drop: true } : {}),
+    };
     if (isSupportedPresentationFile(file)) {
       setSelectedFile(file);
+      posthog?.capture(ANALYTICS_EVENTS.PRESENTATION_FILE_SELECTED, props);
     } else {
+      posthog?.capture(ANALYTICS_EVENTS.PRESENTATION_FILE_REJECTED, props);
       alert("PDF, PPT, PPTX 파일만 선택해주세요!");
     }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileCandidate(event.target.files?.[0]);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-
-    const file = e.dataTransfer.files[0];
-    if (isSupportedPresentationFile(file)) {
-      setSelectedFile(file);
-    } else {
-      alert("PDF, PPT, PPTX 파일만 선택해주세요!");
-    }
+    handleFileCandidate(e.dataTransfer.files[0], true);
   };
 
   const handleStartPresentation = () => {
     if (!selectedFile) return alert("발표 자료를 먼저 업로드해주세요!");
+    posthog?.capture(ANALYTICS_EVENTS.PRESENTATION_STARTED, {
+      file_type: getPresentationFileType(selectedFile),
+    });
     navigate("/rooms/new", {
       state: {
         presentationFile: selectedFile,

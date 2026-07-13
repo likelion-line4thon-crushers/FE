@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import styled, { css } from "styled-components";
 import { useLocation, useNavigate } from "react-router";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 import { useAtomValue } from "jotai";
 import BoiniLogo from "@/shared/assets/images/Boini_logo.svg";
 import LiveIcon from "@/shared/assets/images/live.png";
@@ -112,6 +114,7 @@ interface AppHeaderProps {
 function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const posthog = usePostHog();
 
   const isMain = location.pathname === "/";
   const isRating = location.pathname.includes("/rating");
@@ -183,6 +186,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
       alert("⚠️ 방 정보가 없습니다. 발표 준비 완료 후 다시 시도해주세요.");
       return;
     }
+    posthog?.capture(ANALYTICS_EVENTS.SHARE_MODAL_OPENED, { room_id: roomData?.roomId });
     setShowShareModal(true);
   };
 
@@ -198,6 +202,7 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
     setCsvDownloading(true);
     try {
       await downloadAudienceVoiceCsv(csvRoomId, fileName);
+      posthog?.capture(ANALYTICS_EVENTS.QUESTIONS_CSV_DOWNLOADED, { room_id: csvRoomId });
     } catch {
       alert("CSV 다운로드에 실패했습니다. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -216,11 +221,13 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
       return;
     }
 
+    posthog?.capture(ANALYTICS_EVENTS.SESSION_ENDED, { room_id: roomData?.roomId });
     handleSessionAction();
   };
 
   const handleConfirmStartSession = () => {
     setShowPresenterStartWarning(false);
+    posthog?.capture(ANALYTICS_EVENTS.SESSION_STARTED, { room_id: roomData?.roomId });
     handleSessionAction();
   };
 

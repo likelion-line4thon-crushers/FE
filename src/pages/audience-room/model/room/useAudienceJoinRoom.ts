@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useSetAtom } from "jotai";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 import { joinRoom, getRoomInfo } from "@/shared/api/room";
 import { roomIdAtom, deckIdAtom, totalPagesAtom, wsUrlAtom } from "@/entities/room";
 import {
@@ -63,6 +65,7 @@ const useAudienceJoinRoom = ({
   setFollowPresenter?: any;
   changeCurrentSlide?: any;
 }) => {
+  const posthog = usePostHog();
   const setRoomId = useSetAtom(roomIdAtom);
   const setAudienceId = useSetAtom(audienceIdAtom);
   const setAudienceToken = useSetAtom(audienceTokenAtom);
@@ -339,6 +342,10 @@ const useAudienceJoinRoom = ({
         }
         setWsUrl(wsUrlValue);
       } catch (err) {
+        posthog?.capture(ANALYTICS_EVENTS.AUDIENCE_JOIN_FAILED, {
+          join_code: code,
+          error_message: err instanceof Error ? err.message : String(err),
+        });
         alert("방 입장에 실패했습니다. 코드를 확인해주세요.");
       }
     };
@@ -350,6 +357,7 @@ const useAudienceJoinRoom = ({
     code,
     lastPresenterPageRef,
     setFollowPresenter,
+    posthog,
     setRoomId,
     setAudienceId,
     setAudienceToken,

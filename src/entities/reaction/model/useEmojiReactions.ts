@@ -165,7 +165,13 @@ const useEmojiReactions = ({
     };
 
     setConnectionError(null);
-    socketService.connect(wsUrl, token, onConnect, onError);
+    socketService.connect(wsUrl, token, onConnect, onError, {
+      // 재연결 시 onConnect가 다시 구독하므로, 끊김 동안 ready만 내려 스탬프 유실을 막는다.
+      onDisconnect: () => {
+        if (!isMounted) return;
+        setIsReady(false);
+      },
+    });
     connectionKeyRef.current = desiredConnectionKey;
 
     return () => {

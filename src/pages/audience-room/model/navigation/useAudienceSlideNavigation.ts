@@ -1,5 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useAtomValue } from "jotai";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 import websocketService from "@/shared/api/websocket";
 import { unlockSettingsAtom } from "@/entities/session";
 
@@ -17,6 +19,7 @@ const useAudienceSlideNavigation = ({
   lastPresenterPageRef?: any;
 }) => {
   const unlockSettings = useAtomValue(unlockSettingsAtom);
+  const posthog = usePostHog();
 
   const getInitialSlide = () => {
     if (!code) return 0;
@@ -106,14 +109,32 @@ const useAudienceSlideNavigation = ({
       });
 
       if (!preserveFollowState && !isPresenterDriven) {
+        // 사용자 주도 이탈(팔로우 true→false 전환)만 계측 — focusOn 소환이나 공개 경계
+        // 복귀 같은 강제 전환은 세지 않아 returned_to_live/browsed_away가 부풀지 않는다.
+        if (followPresenterRef.current) {
+          followPresenterRef.current = false;
+          posthog?.capture(ANALYTICS_EVENTS.AUDIENCE_BROWSED_AWAY, {
+            room_id: roomId,
+            slide_index: clampedNextIndex,
+            presenter_slide_index: lastPresenterPageRef?.current,
+          });
+        }
         setFollowPresenter(false);
       }
     },
-    [slideCount, roomId, audienceId, isLockedTarget]
+    [slideCount, roomId, audienceId, isLockedTarget, posthog, lastPresenterPageRef]
   );
 
   const handleToggleFollowPresenter = useCallback(
     (checked: any) => {
+      if (Boolean(checked) !== followPresenterRef.current) {
+        followPresenterRef.current = Boolean(checked);
+        posthog?.capture(checked ? ANALYTICS_EVENTS.AUDIENCE_RETURNED_TO_LIVE : ANALYTICS_EVENTS.AUDIENCE_BROWSED_AWAY, {
+          room_id: roomId,
+          slide_index: prevSlideRef.current,
+          presenter_slide_index: lastPresenterPageRef?.current,
+        });
+      }
       setFollowPresenter(checked);
 
       if (checked) {
@@ -131,7 +152,7 @@ const useAudienceSlideNavigation = ({
         });
       }
     },
-    [changeCurrentSlide, lastPresenterPageRef, prevSlideRef, setFollowPresenter]
+    [changeCurrentSlide, lastPresenterPageRef, prevSlideRef, setFollowPresenter, posthog, roomId]
   );
 
   const handleAudienceSelectSlide = useCallback(

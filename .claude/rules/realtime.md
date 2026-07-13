@@ -18,6 +18,15 @@ Before changing WebSocket message handling, read `docs/session-lifecycle.md`.
 
 ## Gotchas
 
+- **Reconnect:** stompjs auto-reconnects (5s delay, fresh SockJS per attempt). On an
+  unexpected drop the service retains subscription specs — including `subscribe()` calls
+  made *while disconnected* (stored as pending) — and replays them on reconnect
+  (`resubscribeRetained`); intentional `disconnect()` clears everything. `connect()`
+  accepts `{ onDisconnect, channel }`: `onDisconnect` fires on unexpected drops so hooks
+  can flip readiness state (self-heal path), `channel` labels ws telemetry explicitly.
+  Client callbacks ignore events from an orphaned (replaced) Client. Messages sent
+  during the downtime gap are still lost — topics have no replay
+
 - **`sessionId` params are actually the `roomId`.** The service methods name their first arg
   `sessionId`, but callers pass the roomId — all live topics are keyed by roomId
 - **Page indexing:** UI uses 0-based indices; the server uses 1-based page numbers. The send
