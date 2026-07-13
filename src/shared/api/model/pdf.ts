@@ -18,7 +18,39 @@ export interface ChunkUploadReady {
   streamUrl: string;
 }
 
-export type ChunkUploadResult = ChunkUploadInProgress | ChunkUploadReady;
+export type FontStatus = 'AVAILABLE' | 'MISSING';
+
+export interface FontReportEntry {
+  name: string;
+  status: FontStatus;
+  embedded: boolean;
+  installed: boolean;
+  // 누락 폰트를 업로드 없이 변환할 때 서버가 실제로 사용할 대체 폰트(fc-match). 알 수 없으면 null.
+  substitute?: string | null;
+}
+
+// 청크 업로드 완료, 단, 누락 폰트 존재 (HTTP 201, status=NEEDS_FONTS)
+export interface ChunkUploadNeedsFonts {
+  status: 'NEEDS_FONTS';
+  uploadId: string;
+  fontReport: FontReportEntry[];
+}
+
+// POST /api/upload/{uploadId}/fonts 응답 (개별 폰트 검증 — 전체 리포트는 돌려주지 않는다)
+export interface FontUploadResponse {
+  // targetFont 를 함께 보낸 경우, 방금 올린 파일이 그 요구 폰트와 실제로 일치하는지. 아니면 null/undefined.
+  matched?: boolean | null;
+  targetFont?: string | null;
+  // 방금 올린 파일들의 내부 패밀리명(사용자에게 무엇이 올라갔는지 보여주기 위함)
+  uploadedFamilies?: string[];
+}
+
+export type ChunkUploadTerminal = ChunkUploadReady | ChunkUploadNeedsFonts;
+
+export type ChunkUploadResult =
+  | ChunkUploadInProgress
+  | ChunkUploadReady
+  | ChunkUploadNeedsFonts;
 
 // SSE: event=page
 export interface SsePageEvent {
