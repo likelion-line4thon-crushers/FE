@@ -62,7 +62,9 @@ const useAudienceWebSocketSubscriptions = ({
       wsUrl,
       audienceToken,
       () => setIsWebsocketReady(true),
-      () => setIsWebsocketReady(false)
+      () => setIsWebsocketReady(false),
+      // 끊김 시 ready를 내려야 재연결 후 구독 이펙트가 새로 구독한다 (자가 복구 경로).
+      { channel: "audience", onDisconnect: () => setIsWebsocketReady(false) }
     );
 
     return () => {

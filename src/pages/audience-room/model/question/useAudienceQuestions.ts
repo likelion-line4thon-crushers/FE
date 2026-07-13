@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 import websocketService from "@/shared/api/websocket";
 import { createLogger } from "@/shared/lib/logger";
 
@@ -60,6 +62,7 @@ export const useAudienceQuestions = ({
   audienceId?: string | null;
   currentSlide?: number;
 }) => {
+  const posthog = usePostHog();
   const [questions, setQuestions] = useState<NormalizedQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -160,13 +163,19 @@ export const useAudienceQuestions = ({
         )
       );
 
+      posthog?.capture(ANALYTICS_EVENTS.QUESTION_LIKED, {
+        room_id: roomId,
+        question_id: questionId,
+        liked: nextLiked,
+      });
+
       try {
         sendQuestionLike({ roomId, questionId, audienceId, liked: nextLiked });
       } catch (err) {
         log.error("질문 좋아요 전송 실패:", err);
       }
     },
-    [roomId, audienceId]
+    [roomId, audienceId, posthog]
   );
 
   const submitQuestion = useCallback(
@@ -189,12 +198,16 @@ export const useAudienceQuestions = ({
 
       try {
         websocketService.send(destination, payload);
+        posthog?.capture(ANALYTICS_EVENTS.QUESTION_SUBMITTED, {
+          room_id: roomId,
+          slide_index: currentSlide,
+        });
       } catch (err) {
         log.error("질문 전송 실패:", err);
         throw new Error("질문 전송 중 오류가 발생했습니다.");
       }
     },
-    [roomId, audienceId, currentSlide]
+    [roomId, audienceId, currentSlide, posthog]
   );
 
   const questionTopics = useMemo(() => buildQuestionTopics(roomId ?? ""), [roomId]);

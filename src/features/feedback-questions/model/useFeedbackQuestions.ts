@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 import {
   feedbackQuestionsKeys,
   feedbackQuestionsQuery,
@@ -22,6 +24,7 @@ const toRows = (questions: FeedbackQuestion[]): string[] => {
 };
 
 export function useFeedbackQuestions(roomId: string | undefined, isOpen: boolean) {
+  const posthog = usePostHog();
   const queryClient = useQueryClient();
   // rows stays local + editable, seeded from the query result.
   const [rows, setRows] = useState<string[]>(padRows([]));
@@ -70,12 +73,16 @@ export function useFeedbackQuestions(roomId: string | undefined, isOpen: boolean
     setError(null);
     try {
       await mutateAsync(questions);
+      posthog?.capture(ANALYTICS_EVENTS.FEEDBACK_QUESTIONS_SAVED, {
+        room_id: roomId,
+        question_count: questions.length,
+      });
       return true;
     } catch {
       setError("저장에 실패했어요. 다시 시도해주세요.");
       return false;
     }
-  }, [roomId, rows, mutateAsync]);
+  }, [roomId, rows, mutateAsync, posthog]);
 
   return {
     rows,

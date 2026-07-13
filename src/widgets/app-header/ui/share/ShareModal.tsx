@@ -1,5 +1,7 @@
 import React from "react";
 import styled from "styled-components";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
 import { QRCodeSVG } from "qrcode.react";
 import CopyIcon from "@/shared/assets/images/copy.svg";
 import { useShareRoomInit } from "../../model";
@@ -139,11 +141,13 @@ interface ShareModalProps {
 }
 
 const ShareModal = ({ roomData, totalPages = 10, onClose }: ShareModalProps) => {
+  const posthog = usePostHog();
   const { sessionLink, loading, error } = useShareRoomInit({ roomData, totalPages });
 
   const handleCopy = () => {
     if (!sessionLink) return;
     navigator.clipboard.writeText(sessionLink);
+    posthog?.capture(ANALYTICS_EVENTS.INVITE_LINK_COPIED, { room_id: roomData?.roomId });
     alert("링크가 복사되었습니다!");
   };
 

@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { MouseEvent, PointerEvent } from "react";
 import { useParams } from "react-router";
 import { useAtomValue } from "jotai";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS, ANALYTICS_GROUP_SESSION } from "@/shared/config/analytics-events";
 import AudiencePanel from "./AudiencePanel";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
 import {
@@ -39,6 +41,7 @@ const FULLSCREEN_CONTROLS_IDLE_MS = 5000;
 
 const AudienceRoomPage = () => {
   const { code } = useParams();
+  const posthog = usePostHog();
 
   // * Read shared state from Jotai atoms (set by useAudienceJoinRoom)
   const roomId = useAtomValue(roomIdAtom);
@@ -204,8 +207,11 @@ const AudienceRoomPage = () => {
     if (!roomId || !audienceId || !audienceToken) return;
 
     hasShownAudienceJoinWarningRef.current = true;
+    posthog?.capture(ANALYTICS_EVENTS.AUDIENCE_SESSION_JOINED, { room_id: roomId });
+    posthog?.identify(audienceId);
+    posthog?.group(ANALYTICS_GROUP_SESSION, roomId);
     setShowAudienceJoinWarning(true);
-  }, [audienceId, audienceToken, roomId]);
+  }, [audienceId, audienceToken, roomId, posthog]);
 
   const clearFullscreenControlsTimer = useCallback(() => {
     if (fullscreenControlsTimerRef.current == null) return;
@@ -315,6 +321,11 @@ const AudienceRoomPage = () => {
 
   const handlePlaceStampWithHint = (coords: { xPct: number; yPct: number }) => {
     if (!hasPlacedStamp) setHasPlacedStamp(true);
+    posthog?.capture(ANALYTICS_EVENTS.EMOJI_STAMP_PLACED, {
+      room_id: roomId,
+      slide_index: currentSlide,
+      emoji_id: selectedEmoji?.id,
+    });
     handlePlaceStamp(coords);
   };
 

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEvent, SyntheticEvent } from "react";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS, ANALYTICS_GROUP_SESSION } from "@/shared/config/analytics-events";
 import {
   slideContentFractions,
   stampBoxStyle,
@@ -64,6 +66,7 @@ const ChevronRight = () => (
  */
 const BroadcastScreenPage = () => {
   const { roomId } = useParams();
+  const posthog = usePostHog();
   const [slides, setSlides] = useState<(string | null)[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [stamps, setStamps] = useState<BroadcastStamp[]>([]);
@@ -81,6 +84,12 @@ const BroadcastScreenPage = () => {
       ? crypto.randomUUID()
       : `screen-${Date.now()}-${Math.random().toString(36).slice(2)}`
   );
+
+  useEffect(() => {
+    if (!roomId) return;
+    posthog?.capture(ANALYTICS_EVENTS.BROADCAST_SCREEN_OPENED, { room_id: roomId });
+    posthog?.group(ANALYTICS_GROUP_SESSION, roomId);
+  }, [roomId, posthog]);
 
   // Subscribe to the presenter and pull the current slide on mount.
   useEffect(() => {

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS, ANALYTICS_GROUP_SESSION } from "@/shared/config/analytics-events";
 import { PageContainer, ContentContainer, FooterContainer } from "./AiReportPage.styles";
 import { SideHeader } from "./navigation";
 import {
@@ -18,6 +20,7 @@ import { storedAiReportQuery, mostRevisitSlideQuery } from "@/shared/api/ai-repo
 const AiReportPage = () => {
   const location = useLocation();
   const { roomId: roomIdParam } = useParams();
+  const posthog = usePostHog();
   const totalReactionRef = useRef<HTMLDivElement | null>(null);
   const top3Ref = useRef<HTMLDivElement | null>(null);
   const popularSlideRef = useRef<HTMLDivElement | null>(null);
@@ -37,6 +40,11 @@ const AiReportPage = () => {
   // * URL param is the primary source for roomId; fall back to storage/state
   const roomId = roomIdParam || roomInfo.roomId;
   const { deckId, fileName } = roomInfo;
+
+  useEffect(() => {
+    posthog?.capture(ANALYTICS_EVENTS.AI_REPORT_VIEWED, { room_id: roomId });
+    if (roomId) posthog?.group(ANALYTICS_GROUP_SESSION, roomId);
+  }, [roomId, posthog]);
 
   const reportQuery = useQuery({ ...storedAiReportQuery(roomId ?? ""), enabled: !!roomId });
   const revisitQuery = useQuery({ ...mostRevisitSlideQuery(roomId ?? ""), enabled: !!roomId });

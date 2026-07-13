@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { ChangeEvent } from "react";
 import { useLocation, useParams } from "react-router";
+import { usePostHog } from "@posthog/react";
+import { ANALYTICS_EVENTS, ANALYTICS_GROUP_SESSION } from "@/shared/config/analytics-events";
 import {
   PresentationLayout,
   SlideViewer,
@@ -58,6 +60,7 @@ const EMPTY_STAMPS: never[] = [];
 const PresenterRoomPage = () => {
   const location = useLocation();
   const { roomId: roomIdParam } = useParams();
+  const posthog = usePostHog();
 
   const storedRoomData = useMemo(
     () => JSON.parse(sessionStorage.getItem("boini_room") || "{}"),
@@ -115,6 +118,20 @@ const PresenterRoomPage = () => {
   const [showReactions, setShowReactions] = useState(true);
   const [showStampsInViewer, setShowStampsInViewer] = useState(true);
 
+  // 그룹 분석: 발표자 쪽 이벤트를 세션(room) 단위로 묶는다.
+  useEffect(() => {
+    if (!roomId) return;
+    posthog?.group(ANALYTICS_GROUP_SESSION, roomId);
+  }, [roomId, posthog]);
+
+  const trackSettingChange = (setting: string, enabled: boolean) => {
+    posthog?.capture(ANALYTICS_EVENTS.SESSION_SETTING_CHANGED, {
+      setting,
+      enabled,
+      room_id: roomId,
+    });
+  };
+
   // 서버에서 presigned URL 하나씩 가져와서 썸네일로 사용
   const currentSlideRef = useRef(0);
   useEffect(() => {
@@ -146,8 +163,7 @@ const PresenterRoomPage = () => {
     editable: false,
   });
 
-  const audienceCapacity =
-    locationState.count ?? storedRoomData.count ?? DEFAULT_AUDIENCE_CAPACITY;
+  const audienceCapacity = locationState.count ?? storedRoomData.count ?? DEFAULT_AUDIENCE_CAPACITY;
 
   const initialAudienceCount = useMemo(() => {
     const candidate = locationState.audienceCount ?? storedRoomData.audienceCount ?? null;
@@ -563,25 +579,31 @@ const PresenterRoomPage = () => {
               label="실시간 질문"
               description="청중이 실시간으로 질문을 남길 수 있습니다."
               checked={quickSettings.question}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                handleOptionChange("question", event.target.checked)
-              }
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const enabled = event.target.checked;
+                handleOptionChange("question", enabled);
+                trackSettingChange("question", enabled);
+              }}
             />
             <QuickSettingToggle
               label="리액션 스티커"
               description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
               checked={quickSettings.sticker}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                handleOptionChange("sticker", event.target.checked)
-              }
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const enabled = event.target.checked;
+                handleOptionChange("sticker", enabled);
+                trackSettingChange("sticker", enabled);
+              }}
             />
             <QuickSettingToggle
               label="다음 구간 슬라이드 공개하기"
               description="청중이 다음 슬라이드 화면들을 미리 볼 수 있습니다."
               checked={quickSettings.unlock}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                handleUnlockChange(event.target.checked)
-              }
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const enabled = event.target.checked;
+                handleUnlockChange(enabled);
+                trackSettingChange("slide_unlock", enabled);
+              }}
             />
             <PdfDownloadPolicyControl
               enabled={pdfDownloadEnabled}
