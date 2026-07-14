@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   BrandMark,
   Center,
@@ -9,9 +10,14 @@ import {
 
 interface SessionLoadingOverlayProps {
   message?: string;
+  /** 메시지 아래에 렌더링되는 부가 콘텐츠 슬롯 (진행률, 액션 버튼 등) */
+  children?: ReactNode;
 }
 
-const SessionLoadingOverlay = ({ message = "세션 자료 정리 중..." }: SessionLoadingOverlayProps) => {
+const SessionLoadingOverlay = ({
+  message = "세션 자료 정리 중...",
+  children,
+}: SessionLoadingOverlayProps) => {
   return (
     <Overlay role="status" aria-live="polite">
       <Center aria-hidden="true">
@@ -28,6 +34,7 @@ const SessionLoadingOverlay = ({ message = "세션 자료 정리 중..." }: Sess
         </MarkSurface>
       </Center>
       <Message>{message}</Message>
+      {children}
     </Overlay>
   );
 };

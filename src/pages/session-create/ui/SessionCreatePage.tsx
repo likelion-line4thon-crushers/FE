@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { KeyboardEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import { useSetAtom } from "jotai";
-import { createLogger } from "@/shared/lib/logger";
+import { useAtom, useSetAtom } from "jotai";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import {
   PresentationLayout,
@@ -14,39 +13,48 @@ import {
 } from "@/widgets/presentation-layout";
 import { SlidesSidebar } from "@/widgets/slides-sidebar";
 import { useQuickSettingsStorage, usePdfDownloadPolicy } from "@/entities/session";
-import { canStartSessionAtom } from "@/entities/room";
+import {
+  canStartSessionAtom,
+  pendingPresentationFileAtom,
+  persistRoomData,
+  clearPersistedRoomData,
+} from "@/entities/room";
+import type { RoomData } from "@/entities/room";
 import { SlideNotesPanel, usePresenterSlideNotes } from "@/entities/slide-note";
 import { storageKeys } from "@/shared/config/storage-keys";
 import { DEFAULT_AUDIENCE_CAPACITY } from "@/shared/config/audience";
-import { useChunkedPdfUpload } from "../model/useChunkedPdfUpload";
-import { usePdfStream } from "../model/usePdfStream";
-import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
-import { createRoom } from "@/shared/api/room";
-import { fetchSlidesMeta, fetchAllOriginalSlideUrls } from "@/shared/api/presentation";
 import websocketService from "@/shared/api/websocket";
 import { useBroadcastPublisher, useBroadcastReactionVisibility } from "@/shared/lib/broadcast";
-import { useFontMutations } from "../model/useFontMutations";
+import type { ChunkUploadReady } from "@/shared/api/model/pdf";
+import { usePresentationUploadFlow } from "../model/usePresentationUploadFlow";
+import { usePdfStream } from "../model/usePdfStream";
+import { useRestorePresenterSlides } from "../model/useRestorePresenterSlides";
+import { useRollingMessage } from "../model/useRollingMessage";
+import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
 import FontRequirementPrompt from "./FontRequirementPrompt";
-import type { ChunkUploadReady, FontReportEntry } from "@/shared/api/model/pdf";
+import UploadErrorPanel from "./UploadErrorPanel";
+import RenderFailureBanner from "./RenderFailureBanner";
+import { UploadCancelButton } from "./SessionCreatePage.styles";
 
-const log = createLogger("session-create");
+// 청크 업로드는 실제 진행률 신호가 없어(마지막 응답이 서버 변환까지 블로킹) 시간 기반으로 굴린다.
+const UPLOAD_MESSAGES = [
+  "발표 자료 업로드 중...",
+  "슬라이드로 변환하는 중...",
+  "슬라이드를 준비하는 중...",
+  "거의 다 됐어요...",
+] as const;
 
 const PresentationPrepPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { roomId: roomIdParam } = useParams();
-  const { presentationFile, pdfFile } = location.state || {};
-  const sourceFile = presentationFile || pdfFile;
+  const [pendingFile, setPendingFile] = useAtom(pendingPresentationFileAtom);
   const initialRoomData = resolvePresenterRoomData(roomIdParam, location.state);
 
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [roomData, setRoomData] = useState<any>(initialRoomData);
-  const [restoredSlides, setRestoredSlides] = useState<(string | null)[] | null>(null);
+  const [roomData, setRoomData] = useState<RoomData | null>(initialRoomData);
   const [fatalMessage, setFatalMessage] = useState<string | null>(null);
-  const [pendingFonts, setPendingFonts] = useState<{ uploadId: string; fontReport: FontReportEntry[] } | null>(null);
-  const [fontWarnings, setFontWarnings] = useState<Record<string, string>>({});
-  const [fontError, setFontError] = useState<string | null>(null);
-  const pendingRoomRef = useRef<any>(null);
+  const [renderFailureDismissed, setRenderFailureDismissed] = useState(false);
 
   const roomId = useMemo(() => roomIdParam || roomData?.roomId || null, [roomIdParam, roomData]);
   const quickSettingsStorageKey = roomId ? storageKeys.quickSettings(String(roomId)) : null;
@@ -64,7 +72,6 @@ const PresentationPrepPage = () => {
       typeof roomData?.pdfDownloadEnabled === "boolean" ? roomData.pdfDownloadEnabled : undefined,
   });
 
-  const hasInitializedRef = useRef(false);
   const pendingQuickSettingsRef = useRef<any>({
     sticker: quickSettings.sticker,
     question: quickSettings.question,
@@ -107,26 +114,123 @@ const PresentationPrepPage = () => {
     pendingUnlockRef.current = quickSettings.unlock;
   }, [quickSettings]);
 
-  const { upload: uploadPdf, progress: uploadProgress } = useChunkedPdfUpload();
-
   // 업로드 & 스트림 상태
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [totalPages, setTotalPages] = useState<number>(
     typeof initialRoomData?.totalPages === "number" ? initialRoomData.totalPages : 0
   );
 
+  const setCanStartSessionAtomValue = useSetAtom(canStartSessionAtom);
+
+  // ── 신규 업로드 파이프라인 (createRoom → 청크 업로드 → 폰트 확인 → SSE) ──
+  const handleFlowStart = useCallback(() => {
+    // 신규 업로드 진입 — 이전 세션 잔재(atom, sessionStorage, 로컬 state)를 모두 리셋.
+    setCanStartSessionAtomValue(false);
+    clearPersistedRoomData();
+    setTotalPages(0);
+    setStreamUrl(null);
+    setRoomData(null);
+  }, [setCanStartSessionAtomValue]);
+
+  const handleRoomCreated = useCallback(
+    (room: RoomData) => {
+      // totalPages 0 = "방은 있지만 업로드 미완료" 마커. 새로고침 시 중단 안내에 사용된다.
+      const skeleton: RoomData = { ...room, totalPages: 0 };
+      setRoomData(skeleton);
+      persistRoomData(skeleton);
+      // 방이 생기는 즉시 캐노니컬 URL 로 교체 — 업로드 중 새로고침해도 /rooms/:roomId 로 복귀.
+      navigate(`/rooms/${room.roomId}`, {
+        replace: true,
+        state: { roomData: skeleton, fileName: pendingFile?.name },
+      });
+    },
+    [navigate, pendingFile]
+  );
+
+  const handleReady = useCallback(
+    (room: RoomData, ready: ChunkUploadReady) => {
+      const next: RoomData = {
+        ...room,
+        totalPages: ready.totalPages,
+        pdfId: ready.pdfId,
+        fileName: ready.fileName,
+        canStartSession: false,
+        pdfDownloadEnabled: false,
+      };
+      setRoomData(next);
+      setTotalPages(ready.totalPages);
+      setStreamUrl(ready.streamUrl);
+      persistRoomData(next);
+      setPendingFile(null); // 성공 — 원본 File 참조 해제
+      // 같은 URL 로 replace 해 history.state 의 roomData 를 완성본으로 갱신한다
+      // (발표 화면 전환/새로고침 시 sessionStorage 유실에 대한 이중화).
+      navigate(`/rooms/${room.roomId}`, {
+        replace: true,
+        state: { roomData: next, fileName: next.fileName },
+      });
+    },
+    [setPendingFile, navigate]
+  );
+
+  const {
+    phase,
+    retry: retryUpload,
+    cancel: cancelUpload,
+    fonts,
+  } = usePresentationUploadFlow({
+    pendingFile,
+    onStart: handleFlowStart,
+    onRoomCreated: handleRoomCreated,
+    onReady: handleReady,
+  });
+
+  const isUploadOverlayActive = phase.step === "creating-room" || phase.step === "uploading";
+  const uploadMessage = useRollingMessage(UPLOAD_MESSAGES, isUploadOverlayActive);
+
+  // ── 새로고침 복원 (업로드 완료 이후 재진입) ──
+  const { outcome: restoreOutcome, retry: retryRestore } = useRestorePresenterSlides({
+    enabled: !pendingFile && phase.step === "idle",
+    roomId: roomData?.roomId,
+    deckId: roomData?.deckId,
+    totalPages: roomData?.totalPages,
+    pdfId: roomData?.pdfId,
+  });
+  const restoredSlides = restoreOutcome?.kind === "slides" ? restoreOutcome.slides : null;
+
+  useEffect(() => {
+    if (!restoreOutcome || restoreOutcome.kind === "failed") return;
+    setTotalPages(restoreOutcome.totalPages);
+    if (restoreOutcome.kind === "resubscribe") setStreamUrl(restoreOutcome.streamUrl);
+  }, [restoreOutcome]);
+
+  // 방은 만들어졌지만 업로드가 끝나기 전에 이탈/새로고침한 경우 (원본 File 유실)
+  const uploadInterrupted =
+    !pendingFile && phase.step === "idle" && !!roomData?.roomId && (roomData.totalPages ?? 0) <= 0;
+
+  // 업로드 파일도, 복원할 roomData 도 없으면 이 페이지에 올 이유가 없다 → 랜딩으로
+  useEffect(() => {
+    if (pendingFile || roomData?.roomId || phase.step !== "idle") return;
+    navigate("/");
+  }, [pendingFile, roomData?.roomId, phase.step, navigate]);
+
+  const goHome = useCallback(() => {
+    cancelUpload();
+    setPendingFile(null);
+    clearPersistedRoomData();
+    setCanStartSessionAtomValue(false);
+    navigate("/");
+  }, [cancelUpload, setPendingFile, setCanStartSessionAtomValue, navigate]);
+
   const {
     slides: streamedSlides,
     canStartSession,
-    done: streamDone,
     fatalError,
+    pageErrors,
   } = usePdfStream({
     streamUrl,
     totalPages,
     enabled: !!streamUrl && totalPages > 0,
   });
-
-  const setCanStartSessionAtomValue = useSetAtom(canStartSessionAtom);
 
   const handleOptionChange = useCallback(
     (optionKey: any, value: any) => {
@@ -177,14 +281,10 @@ const PresentationPrepPage = () => {
       const savedEnabled = await setPdfDownloadPolicyEnabled(enabled);
       if (typeof savedEnabled !== "boolean") return;
 
-      setRoomData((prev: any) => {
+      setRoomData((prev) => {
         if (!prev || prev.pdfDownloadEnabled === savedEnabled) return prev;
         const next = { ...prev, pdfDownloadEnabled: savedEnabled };
-        try {
-          sessionStorage.setItem("boini_room", JSON.stringify(next));
-        } catch {
-          /* ignore */
-        }
+        persistRoomData(next);
         return next;
       });
     },
@@ -254,215 +354,6 @@ const PresentationPrepPage = () => {
     }
   }, [isPresenterWsReady, roomId]);
 
-  // 새로고침 복원: sessionStorage 에 roomData 가 있고 pdfFile 이 없을 때.
-  // 우선순위:
-  //  1) meta 엔드포인트로 모든 페이지 URL 이 완비돼 있으면 restoredSlides 로 고정 표시.
-  //  2) meta 가 부분만 돌려주거나 실패 + pdfId 가 있으면 SSE 스트림을 재구독해서 남은 페이지를 수신.
-  //     (BE 는 subscribe 시점 이전 이벤트를 버퍼링 후 flush 해주므로 안전.)
-  //  3) meta 도 실패·pdfId 도 없으면 레거시 per-page API 로 마지막 폴백.
-  useEffect(() => {
-    if (sourceFile) return;
-    if (!roomData?.roomId || !roomData?.deckId) return;
-    if (restoredSlides !== null) return;
-
-    const pages = roomData.totalPages || 0;
-    if (pages <= 0) return;
-
-    const pdfIdFromStorage: string | undefined = roomData.pdfId;
-
-    const resubscribeSse = () => {
-      if (!pdfIdFromStorage) return false;
-      setTotalPages(pages);
-      setStreamUrl(`/api/pdf/${pdfIdFromStorage}/stream`);
-      hasInitializedRef.current = true;
-      return true;
-    };
-
-    const restore = async () => {
-      try {
-        const urls = await fetchSlidesMeta(roomData.roomId, roomData.deckId, pages);
-        const allReady = urls.length === pages && urls.every((u) => !!u);
-        if (allReady) {
-          setRestoredSlides(urls);
-          setTotalPages(pages);
-          setRoomData((prev: any) => ({ ...prev, canStartSession: true }));
-          hasInitializedRef.current = true;
-          return;
-        }
-        // meta 가 부분만 반환 → BE 가 아직 렌더링 중. SSE 로 재구독해 남은 페이지 수신.
-        if (resubscribeSse()) {
-          log.warn("meta 부분 응답, SSE 재구독으로 전환");
-          return;
-        }
-        throw new Error("meta 응답이 비어 있음");
-      } catch (metaErr) {
-        log.warn("meta 조회 실패:", metaErr);
-        if (resubscribeSse()) return;
-        // 최후 폴백: 레거시 per-page API
-        try {
-          const urls = await fetchAllOriginalSlideUrls(roomData.roomId, roomData.deckId, pages);
-          setRestoredSlides(urls);
-          setTotalPages(pages);
-          setRoomData((prev: any) => ({ ...prev, canStartSession: true }));
-          hasInitializedRef.current = true;
-        } catch (err) {
-          log.error("슬라이드 복원 실패:", err);
-        }
-      }
-    };
-
-    restore();
-  }, [
-    sourceFile,
-    roomData?.roomId,
-    roomData?.deckId,
-    roomData?.totalPages,
-    roomData?.pdfId,
-    restoredSlides,
-  ]);
-
-  const applyReady = useCallback(
-    (room: any, ready: ChunkUploadReady) => {
-      const nextRoomData = {
-        ...room,
-        deckId: room.deckId,
-        totalPages: ready.totalPages,
-        pdfId: ready.pdfId,
-        fileName: ready.fileName,
-        canStartSession: false,
-        pdfDownloadEnabled: false,
-      };
-      setRoomData(nextRoomData);
-      setTotalPages(ready.totalPages);
-      setStreamUrl(ready.streamUrl);
-      sessionStorage.setItem("boini_room", JSON.stringify(nextRoomData));
-      setPendingFonts(null);
-
-      if (roomIdParam !== room.roomId) {
-        navigate(`/rooms/${room.roomId}`, {
-          replace: true,
-          state: {
-            ...(location.state || {}),
-            roomData: nextRoomData,
-            roomId: room.roomId,
-            deckId: room.deckId,
-            totalPages: ready.totalPages,
-          },
-        });
-      }
-    },
-    [navigate, roomIdParam, location.state]
-  );
-
-  // 폰트 업로드 / 변환 시작은 React Query mutation 으로 처리한다(청크 업로드는 raw axios 유지).
-  const { uploadFont, finalize: runFinalize, uploadingName, busy: fontBusy } = useFontMutations({
-    onUploaded: (fontName, res) => {
-      setFontError(null);
-      // 서버는 전체 리포트를 재분석하지 않으므로, 일치하면 해당 폰트만 로컬에서 '사용 가능'으로 바꾼다.
-      if (res.matched) {
-        setPendingFonts((prev) =>
-          prev
-            ? {
-                ...prev,
-                fontReport: prev.fontReport.map((e) =>
-                  e.name === fontName ? { ...e, status: "AVAILABLE" as const, installed: true } : e
-                ),
-              }
-            : prev
-        );
-        setFontWarnings((prev) => {
-          const next = { ...prev };
-          delete next[fontName];
-          return next;
-        });
-      } else {
-        setFontWarnings((prev) => ({ ...prev, [fontName]: res.uploadedFamilies?.[0] ?? "" }));
-      }
-    },
-    onUploadError: () => setFontError("폰트 업로드에 실패했습니다. 다시 시도해주세요."),
-    onFinalized: (ready) => applyReady(pendingRoomRef.current, ready),
-    onFinalizeError: () => setFontError("변환을 시작하지 못했습니다. 다시 시도해주세요."),
-  });
-
-  const handleUploadFont = useCallback(
-    (fontName: string, file: File) => {
-      if (!pendingFonts) return;
-      setFontError(null);
-      uploadFont(pendingFonts.uploadId, fontName, file);
-    },
-    [pendingFonts, uploadFont]
-  );
-
-  const handleContinue = useCallback(() => {
-    if (!pendingFonts) return;
-    setFontError(null);
-    runFinalize(pendingFonts.uploadId, false);
-  }, [pendingFonts, runFinalize]);
-
-  const handleProceedWithout = useCallback(() => {
-    if (!pendingFonts) return;
-    setFontError(null);
-    runFinalize(pendingFonts.uploadId, true);
-  }, [pendingFonts, runFinalize]);
-
-  // 신규 업로드 플로우: createRoom → 청크 업로드 → SSE 스트림 구독
-  useEffect(() => {
-    if (hasInitializedRef.current) return;
-    // sourceFile 이 없는 경우(= 새로고침 복원)만 기존 roomData 로 skip. sourceFile 이 있으면
-    // stale roomData 가 있더라도 신규 업로드가 우선.
-    if (!sourceFile && roomData?.roomId) {
-      hasInitializedRef.current = true;
-      return;
-    }
-    if (!sourceFile) {
-      navigate("/");
-      return;
-    }
-
-    hasInitializedRef.current = true;
-
-    // 신규 업로드 진입 — 이전 세션 잔재(atom, sessionStorage, 로컬 state)를 모두 리셋.
-    setCanStartSessionAtomValue(false);
-    try {
-      sessionStorage.removeItem("boini_room");
-    } catch {
-      /* ignore */
-    }
-    setTotalPages(0);
-    setStreamUrl(null);
-    setRoomData(null);
-
-    const run = async () => {
-      try {
-        // BE 는 totalPages >= 1 을 요구하므로 placeholder 로 1 을 보낸다.
-        // 실제 총 페이지는 업로드 조립 완료 응답(ready.totalPages) 에서 확정된다.
-        const room = await createRoom(1);
-        pendingRoomRef.current = room;
-        const terminal = await uploadPdf(sourceFile, room.roomId, room.deckId);
-        if (terminal.status === "NEEDS_FONTS") {
-          setPendingFonts({ uploadId: terminal.uploadId, fontReport: terminal.fontReport });
-          return; // Phase B는 사용자 액션(폰트 업로드/그냥 진행)으로 트리거됨
-        }
-        applyReady(room, terminal);
-      } catch (err) {
-        log.error("발표 자료 업로드/스트림 준비 실패:", err);
-        hasInitializedRef.current = false;
-        setFatalMessage("발표 자료 업로드에 실패했습니다. 다시 시도해주세요.");
-      }
-    };
-
-    run();
-  }, [
-    sourceFile,
-    roomData?.roomId,
-    roomIdParam,
-    navigate,
-    location.state,
-    uploadPdf,
-    setCanStartSessionAtomValue,
-    applyReady,
-  ]);
-
   // canStartSession 이 true 가 되면 atom + roomData + sessionStorage 를 모두 동기화.
   // AppHeader 는 atom 을 구독해 즉시 재렌더되고, 새로고침 대비로 sessionStorage 에도 저장한다.
   // 새로고침 복원 경로는 restoredSlides 채워지는 시점에 canStartSession 을 true 로 간주.
@@ -470,14 +361,10 @@ const PresentationPrepPage = () => {
     const effective = canStartSession || !!restoredSlides;
     if (!effective) return;
     setCanStartSessionAtomValue(true);
-    setRoomData((prev: any) => {
+    setRoomData((prev) => {
       if (!prev || prev.canStartSession === true) return prev;
       const next = { ...prev, canStartSession: true };
-      try {
-        sessionStorage.setItem("boini_room", JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
+      persistRoomData(next);
       return next;
     });
   }, [canStartSession, restoredSlides, setCanStartSessionAtomValue]);
@@ -561,25 +448,51 @@ const PresentationPrepPage = () => {
     };
   }, [displaySlides.length]);
 
-  if (fatalMessage) {
-    return <SessionLoadingOverlay message={`⚠️ ${fatalMessage}`} />;
+  // ── 상태별 화면 분기 ──
+  if (phase.step === "failed") {
+    return <UploadErrorPanel message={phase.message} onRetry={retryUpload} onGoHome={goHome} />;
   }
 
-  if (pendingFonts) {
+  if (fatalMessage) {
+    // SSE 치명 오류(PDF_LOAD_FAILED 등) — 원본 File 이 이미 해제됐을 수 있어 처음부터 다시.
+    return <UploadErrorPanel message={fatalMessage} onGoHome={goHome} />;
+  }
+
+  if (restoreOutcome?.kind === "failed") {
+    return (
+      <UploadErrorPanel
+        message="발표 자료를 불러오지 못했습니다."
+        onRetry={retryRestore}
+        onGoHome={goHome}
+      />
+    );
+  }
+
+  if (uploadInterrupted) {
+    return (
+      <UploadErrorPanel
+        message="업로드가 완료되지 않았습니다. 발표 자료를 다시 선택해주세요."
+        onGoHome={goHome}
+        homeLabel="파일 다시 선택"
+      />
+    );
+  }
+
+  if (phase.step === "awaiting-fonts") {
     return (
       <>
         <SessionLoadingOverlay message="발표 자료 준비 중..." />
         {/* 변환(finalize) 시작하면 모달을 닫아, 사용자가 '준비 중' 로딩 화면을 보게 한다. */}
-        {!fontBusy && (
+        {!fonts.busy && (
           <FontRequirementPrompt
-            fontReport={pendingFonts.fontReport}
-            busy={fontBusy}
-            uploadingName={uploadingName}
-            warnings={fontWarnings}
-            error={fontError}
-            onUploadFont={handleUploadFont}
-            onContinue={handleContinue}
-            onProceedWithout={handleProceedWithout}
+            fontReport={phase.fontReport}
+            busy={fonts.busy}
+            uploadingName={fonts.uploadingName}
+            warnings={fonts.warnings}
+            error={fonts.error}
+            onUploadFont={fonts.uploadFont}
+            onContinue={fonts.continueWithFonts}
+            onProceedWithout={fonts.proceedWithoutFonts}
           />
         )}
       </>
@@ -590,15 +503,19 @@ const PresentationPrepPage = () => {
   // 업로드 완료로 totalPages 가 확정되거나 새로고침 복원이 끝나면 곧바로 대시보드를 열고,
   // 각 슬라이드는 SSE 로 도착하는 대로 비동기로 채워진다.
   if (totalPages === 0 && !restoredSlides) {
-    const msg =
-      uploadProgress.total > 0
-        ? `발표 자료 업로드 중... (${uploadProgress.sent}/${uploadProgress.total})`
-        : "세션 자료 준비 중...";
-    return <SessionLoadingOverlay message={msg} />;
+    if (isUploadOverlayActive) {
+      return (
+        <SessionLoadingOverlay message={uploadMessage}>
+          <UploadCancelButton type="button" onClick={goHome}>
+            업로드 취소
+          </UploadCancelButton>
+        </SessionLoadingOverlay>
+      );
+    }
+    return <SessionLoadingOverlay message="세션 자료 준비 중..." />;
   }
 
-  void streamDone;
-  void totalPages;
+  const renderFailureCount = Object.keys(pageErrors).length;
 
   return (
     <PresentationLayout>
@@ -655,6 +572,12 @@ const PresentationPrepPage = () => {
           </>
         }
       />
+      {renderFailureCount > 0 && !renderFailureDismissed && (
+        <RenderFailureBanner
+          failedCount={renderFailureCount}
+          onDismiss={() => setRenderFailureDismissed(true)}
+        />
+      )}
     </PresentationLayout>
   );
 };

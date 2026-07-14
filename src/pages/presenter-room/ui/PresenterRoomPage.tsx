@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { useLocation, useParams } from "react-router";
 import { usePostHog } from "@posthog/react";
 import { ANALYTICS_EVENTS, ANALYTICS_GROUP_SESSION } from "@/shared/config/analytics-events";
+import { STORAGE_KEYS } from "@/shared/config/storage-keys";
 import {
   PresentationLayout,
   SlideViewer,
@@ -62,10 +63,22 @@ const PresenterRoomPage = () => {
   const { roomId: roomIdParam } = useParams();
   const posthog = usePostHog();
 
-  const storedRoomData = useMemo(
-    () => JSON.parse(sessionStorage.getItem("boini_room") || "{}"),
-    []
-  );
+  // sessionStorage 를 우선하되(항상 최신), 준비 페이지가 남긴 history.state 의
+  // roomData 를 폴백으로 병합한다 (스토리지 쓰기 실패 대비).
+  const storedRoomData = useMemo(() => {
+    const stateRoomData = (location.state as { roomData?: Record<string, unknown> } | null)
+      ?.roomData;
+    let stored: Record<string, unknown> = {};
+    try {
+      stored = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.ROOM) || "{}");
+    } catch {
+      stored = {};
+    }
+    return {
+      ...(stateRoomData && typeof stateRoomData === "object" ? stateRoomData : {}),
+      ...stored,
+    };
+  }, [location.state]);
 
   const locationState = location.state || {};
 

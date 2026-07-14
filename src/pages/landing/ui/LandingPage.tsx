@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import styled, { css } from "styled-components";
 import { usePostHog } from "@posthog/react";
+import { useSetAtom } from "jotai";
+import { pendingPresentationFileAtom } from "@/entities/room";
+import { MAX_PRESENTATION_FILE_BYTES, MAX_PRESENTATION_FILE_LABEL } from "@/shared/config/upload";
 import TitleSVG from "@/shared/assets/images/title.svg";
 import Emoji1 from "@/shared/assets/images/emoji1.svg";
 import Emoji2 from "@/shared/assets/images/emoji2.svg";
@@ -191,6 +194,15 @@ const HiddenInput = styled.input`
   display: none;
 `;
 
+const ErrorText = styled.p`
+  margin: 0.6vh 0 0;
+  color: #d32f2f;
+  font-size: clamp(12px, 0.9vw, 15px);
+  font-weight: 600;
+  text-align: center;
+  word-break: keep-all;
+`;
+
 const Button = styled.button`
   padding: 1.3vh 1.8vw;
   background-color: ${(props) => (props.disabled ? "#ccc" : "#e8541e")};
@@ -207,8 +219,10 @@ const Button = styled.button`
 
 const MainPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const navigate = useNavigate();
+  const setPendingFile = useSetAtom(pendingPresentationFileAtom);
   const posthog = usePostHog();
 
   // 클릭 선택과 드래그 앤 드롭이 완전히 같은 검증/계측 경로를 타도록 단일화.
@@ -217,13 +231,23 @@ const MainPage = () => {
       file_type: getPresentationFileType(file),
       ...(viaDragDrop ? { via_drag_drop: true } : {}),
     };
-    if (isSupportedPresentationFile(file)) {
-      setSelectedFile(file);
-      posthog?.capture(ANALYTICS_EVENTS.PRESENTATION_FILE_SELECTED, props);
-    } else {
-      posthog?.capture(ANALYTICS_EVENTS.PRESENTATION_FILE_REJECTED, props);
-      alert("PDF, PPT, PPTX 파일만 선택해주세요!");
+    if (!isSupportedPresentationFile(file)) {
+      posthog?.capture(ANALYTICS_EVENTS.PRESENTATION_FILE_REJECTED, { ...props, reason: "type" });
+      setFileError("PDF, PPT, PPTX 파일만 선택할 수 있어요.");
+      return;
     }
+    if (file.size > MAX_PRESENTATION_FILE_BYTES) {
+      posthog?.capture(ANALYTICS_EVENTS.PRESENTATION_FILE_REJECTED, {
+        ...props,
+        reason: "size",
+        file_size_bytes: file.size,
+      });
+      setFileError(`파일이 너무 커요. ${MAX_PRESENTATION_FILE_LABEL} 이하만 업로드할 수 있어요.`);
+      return;
+    }
+    setSelectedFile(file);
+    setFileError(null);
+    posthog?.capture(ANALYTICS_EVENTS.PRESENTATION_FILE_SELECTED, props);
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,17 +262,16 @@ const MainPage = () => {
   };
 
   const handleStartPresentation = () => {
-    if (!selectedFile) return alert("발표 자료를 먼저 업로드해주세요!");
+    if (!selectedFile) {
+      setFileError("발표 자료를 먼저 업로드해주세요!");
+      return;
+    }
     posthog?.capture(ANALYTICS_EVENTS.PRESENTATION_STARTED, {
       file_type: getPresentationFileType(selectedFile),
     });
-    navigate("/rooms/new", {
-      state: {
-        presentationFile: selectedFile,
-        pdfFile: selectedFile,
-        fileName: selectedFile.name,
-      },
-    });
+    // File 은 직렬화가 안 되므로 location.state 대신 아톰으로 전달한다.
+    setPendingFile(selectedFile);
+    navigate("/rooms/new", { state: { fileName: selectedFile.name } });
   };
 
   return (
@@ -288,6 +311,15 @@ const MainPage = () => {
             }}
             onDrop={handleDrop}
             onClick={() => (document.getElementById("pdfInput") as HTMLInputElement)?.click()}
+            role="button"
+            tabIndex={0}
+            aria-label="발표 자료 파일 선택 (PDF, PPT, PPTX)"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                (document.getElementById("pdfInput") as HTMLInputElement)?.click();
+              }
+            }}
           >
             <span className="file-name">
               {selectedFile
@@ -306,6 +338,8 @@ const MainPage = () => {
               ➜
             </span>
           </UploadBox>
+
+          {fileError && <ErrorText role="alert">{fileError}</ErrorText>}
 
           <HiddenInput
             id="pdfInput"

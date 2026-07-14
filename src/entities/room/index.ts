@@ -1,4 +1,10 @@
 export type { RoomData, JoinRoomResponse, SessionStatus, RoomInfo } from "./model/room";
+export { pendingPresentationFileAtom } from "./model/pendingUpload";
+export {
+  persistRoomData,
+  readPersistedRoomData,
+  clearPersistedRoomData,
+} from "./model/persistedRoom";
 export {
   roomIdAtom,
   deckIdAtom,
