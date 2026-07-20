@@ -7,7 +7,7 @@ import TasksIcon from "@/shared/assets/icons/landing/glass-tasks.svg";
 import BulletListIcon from "@/shared/assets/icons/landing/glass-bullet-list.svg";
 import DownloadIcon from "@/shared/assets/icons/landing/glass-cloud-download.svg";
 import ThumbsUpIcon from "@/shared/assets/icons/landing/glass-thumbs-up.svg";
-import CircleChartIcon from "@/shared/assets/icons/landing/glass-circle-chart-line.svg";
+import SquareChartIcon from "@/shared/assets/icons/landing/glass-square-chart-line.svg";
 import SparkleIcon from "@/shared/assets/icons/landing/glass-sparkle.svg";
 import FileIcon from "@/shared/assets/icons/landing/glass-file.svg";
 
@@ -155,7 +155,7 @@ export const FEATURE_SECTIONS: FeatureContent[] = [
     mediaSlots: [{ label: "AI 리포트 대시보드", width: 1550, height: 810, demo: 5 }],
     bullets: [
       {
-        icon: CircleChartIcon,
+        icon: SquareChartIcon,
         title: "몰입도 분석",
         description: "어느 슬라이드에서 반응이 터졌는지,\n어떤 질문이 가장 많았는지 한눈에 봐요.",
       },

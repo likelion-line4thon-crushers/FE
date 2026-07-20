@@ -1,6 +1,6 @@
 import EyeOffIcon from "@/shared/assets/icons/landing/glass-eye-closed.svg";
 import MessageCircleOffIcon from "@/shared/assets/icons/landing/glass-msgs.svg";
-import ChartNoAxesIcon from "@/shared/assets/icons/landing/glass-square-chart-line.svg";
+import CircleChartIcon from "@/shared/assets/icons/landing/glass-circle-chart-line.svg";
 import * as C from "./common.styles";
 import * as S from "./ProblemSection.styles";
 import { Reveal } from "./Reveal";
@@ -17,7 +17,7 @@ const PAIN_POINTS = [
     description: "궁금한 게 있어도 흐름이 끊길까 묻지 못하고\nQ&A 시간에 몰아서 쏟아지죠.",
   },
   {
-    icon: ChartNoAxesIcon,
+    icon: CircleChartIcon,
     title: "피드백이 남지 않는다",
     description: "뭐가 좋았고, 뭐가 아쉬웠는지 다음 발표에 쓸 데이터가 잘 남지 않아요.",
   },
