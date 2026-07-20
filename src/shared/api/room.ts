@@ -1,15 +1,16 @@
 import api from "./api";
 import type { RoomData, JoinRoomResponse } from "@/entities/room";
 import { createLogger } from "@/shared/lib/logger";
+import { writeAudienceIdentity } from "@/shared/lib/audience-identity";
 import { DEFAULT_AUDIENCE_CAPACITY } from "@/shared/config/audience";
 
 const log = createLogger("room");
 
-export async function createRoom(totalPages = 10): Promise<RoomData> {
+export async function createRoom(totalPages = 10, signal?: AbortSignal): Promise<RoomData> {
   const requestData = { count: DEFAULT_AUDIENCE_CAPACITY, totalPages };
   log.log("Creating room", requestData);
 
-  const res = await api.post("/api/rooms", requestData);
+  const res = await api.post("/api/rooms", requestData, { signal });
   return res.data.data;
 }
 
@@ -34,6 +35,41 @@ export async function joinRoom(code: string): Promise<JoinRoomResponse> {
   } finally {
     inFlightJoins.delete(code);
   }
+}
+
+// join 응답의 wsUrl 정규화 — 콤마 목록이면 첫 항목, /ws 로 끝나면 /ws/audience 로 보정
+export function normalizeWsUrl(wsUrl?: string): string {
+  if (!wsUrl) {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    return `${apiBaseUrl}/ws/audience`;
+  }
+  let value = wsUrl;
+  if (value.includes(",")) value = value.split(",")[0].trim();
+  if (!value.endsWith("/audience")) value = value.replace(/\/ws\/?$/, "/ws/audience");
+  return value;
+}
+
+// * join 결과를 오디언스 페이지가 재사용하는 형태로 저장한다.
+// join은 호출마다 새 audienceId를 발급하고 누적 입장 수를 올리므로, 랜딩에서 코드 검증을
+// 겸해 join했다면 이 저장본으로 오디언스 페이지가 재-join 없이 복원하게 해야 한다.
+export function persistAudienceJoin(code: string, joinData: JoinRoomResponse) {
+  writeAudienceIdentity(code, {
+    roomId: joinData.roomId,
+    audienceId: joinData.audienceId,
+    audienceToken: joinData.audienceToken,
+    deckId:
+      joinData.deckId || joinData.deckID || joinData.deck?.deckId || joinData.presentation?.deckId,
+    totalPages:
+      joinData.totalPages || joinData.deck?.totalPages || joinData.presentation?.totalPages,
+    sessionStatus: joinData.sessionStatus || "waiting",
+    currentPage: joinData.currentPage,
+    sticker: joinData.sticker,
+    question: joinData.question,
+    feedback: joinData.feedback,
+    maxPage: joinData.maxPage,
+    slideUnlock: joinData.slideUnlock,
+    wsUrl: normalizeWsUrl(joinData.wsUrl),
+  });
 }
 
 export async function startSession(roomId: string) {

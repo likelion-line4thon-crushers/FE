@@ -146,18 +146,39 @@ Main file:
 
 ### 1. Join room
 
-The audience opens `/join/:code`.
+There are two entry points: the landing page's 6-digit session-code form, and the shared
+`/join/:code` link. Both end up on `/join/:code` with the same stored identity.
 
-The frontend then:
+`joinRoom(code)` receives `roomId`, `audienceId`, `audienceToken`, `deckId`, `wsUrl`, and session
+options, and the result is written by `persistAudienceJoin` to **both** `sessionStorage` (this tab)
+and `localStorage` (durable per-browser copy). The audience page then populates the room and
+session state atoms.
 
-- calls `joinRoom(code)`
-- receives `roomId`, `audienceId`, `audienceToken`, `deckId`, `wsUrl`, and session options
-- stores audience session data in `sessionStorage`
-- populates room and session state atoms
+**Every join call mints a new identity.** The backend issues a fresh `audienceId` (`UUID.randomUUID()`)
+on every `GET /api/rooms/join/{code}` and increments `enterAudienceCount`, so both entry points
+reuse a stored identity instead of re-joining whenever one exists:
 
-Main file:
+- the audience page restores from storage and skips `joinRoom` entirely
+- the landing form skips `joinRoom` when the stored token is still valid
+  (`readAudienceIdentity(code, { requireValidToken: true })`)
 
-- [`src/pages/audience-room/model/useAudienceJoinRoom.ts`](/Users/yh/Desktop/line4thon-presentation-frontend/src/pages/audience-room/model/useAudienceJoinRoom.ts)
+This keeps the AI report's entry count honest and keeps per-browser feedback dedupe working, since
+both key on `audienceId`.
+
+> **Known limitation.** On the landing reuse path nothing contacts the server, so the code is not
+> validated before navigating. The audience JWT lives 24h (`Room.ttlSeconds = 86400`) while the code
+> key drops to a 1h grace after the session ends (`CodeService.shortenTtlAfterEnd`) — so for up to
+> ~23h after a session ends, re-entering that code lands on a dead room instead of showing
+> "세션을 찾을 수 없어요". `getRoomInfo` cannot be used as a probe: it returns 200 with null fields
+> and `sessionStatus: "waiting"` for a vanished room, because `RoomService.getSessionStatus` defaults
+> to `waiting` when the Redis key is missing. Mitigation in place: `sessionStatus` is persisted to the
+> durable copy too, so an ended session restores onto the ended screen rather than a blank wait.
+> The real fix needs a minting-free `GET /api/rooms/code/{code}` resolver on the backend.
+
+Main files:
+
+- [`src/pages/audience-room/model/room/useAudienceJoinRoom.ts`](/Users/yh/Desktop/line4thon-presentation-frontend/src/pages/audience-room/model/room/useAudienceJoinRoom.ts)
+- [`src/shared/lib/audience-identity.ts`](/Users/yh/Desktop/line4thon-presentation-frontend/src/shared/lib/audience-identity.ts)
 
 ### 2. Audience page initialization
 

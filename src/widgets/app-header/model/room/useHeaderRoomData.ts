@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router";
+import { STORAGE_KEYS } from "@/shared/config/storage-keys";
 
 /**
  * * Resolves roomData from props or sessionStorage.
@@ -17,7 +18,7 @@ export const useHeaderRoomData = (propRoomData: any) => {
     let storedRoomData: Record<string, unknown> | null = null;
 
     try {
-      const stored = sessionStorage.getItem("boini_room");
+      const stored = sessionStorage.getItem(STORAGE_KEYS.ROOM);
       storedRoomData = stored ? JSON.parse(stored) : null;
     } catch {
       storedRoomData = null;

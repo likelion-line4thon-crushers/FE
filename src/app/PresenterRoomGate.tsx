@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef } from "react";
 import { useLocation, useParams } from "react-router";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { SessionCreatePage } from "@/pages/session-create";
 import { PresenterRoomPage } from "@/pages/presenter-room";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
-import { presenterModeAtom } from "@/entities/room";
+import { presenterModeAtom, pendingPresentationFileAtom } from "@/entities/room";
 import type { PresenterMode } from "@/entities/room";
 import { getSessionStatus } from "@/shared/api/room";
 import { sessionStartMarker } from "@/shared/config/storage-keys";
@@ -21,7 +21,7 @@ import { sessionStartMarker } from "@/shared/config/storage-keys";
  *
  * 동기 판정(첫 렌더에서 즉시 결정 — 백엔드 조회 불필요):
  *  - roomId 없음(/rooms/new) → 준비
- *  - 업로드 직후(location.state.roomData/pdfFile) → 준비
+ *  - 업로드 진행/직후(pendingPresentationFileAtom 또는 location.state.roomData) → 준비
  *  - 시작 마커 보유(발표자 본인의 새로고침) → 발표
  *  - 그 외 → null(미정) → 로딩 + 백엔드 조회
  */
@@ -29,12 +29,11 @@ const PresenterRoomGate = () => {
   const { roomId } = useParams();
   const location = useLocation();
   const [mode, setMode] = useAtom(presenterModeAtom);
+  const pendingFile = useAtomValue(pendingPresentationFileAtom);
   const decidedRoomRef = useRef<string | null>(null);
 
-  const locationState = (location.state as any) || {};
-  const hasUploadState = Boolean(
-    locationState.roomData || locationState.pdfFile || locationState.presentationFile
-  );
+  const locationState = (location.state as { roomData?: unknown } | null) ?? {};
+  const hasUploadState = Boolean(pendingFile || locationState.roomData);
 
   // 첫 렌더에 동기적으로 결정 가능한 값. null 이면 백엔드 조회가 필요하다.
   // ⚠️ 시작 마커를 업로드 상태보다 먼저 본다. location.state(roomData)는 history.state 에

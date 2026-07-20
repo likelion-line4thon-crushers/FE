@@ -1,6 +1,10 @@
 // PostHog 이벤트 이름 단일 정의 — 호출부마다 리터럴을 중복하면 오타 하나로
 // 퍼널이 조용히 갈라지므로, 모든 capture는 여기 상수를 참조한다.
 export const ANALYTICS_EVENTS = {
+  // Landing (발표자/청중 공통 진입)
+  LANDING_CTA_CLICKED: "landing_cta_clicked",
+  LANDING_HERO_TAB_SELECTED: "landing_hero_tab_selected",
+
   // Presenter funnel
   PRESENTATION_FILE_SELECTED: "presentation_file_selected",
   PRESENTATION_FILE_REJECTED: "presentation_file_rejected",
@@ -18,6 +22,7 @@ export const ANALYTICS_EVENTS = {
   AI_REPORT_VIEWED: "ai_report_viewed",
 
   // Audience funnel
+  LANDING_JOIN_CODE_SUBMITTED: "landing_join_code_submitted",
   AUDIENCE_SESSION_JOINED: "audience_session_joined",
   AUDIENCE_JOIN_FAILED: "audience_join_failed",
   EMOJI_STAMP_PLACED: "emoji_stamp_placed",

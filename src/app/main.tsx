@@ -19,6 +19,10 @@ if (import.meta.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN) {
     // "history_change": SPA 라우트 이동마다 $pageview 캡처 (true 는 최초 로드 1회만 캡처하므로 금지)
     capture_pageview: "history_change",
     capture_pageleave: true,
+    // 앱은 html/body 스크롤을 잠그고 내부 컨테이너로 스크롤한다(global.css). 기본값인
+    // documentElement를 재면 스크롤 뎁스가 항상 0으로 찍히므로 랜딩 스크롤러를 지정한다.
+    // (매칭되는 요소가 없으면 첫 대체값인 body를 쓴다 — 스크롤 없는 페이지라 0이 정상)
+    scroll_root_selector: ["[data-landing-scroll]", "body"],
     capture_performance: true,
     capture_dead_clicks: true,
     loaded: (ph) => {
