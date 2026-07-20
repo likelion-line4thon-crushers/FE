@@ -32,15 +32,17 @@ import {
   resolveShareJoinUrl,
 } from "../../model";
 
+/* 피그마 헤더 스펙: 높이 65px, 로고 높이 32px, 하단 1px 헤어라인 */
 const HeaderWrapper = styled.header`
   width: 100%;
+  min-height: 65px;
   display: flex;
   align-items: center;
   background: #fff;
-  border-bottom: 0.05vw solid #e6e6e6;
+  border-bottom: 1px solid #eaeaea;
   position: relative;
   z-index: 1000;
-  padding: clamp(9px, 1.11vh, 12px) clamp(20px, 1.67vw, 32px);
+  padding: 8px clamp(20px, 1.67vw, 32px);
   box-sizing: border-box;
 `;
 
@@ -49,7 +51,7 @@ const Logo = styled.div<{ $isMain?: boolean; $isAiReport?: boolean }>`
   align-items: center;
 
   img {
-    height: 3vh;
+    height: 32px;
     width: auto;
   }
 
@@ -287,6 +289,9 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
     navigate("/");
   };
+
+  // 랜딩은 페이지 안에서 자체 헤더(일반 흐름)와 스크롤 CTA 바를 렌더한다
+  if (isMain) return null;
 
   return (
     <>
