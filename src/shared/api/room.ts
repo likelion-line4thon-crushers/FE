@@ -5,11 +5,11 @@ import { DEFAULT_AUDIENCE_CAPACITY } from "@/shared/config/audience";
 
 const log = createLogger("room");
 
-export async function createRoom(totalPages = 10): Promise<RoomData> {
+export async function createRoom(totalPages = 10, signal?: AbortSignal): Promise<RoomData> {
   const requestData = { count: DEFAULT_AUDIENCE_CAPACITY, totalPages };
   log.log("Creating room", requestData);
 
-  const res = await api.post("/api/rooms", requestData);
+  const res = await api.post("/api/rooms", requestData, { signal });
   return res.data.data;
 }
 

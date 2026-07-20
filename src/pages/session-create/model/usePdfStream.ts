@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import type { SseErrorEvent, SsePageEvent } from '@/shared/api/model/pdf';
-import { subscribePdfStream } from '@/shared/api/pdfStream';
+import { useEffect, useState } from "react";
+import type { SseErrorEvent, SsePageEvent } from "@/shared/api/model/pdf";
+import { subscribePdfStream } from "@/shared/api/pdfStream";
 
 interface UsePdfStreamArgs {
   streamUrl: string | null;
@@ -15,7 +15,9 @@ export function usePdfStream({ streamUrl, totalPages, enabled }: UsePdfStreamArg
   const [canStartSession, setCanStartSession] = useState(false);
   const [done, setDone] = useState(false);
   const [fatalError, setFatalError] = useState<SseErrorEvent | Error | null>(null);
-  const pageErrorsRef = useRef<Record<number, SseErrorEvent>>({});
+  // 페이지 단위 렌더링 실패 — 스트림은 계속되지만 해당 페이지는 빈 슬라이드로 남는다.
+  // UI 에서 "N장 변환 실패" 안내를 띄울 수 있도록 상태로 노출한다.
+  const [pageErrors, setPageErrors] = useState<Record<number, SseErrorEvent>>({});
 
   useEffect(() => {
     if (!enabled || !streamUrl || totalPages <= 0) return;
@@ -24,7 +26,7 @@ export function usePdfStream({ streamUrl, totalPages, enabled }: UsePdfStreamArg
     setCanStartSession(false);
     setDone(false);
     setFatalError(null);
-    pageErrorsRef.current = {};
+    setPageErrors({});
 
     const close = subscribePdfStream({
       streamUrl,
@@ -50,12 +52,12 @@ export function usePdfStream({ streamUrl, totalPages, enabled }: UsePdfStreamArg
           return;
         }
         // PDF 자체 열기 실패 → 스트림 종료, 치명 오류
-        if (e.pageIndex === -1 || e.code === 'PDF_LOAD_FAILED') {
+        if (e.pageIndex === -1 || e.code === "PDF_LOAD_FAILED") {
           setFatalError(e);
           return;
         }
         // 페이지 단위 실패 → 기록만 하고 스트림 지속
-        pageErrorsRef.current[e.pageIndex] = e;
+        setPageErrors((prev) => ({ ...prev, [e.pageIndex]: e }));
       },
     });
 
@@ -67,6 +69,6 @@ export function usePdfStream({ streamUrl, totalPages, enabled }: UsePdfStreamArg
     canStartSession,
     done,
     fatalError,
-    pageErrors: pageErrorsRef.current,
+    pageErrors,
   };
 }
