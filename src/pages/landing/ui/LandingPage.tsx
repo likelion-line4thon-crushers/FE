@@ -523,7 +523,7 @@ const MainPage = () => {
           </S.FooterCol>
           <S.FooterCol>
             <S.FooterLink href="mailto:boini.team@gmail.com">boini.team@gmail.com</S.FooterLink>
-            <S.FooterCopy>Made by 멋쟁이사자처럼 대학 14기 Team BOiNi</S.FooterCopy>
+            <S.FooterCopy>Made by 멋쟁이사자처럼 대학 13기 Team BOiNi</S.FooterCopy>
           </S.FooterCol>
         </S.FooterInner>
       </S.Footer>
