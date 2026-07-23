@@ -21,7 +21,7 @@ const PdfDownloadPolicyControl = ({
   error = null,
   onChange,
 }: PdfDownloadPolicyControlProps) => (
-  <PolicyWrapper>
+  <PolicyWrapper data-tour="setting-pdf">
     <PolicyBox>
       <PolicyText>
         <PolicyLabel>슬라이드 다운로드 허용</PolicyLabel>

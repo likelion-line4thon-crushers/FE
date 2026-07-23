@@ -22,6 +22,7 @@ const SlideContainer = ({
   showStamps = true,
   highlight = false,
   testId,
+  dataTour,
 }: any) => {
   const imageBorderColor = highlight ? "#ffc551" : "#eee";
 
@@ -46,7 +47,7 @@ const SlideContainer = ({
   };
 
   return (
-    <SlideBox ref={boxRef} highlight={highlight} data-testid={testId}>
+    <SlideBox ref={boxRef} highlight={highlight} data-testid={testId} data-tour={dataTour}>
       {hasSrc ? (
         <img
           key={src}

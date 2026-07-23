@@ -18,6 +18,8 @@ export const storageKeys = {
   broadcastReactionsVisible: (roomId: string) => `boini_broadcast_reactions_${roomId}` as const,
   // 발표자가 이 브라우저에서 세션을 시작했음을 기록하는 마커 (새로고침 시 발표 화면 복원에 사용)
   sessionStarted: (roomId: string) => `boini_session_started_${roomId}` as const,
+  // 온보딩 투어를 이 브라우저에서 이미 봤는지 표시 (localStorage, 세션 간 유지)
+  tourSeen: (surface: string) => `boini_tour_seen_${surface}` as const,
 } as const;
 
 /** 발표 세션 시작 마커 헬퍼 — 백엔드 상태 조회가 실패해도 발표자 본인의 새로고침을 복원. */

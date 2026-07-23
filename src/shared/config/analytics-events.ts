@@ -21,6 +21,12 @@ export const ANALYTICS_EVENTS = {
   BROADCAST_SCREEN_OPENED: "broadcast_screen_opened",
   AI_REPORT_VIEWED: "ai_report_viewed",
 
+  // Onboarding tour
+  ONBOARDING_TOUR_STARTED: "onboarding_tour_started",
+  ONBOARDING_TOUR_STEP_VIEWED: "onboarding_tour_step_viewed",
+  ONBOARDING_TOUR_COMPLETED: "onboarding_tour_completed",
+  ONBOARDING_TOUR_SKIPPED: "onboarding_tour_skipped",
+
   // Audience funnel
   LANDING_JOIN_CODE_SUBMITTED: "landing_join_code_submitted",
   AUDIENCE_SESSION_JOINED: "audience_session_joined",

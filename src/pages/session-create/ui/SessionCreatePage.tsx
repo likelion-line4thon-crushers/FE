@@ -25,12 +25,14 @@ import { storageKeys } from "@/shared/config/storage-keys";
 import { DEFAULT_AUDIENCE_CAPACITY } from "@/shared/config/audience";
 import websocketService from "@/shared/api/websocket";
 import { useBroadcastPublisher, useBroadcastReactionVisibility } from "@/shared/lib/broadcast";
+import { useTour } from "@/shared/lib/tour";
 import type { ChunkUploadReady } from "@/shared/api/model/pdf";
 import { usePresentationUploadFlow } from "../model/usePresentationUploadFlow";
 import { usePdfStream } from "../model/usePdfStream";
 import { useRestorePresenterSlides } from "../model/useRestorePresenterSlides";
 import { useRollingMessage } from "../model/useRollingMessage";
 import { resolvePresenterRoomData } from "../model/resolvePresenterRoomData";
+import { prepareTourSteps } from "../model/tour/prepareTourSteps";
 import FontRequirementPrompt from "./FontRequirementPrompt";
 import UploadErrorPanel from "./UploadErrorPanel";
 import RenderFailureBanner from "./RenderFailureBanner";
@@ -447,6 +449,10 @@ const PresentationPrepPage = () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [displaySlides.length]);
+
+  // 온보딩 투어(준비 화면) — 슬라이드가 실제로 한 장이라도 렌더된 뒤 첫 방문 시 자동 실행.
+  const slidesReady = displaySlides.length > 0 && displaySlides.some(Boolean);
+  useTour({ surface: "prepare", steps: prepareTourSteps, enabled: slidesReady, roomId });
 
   // ── 상태별 화면 분기 ──
   if (phase.step === "failed") {

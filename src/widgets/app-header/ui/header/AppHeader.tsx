@@ -3,7 +3,7 @@ import styled, { css } from "styled-components";
 import { useLocation, useNavigate } from "react-router";
 import { usePostHog } from "@posthog/react";
 import { ANALYTICS_EVENTS } from "@/shared/config/analytics-events";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import BoiniLogo from "@/shared/assets/images/Boini_logo.svg";
 import LiveIcon from "@/shared/assets/images/live.png";
 import SessionQuestionFace from "@/shared/assets/images/session-question-face.svg";
@@ -14,6 +14,7 @@ import {
   StartSessionButton,
   FeedbackQuestionButton,
   CsvDownloadButton,
+  TourHelpButton,
 } from "./HeaderButtons";
 import { FeedbackQuestionModal } from "@/features/feedback-questions";
 import { leaveRoom } from "@/shared/api/room";
@@ -23,6 +24,8 @@ import {
   presenterModeAtom,
   audienceVoiceCsvEnabledAtom,
 } from "@/entities/room";
+import { tourReplayRequestAtom } from "@/shared/lib/tour";
+import type { TourSurface } from "@/shared/lib/tour";
 import { SessionLoadingOverlay } from "@/shared/ui/session-loading-overlay";
 import { SessionWarningModal } from "@/shared/ui/session-warning-modal";
 import {
@@ -128,6 +131,15 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
   const isPresenterRoom = /^\/rooms\/[^/]+$/.test(location.pathname);
   const isPrep = isPresenterRoom && presenterMode === "prepare";
   const isPresenter = isPresenterRoom && presenterMode === "present";
+
+  const setTourReplay = useSetAtom(tourReplayRequestAtom);
+  const tourSurface: TourSurface | null = isPrep
+    ? "prepare"
+    : isPresenter
+      ? "present"
+      : isAiReport
+        ? "report"
+        : null;
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [showFeedbackQuestionModal, setShowFeedbackQuestionModal] = useState(false);
@@ -318,12 +330,27 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
         {(isAudienceView || isPrep || isPresenter || isAiReport) && (
           <RightActions>
-            {isPrep && <FeedbackQuestionButton onClick={handleFeedbackQuestionClick} />}
+            {tourSurface && (
+              <TourHelpButton
+                onClick={() => setTourReplay(tourSurface)}
+                aria-label="온보딩 가이드 다시 보기"
+              />
+            )}
 
-            {(isPrep || isPresenter) && <ShareButton onClick={handleShareClick} />}
+            {isPrep && (
+              <FeedbackQuestionButton
+                data-tour="feedback-form-button"
+                onClick={handleFeedbackQuestionClick}
+              />
+            )}
+
+            {(isPrep || isPresenter) && (
+              <ShareButton data-tour="share-button" onClick={handleShareClick} />
+            )}
 
             {(isPrep || isPresenter) && (
               <StartSessionButton
+                data-tour="start-session-button"
                 onClick={handleStartSessionClick}
                 disabled={isSessionEnding || (isPrep && !resolvedCanStartSession)}
                 isEndSession={isPresenter}
@@ -334,12 +361,15 @@ function AppHeader({ roomData: propRoomData, totalPages }: AppHeaderProps) {
 
             {isAiReport && (
               <CsvDownloadButton
+                data-tour="csv-download-button"
                 onClick={handleDownloadCsv}
                 disabled={csvDownloading || !csvEnabled}
               />
             )}
 
-            {(isAudienceView || isAiReport) && <ExitButton onClick={handleExitClick} />}
+            {(isAudienceView || isAiReport) && (
+              <ExitButton data-tour="exit-button" onClick={handleExitClick} />
+            )}
           </RightActions>
         )}
       </HeaderWrapper>
