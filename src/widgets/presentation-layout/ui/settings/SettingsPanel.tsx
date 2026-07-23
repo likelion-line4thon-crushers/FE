@@ -60,12 +60,17 @@ interface QuickSettingToggleProps {
   checked: boolean;
   onChange: ChangeEventHandler<HTMLInputElement>;
   disabled?: boolean;
+  dataTour?: string;
 }
 
 interface CollapsibleSectionProps {
   title: string;
   defaultCollapsed?: boolean;
   children: React.ReactNode;
+  // 온보딩 투어가 시작 전 자동으로 펼칠 수 있도록 헤더에 data-tour-expand 를 단다.
+  expandableForTour?: boolean;
+  // 온보딩 투어 앵커 — 섹션 전체를 하이라이트할 때 사용.
+  dataTour?: string;
 }
 
 const SettingsPanel = ({
@@ -93,15 +98,18 @@ const CollapsibleSection = ({
   title,
   defaultCollapsed = false,
   children,
+  expandableForTour = false,
+  dataTour,
 }: CollapsibleSectionProps) => {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   return (
-    <Section>
+    <Section data-tour={dataTour}>
       <SectionHeader
         type="button"
         onClick={() => setCollapsed((prev) => !prev)}
         aria-expanded={!collapsed}
+        data-tour-expand={expandableForTour ? "" : undefined}
       >
         {title}
         <SectionChevron src={ChevronIcon} alt="" aria-hidden="true" $collapsed={collapsed} />
@@ -153,25 +161,28 @@ const SessionSettingsSection = ({
   SettingsPanelProps,
   "quickSettings" | "onOptionChange" | "onUnlockChange" | "prepSettingsContent"
 >) => (
-  <CollapsibleSection title="세션 설정">
+  <CollapsibleSection title="세션 설정" expandableForTour>
     <QuickTogglesGrid>
       <QuickSettingToggle
         label="실시간 질문"
         description="청중이 실시간으로 질문을 남길 수 있습니다."
         checked={quickSettings.question}
         onChange={(event) => onOptionChange?.("question", event.target.checked)}
+        dataTour="setting-question"
       />
       <QuickSettingToggle
         label="리액션 스티커"
         description="청중이 리액션 스티커로 반응을 남길 수 있습니다."
         checked={quickSettings.sticker}
         onChange={(event) => onOptionChange?.("sticker", event.target.checked)}
+        dataTour="setting-sticker"
       />
       <QuickSettingToggle
         label="다음 구간 슬라이드 공개하기"
         description="청중이 다음 슬라이드 화면들을 미리 볼 수 있습니다."
         checked={quickSettings.unlock}
         onChange={(event) => onUnlockChange?.(event.target.checked)}
+        dataTour="setting-unlock"
       />
       {prepSettingsContent}
     </QuickTogglesGrid>
@@ -280,8 +291,9 @@ const QuickSettingToggle = ({
   checked,
   onChange,
   disabled = false,
+  dataTour,
 }: QuickSettingToggleProps) => (
-  <ToggleBox>
+  <ToggleBox data-tour={dataTour}>
     <ToggleText>
       <ToggleLabel>{label}</ToggleLabel>
       <ToggleDescription>{description}</ToggleDescription>
@@ -301,7 +313,7 @@ const LiveQuestionSection = ({
 }: {
   quickSettings?: QuickSettings;
 }) => (
-  <FillSection>
+  <FillSection data-tour="live-question-panel">
     <Title>실시간 질문</Title>
     <LiveWaitingBox isQuestionEnabled={quickSettings.question} />
   </FillSection>

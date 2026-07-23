@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import type { ChangeEvent } from "react";
 import { useLocation, useParams } from "react-router";
 import { usePostHog } from "@posthog/react";
+import { useTour } from "@/shared/lib/tour";
+import { presentTourSteps } from "../model/tour/presentTourSteps";
 import { ANALYTICS_EVENTS, ANALYTICS_GROUP_SESSION } from "@/shared/config/analytics-events";
 import { STORAGE_KEYS } from "@/shared/config/storage-keys";
 import {
@@ -489,6 +491,15 @@ const PresenterRoomPage = () => {
     [changeSlide]
   );
 
+  // 온보딩 투어(발표 화면) — 조용한 프리셋. 슬라이드 로드 후 첫 방문 시 자동 실행.
+  useTour({
+    surface: "present",
+    steps: presentTourSteps,
+    preset: "quiet",
+    enabled: !loading && slideUrls.length > 0,
+    roomId,
+  });
+
   // ✅ 로딩 중일 때 표시
   if (loading) {
     return (
@@ -586,7 +597,7 @@ const PresenterRoomPage = () => {
         <NextSlidePreview slides={slideUrls} currentSlide={currentSlide} />
 
         {/* === 세션 설정 섹션 === */}
-        <CollapsibleSection title="세션 설정">
+        <CollapsibleSection title="세션 설정" dataTour="present-settings" expandableForTour>
           <QuickTogglesList>
             <QuickSettingToggle
               label="실시간 질문"

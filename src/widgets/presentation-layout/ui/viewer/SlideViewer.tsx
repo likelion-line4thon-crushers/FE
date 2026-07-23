@@ -83,7 +83,7 @@ const SlideViewer = ({
       <FocusBar>
         {/* 🔹 왼쪽 그룹 (집중유도 + 검정바) */}
         <FocusGroupLeft>
-          <FocusLeft onClick={onFocusClick}>
+          <FocusLeft onClick={onFocusClick} data-tour="focus-button">
             <img src={FocusIcon} alt="집중 유도" width={20} height={20} />
             <span>집중 유도</span>
           </FocusLeft>
@@ -142,7 +142,7 @@ const SlideViewer = ({
           )}
           <TooltipHoverArea>
             <Tooltip>리액션 스티커 보이기</Tooltip>
-            <ReactionButton onClick={handleToggleEyesClick}>
+            <ReactionButton onClick={handleToggleEyesClick} data-tour="sticker-visibility">
               <img
                 src={showReactions ? openeyes : closeeyes}
                 alt={showReactions ? "openeyes" : "closeeyes"}
@@ -164,6 +164,7 @@ const SlideViewer = ({
         showStamps={showReactions}
         highlight={focusHighlight}
         testId="presenter-slide-surface"
+        dataTour="slide-surface"
       />
 
       {afterSlideContent}
