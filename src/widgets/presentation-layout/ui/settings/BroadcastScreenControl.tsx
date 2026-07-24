@@ -45,7 +45,7 @@ const BroadcastScreenControl = ({
     : "새 창에서 오직 슬라이드 화면만이 보여집니다.";
 
   return (
-    <ControlWrapper>
+    <ControlWrapper data-tour="setting-broadcast">
       <ControlBox>
         <ControlText>
           <ControlLabel>깔끔한 발표 화면</ControlLabel>

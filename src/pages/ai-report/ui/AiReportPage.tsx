@@ -3,6 +3,8 @@ import { useLocation, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { usePostHog } from "@posthog/react";
 import { ANALYTICS_EVENTS, ANALYTICS_GROUP_SESSION } from "@/shared/config/analytics-events";
+import { useTour } from "@/shared/lib/tour";
+import { reportTourSteps } from "../model/tour/reportTourSteps";
 import { PageContainer, ContentContainer, FooterContainer } from "./AiReportPage.styles";
 import { SideHeader } from "./navigation";
 import {
@@ -143,11 +145,15 @@ const AiReportPage = () => {
     };
   }, [storedReport, revisitReport]);
 
+  // 온보딩 투어(AI 리포트) — 리포트 데이터가 실제로 로드된 뒤 첫 방문 시 자동 실행.
+  const reportReady = !reportLoading && !reportError && !!storedReport;
+  useTour({ surface: "report", steps: reportTourSteps, enabled: reportReady, roomId });
+
   return (
     <PageContainer>
       <SideHeader onIconClick={scrollToSection} activeSection={activeSection} />
       <ContentContainer ref={contentContainerRef}>
-        <div ref={totalReactionRef}>
+        <div ref={totalReactionRef} data-tour="report-totalReaction">
           <TotalReaction
             reportData={storedReport}
             loading={reportLoading}
@@ -157,16 +163,16 @@ const AiReportPage = () => {
             fileName={fileName}
           />
         </div>
-        <div ref={top3Ref}>
+        <div ref={top3Ref} data-tour="report-top3">
           <Top3 />
         </div>
-        <div ref={popularSlideRef}>
+        <div ref={popularSlideRef} data-tour="report-popularSlide">
           <PopularSlide roomId={roomId} deckId={deckId} />
         </div>
-        <div ref={questionSlideRef}>
+        <div ref={questionSlideRef} data-tour="report-questionSlide">
           <QuestionSlide />
         </div>
-        <div ref={replaySlideRef}>
+        <div ref={replaySlideRef} data-tour="report-replaySlide">
           <ReplaySlide
             reportData={revisitReport}
             loading={revisitLoading}
@@ -175,7 +181,7 @@ const AiReportPage = () => {
             deckId={deckId}
           />
         </div>
-        <div ref={reviewRef}>
+        <div ref={reviewRef} data-tour="report-review">
           <ReviewSlide />
         </div>
         <FooterContainer>

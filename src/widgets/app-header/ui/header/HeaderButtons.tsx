@@ -5,6 +5,7 @@ import PlayIconDefault from "@/shared/assets/images/play2.svg";
 import ExitIconDefault from "@/shared/assets/images/getout.png";
 import FilesIconDefault from "@/shared/assets/images/files.svg";
 import DownloadCsvIconDefault from "@/shared/assets/images/AI/download-csv.svg";
+import HelpIconDefault from "@/shared/assets/images/help.svg";
 
 const BasePillButton = styled.button`
   display: inline-flex;
@@ -192,6 +193,18 @@ export const ExitButton = ({
   <ExitPillButton ref={ref} {...props}>
     {renderContent(iconSrc, iconAlt, children)}
   </ExitPillButton>
+);
+
+export const TourHelpButton = ({
+  children = "퀵 가이드",
+  iconSrc = HelpIconDefault,
+  iconAlt = typeof children === "string" ? children : "퀵 가이드",
+  ref,
+  ...props
+}: ButtonProps) => (
+  <BasePillButton ref={ref} {...props}>
+    {renderContent(iconSrc, iconAlt, children)}
+  </BasePillButton>
 );
 
 export { BasePillButton };
